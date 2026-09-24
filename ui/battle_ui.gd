@@ -7,9 +7,49 @@ const GOLD := Color("#dec596")
 const MUTED := Color("#9aaabc")
 const WHITE := Color("#f5f1e9")
 const RED := Color("#f48177")
+const HP_FILL := {"player": Color("#6ec9ae"), "enemy": Color("#d95e63")}
 const CARD_VIEW_SCENE := preload("res://ui/card_view.tscn")
 const CARD_REVEAL_SECONDS := 1.45
 const EFFECT_PAUSE_SECONDS := 0.9
+
+# --- horizontal arena layout (1600x900 design viewport) ----------------------
+# The player stands on the left and the enemy on the right, facing each other.
+# Everything is point symmetric about the viewport centre: mirroring a point p
+# gives VIEW_SIZE - p, so the player HUD, hand and draw pile at the bottom left
+# / bottom right are matched by the enemy HUD, card backs and draw pile at the
+# top right / top left.
+const VIEW_SIZE := Vector2(1600, 900)
+
+const HUD_SIZE := Vector2(420, 210)
+const HUD_MARGIN := 16.0
+const HUD_PORTRAIT := Rect2(10, 10, 72, 72)
+const HUD_NAME := Rect2(92, 8, 316, 32)
+const HUD_COUNTS := Rect2(92, 40, 316, 22)
+const HUD_HP := Rect2(92, 66, 316, 18)
+const HUD_STATUS := Rect2(10, 154, 400, 48)
+const ORB_DIAMETER := 52.0
+const ORB_STEP := 60.0
+const ORB_ROW_X := 64.0
+const ORB_ROW_Y := 94.0
+
+const STANDEE_SIZE := Vector2(300, 450)
+const STANDEE_TOP := 228.0
+const STANDEE_MARGIN := 105.0
+const MIRROR_ENEMY_STANDEE := false
+# Where a card leaves its caster and where effects land on a standee.
+const PLAYER_ANCHOR := Vector2(292, 452)
+const ENEMY_ANCHOR := Vector2(1308, 452)
+
+const HAND_CENTER_X := 900.0
+const HAND_BASE_Y := 560.0
+const ENEMY_HAND_CENTER_X := VIEW_SIZE.x - HAND_CENTER_X
+const ENEMY_HAND_Y := 158.0
+const DECK_SIZE := Vector2(72, 102)
+const PLAYER_DECK_POS := Vector2(1512, 764)
+const ENEMY_DECK_POS := Vector2(16, 34)
+const DROP_ZONE_Y := 600.0
+const REVEAL_CENTER := Vector2(665, 260)
+const TURN_PLATE := Rect2(640, 492, 320, 44)
 
 var manager: BattleManager
 var fx_layer: Control
@@ -50,6 +90,7 @@ func _ready() -> void:
 	fx_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(fx_layer)
 	battle_fx = BattleFX.new()
+	battle_fx.set_anchors(PLAYER_ANCHOR, ENEMY_ANCHOR)
 	fx_layer.add_child(battle_fx)
 	_refresh()
 
@@ -61,11 +102,11 @@ func _box(color: Color, border: Color = Color.TRANSPARENT, radius: int = 12, bor
 	s.set_corner_radius_all(radius)
 	return s
 
-func _panel(parent: Node, rect: Rect2, color: Color = PANEL, border: Color = Color("#705f49"), radius: int = 12) -> Panel:
+func _panel(parent: Node, rect: Rect2, color: Color = PANEL, border: Color = Color("#705f49"), radius: int = 12, border_width: int = 1) -> Panel:
 	var p := Panel.new()
 	p.position = rect.position
 	p.size = rect.size
-	p.add_theme_stylebox_override("panel", _box(color, border, radius))
+	p.add_theme_stylebox_override("panel", _box(color, border, radius, border_width))
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(p)
 	return p
@@ -163,7 +204,7 @@ func _build_menu() -> void:
 	var deck_info := manager.find_entry(manager.decks, menu_deck)
 	_label(center, deck_info["description"], Vector2(90, 475), Vector2(720, 45), 18, MUTED)
 	_button(center, "进入战斗", Rect2(270, 545, 360, 64), func(): _start_battle(), Color("#704e35"), GOLD)
-	_label(self, "操作：悬停查看卡牌，拖到战场打出；点击「结束回合」让对手行动。", Vector2(290, 820), Vector2(1020, 38), 18, MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	_label(self, "操作：悬停查看卡牌，往战场上任意位置拖出即可打出；点击「结束回合」让对手行动。", Vector2(290, 820), Vector2(1020, 38), 18, MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 
 func _start_battle() -> void:
 	selected_index = -1
@@ -181,13 +222,14 @@ func _start_battle() -> void:
 func _build_battle() -> void:
 	var arena := ArenaArt.new()
 	arena.position = Vector2.ZERO
-	arena.size = Vector2(1600, 900)
+	arena.size = VIEW_SIZE
 	arena.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(arena)
-	_build_enemy_hud()
+	_build_standees()
+	_build_turn_plate()
 	_build_enemy_hand()
-	_build_arena_actor()
-	_build_player_hud()
+	_build_combatant_hud("enemy")
+	_build_combatant_hud("player")
 	_build_decks()
 	_build_hand()
 	_build_end_turn()
@@ -199,23 +241,74 @@ func _build_battle() -> void:
 	if manager.phase == "victory" or manager.phase == "defeat":
 		_build_result()
 
-func _hp_bar(parent: Node, pos: Vector2, width: float, actor: Combatant) -> void:
-	_panel(parent, Rect2(pos, Vector2(width, 18)), Color("#1b2631"), Color("#624d49"), 5)
-	var fill := ColorRect.new()
-	fill.position = pos + Vector2(3, 3)
-	fill.size = Vector2((width - 6) * float(actor.hp) / float(actor.max_hp), 12)
-	fill.color = Color("#d95e63") if actor == manager.enemy else Color("#6ec9ae")
-	parent.add_child(fill)
-	_label(parent, "%d / %d" % [actor.hp, actor.max_hp], pos + Vector2(0, -1), Vector2(width, 20), 15, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+# --- HUD --------------------------------------------------------------------
 
-func _energy_row(parent: Node, actor: Combatant, pos: Vector2, compact: bool = false) -> void:
-	var chip_w := 92.0 if compact else 115.0
+func _hud_origin(side: String) -> Vector2:
+	if side == "player":
+		return Vector2(HUD_MARGIN, VIEW_SIZE.y - HUD_MARGIN - HUD_SIZE.y)
+	return Vector2(VIEW_SIZE.x - HUD_MARGIN - HUD_SIZE.x, HUD_MARGIN)
+
+func _hud_local(side: String, local: Rect2) -> Rect2:
+	if side == "player":
+		return local
+	return Rect2(HUD_SIZE.x - local.position.x - local.size.x, local.position.y, local.size.x, local.size.y)
+
+func _hud_global_rect(side: String, local: Rect2) -> Rect2:
+	return Rect2(_hud_origin(side) + _hud_local(side, local).position, local.size)
+
+func _build_combatant_hud(side: String) -> void:
+	var enemy_side := side == "enemy"
+	var actor: Combatant = manager.enemy if enemy_side else manager.player
+	var panel := _panel(self, Rect2(_hud_origin(side), HUD_SIZE), PANEL_DARK, GOLD.darkened(0.42), 14)
+	var align := HORIZONTAL_ALIGNMENT_RIGHT if enemy_side else HORIZONTAL_ALIGNMENT_LEFT
+	var tag_align := HORIZONTAL_ALIGNMENT_LEFT if enemy_side else HORIZONTAL_ALIGNMENT_RIGHT
+
+	var portrait := _hud_local(side, HUD_PORTRAIT)
+	_portrait(panel, actor.id, portrait.position, portrait.size, enemy_side)
+
+	var name_rect := _hud_local(side, HUD_NAME)
+	_label(panel, actor.display_name, name_rect.position, name_rect.size, 24, WHITE, align)
+	_label(panel, _side_subtitle(side), name_rect.position, name_rect.size, 16, GOLD.darkened(0.1), tag_align)
+
+	var counts := _hud_local(side, HUD_COUNTS)
+	_label(panel, "手牌 %d    牌库 %d    弃牌 %d" % [actor.hand.size(), actor.draw_pile.size(), actor.discard_pile.size()],
+		counts.position, counts.size, 15, MUTED, align)
+
+	_hp_bar(panel, _hud_local(side, HUD_HP), actor, enemy_side)
+
+	# The orb row is laid out identically on both sides so 金木水火土 always read
+	# left to right; only the surrounding text mirrors.
 	for i in BattleRules.ELEMENTS.size():
-		var element: String = BattleRules.ELEMENTS[i]
-		var x := pos.x + float(i) * (chip_w + 6)
-		var chip := _panel(parent, Rect2(x, pos.y, chip_w, 37), Color("#152435"), BattleRules.color(element).darkened(0.25), 8)
-		_label(chip, BattleRules.element_name(element), Vector2(8, 1), Vector2(32, 35), 22, BattleRules.color(element), HORIZONTAL_ALIGNMENT_CENTER)
-		_label(chip, str(actor.energy[element]), Vector2(40, 1), Vector2(chip_w - 47, 35), 22, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+		_energy_orb(panel, actor, side, i)
+
+	var status := _hud_local(side, HUD_STATUS)
+	_label(panel, _status_line(actor), status.position, status.size, 15, MUTED)
+
+func _side_subtitle(side: String) -> String:
+	if side == "enemy":
+		return str(manager.find_entry(manager.enemies, manager.enemy.id).get("subtitle", ""))
+	return str(manager.find_entry(manager.decks, manager.selected_deck_id).get("name", ""))
+
+func _hp_bar(parent: Node, rect: Rect2, actor: Combatant, enemy_side: bool) -> void:
+	_panel(parent, rect, Color("#1b2631"), Color("#624d49"), 6)
+	var inner := rect.grow(-3.0)
+	var ratio := clampf(float(actor.hp) / float(maxi(1, actor.max_hp)), 0.0, 1.0)
+	var fill := ColorRect.new()
+	fill.position = inner.position
+	fill.size = Vector2(inner.size.x * ratio, inner.size.y)
+	fill.color = HP_FILL["enemy"] if enemy_side else HP_FILL["player"]
+	parent.add_child(fill)
+	_label(parent, "%d / %d" % [actor.hp, actor.max_hp], rect.position, rect.size, 14, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+
+func _energy_orb(parent: Node, actor: Combatant, side: String, index: int) -> void:
+	var element: String = BattleRules.ELEMENTS[index]
+	var tint := BattleRules.color(element)
+	# The orb row is centred in the panel and deliberately not mirrored, so both
+	# sides read 金木水火土 left to right; only the surrounding text mirrors.
+	var local := Rect2(Vector2(ORB_ROW_X + float(index) * ORB_STEP, ORB_ROW_Y), Vector2(ORB_DIAMETER, ORB_DIAMETER))
+	var orb := _panel(parent, local, Color("#0c1826").lerp(tint, 0.14), tint.darkened(0.1), int(ORB_DIAMETER / 2.0), 2)
+	_label(orb, BattleRules.element_name(element), Vector2(0, 2), Vector2(ORB_DIAMETER, 18), 14, tint, HORIZONTAL_ALIGNMENT_CENTER)
+	_label(orb, str(actor.energy[element]), Vector2(0, 17), Vector2(ORB_DIAMETER, 30), 24, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 
 func _status_line(actor: Combatant) -> String:
 	if actor.statuses.is_empty():
@@ -228,24 +321,13 @@ func _status_line(actor: Combatant) -> String:
 		parts.append("%s %d (%d回合)" % [word, int(status["stacks"]), int(status["turns"])])
 	return "   ".join(parts)
 
-func _build_enemy_hud() -> void:
-	var p := _panel(self, Rect2(232, 16, 1128, 135), PANEL_DARK, GOLD.darkened(0.5))
-	_portrait(p, manager.enemy.id, Vector2(12, 12), Vector2(112, 112), true)
-	_label(p, manager.enemy.display_name, Vector2(138, 9), Vector2(280, 35), 26, WHITE)
-	var info := manager.find_entry(manager.enemies, manager.enemy.id)
-	_label(p, info["subtitle"], Vector2(422, 11), Vector2(245, 31), 18, MUTED)
-	_hp_bar(p, Vector2(140, 49), 617, manager.enemy)
-	_energy_row(p, manager.enemy, Vector2(141, 82))
-	_label(p, "手牌 %d     牌库 %d     弃牌 %d" % [manager.enemy.hand.size(), manager.enemy.draw_pile.size(), manager.enemy.discard_pile.size()], Vector2(777, 37), Vector2(324, 31), 19, WHITE)
-	_label(p, _status_line(manager.enemy), Vector2(777, 77), Vector2(326, 50), 16, MUTED)
-
 func _portrait(parent: Node, actor_id: String, pos: Vector2, sz: Vector2, enemy_side: bool) -> void:
-	var frame := _panel(parent, Rect2(pos, sz), Color("#182839"), GOLD.darkened(0.15), 58)
+	var frame := _panel(parent, Rect2(pos, sz), Color("#182839"), GOLD.darkened(0.15), 12)
 	var path := "res://assets/characters/%s.webp" % actor_id
 	if ResourceLoader.exists(path):
 		var image := TextureRect.new()
-		image.position = Vector2(6, 6)
-		image.size = sz - Vector2(12, 12)
+		image.position = Vector2(4, 4)
+		image.size = sz - Vector2(8, 8)
 		var atlas := AtlasTexture.new()
 		atlas.atlas = load(path)
 		atlas.region = Rect2(120, 0, 780, 780)
@@ -256,40 +338,43 @@ func _portrait(parent: Node, actor_id: String, pos: Vector2, sz: Vector2, enemy_
 		frame.add_child(image)
 	else:
 		var glyph := "火" if actor_id == "ember" else "水" if actor_id == "tide" else "行" if actor_id == "harmony" else "云"
-		_label(frame, glyph, Vector2.ZERO, sz, 53, RED if enemy_side else Color("#95d9da"), HORIZONTAL_ALIGNMENT_CENTER)
+		_label(frame, glyph, Vector2.ZERO, sz, 40, RED if enemy_side else Color("#95d9da"), HORIZONTAL_ALIGNMENT_CENTER)
 
-func _build_arena_actor() -> void:
-	var actor_path := "res://assets/characters/%s_standee.webp" % manager.enemy.id
-	if ResourceLoader.exists(actor_path):
+# --- arena actors -----------------------------------------------------------
+
+func _build_standees() -> void:
+	_standee("player", STANDEE_MARGIN, false, 2.4)
+	_standee(manager.enemy.id, VIEW_SIZE.x - STANDEE_MARGIN - STANDEE_SIZE.x, MIRROR_ENEMY_STANDEE, 2.0)
+
+func _standee(actor_id: String, x: float, mirrored: bool, bob_seconds: float) -> void:
+	var path := "res://assets/characters/%s_standee.webp" % actor_id
+	if not ResourceLoader.exists(path):
+		path = "res://assets/characters/%s.webp" % actor_id
+	if ResourceLoader.exists(path):
 		var actor := TextureRect.new()
-		actor.texture = load(actor_path)
-		actor.position = Vector2(632, 180)
-		actor.size = Vector2(320, 480)
+		actor.texture = load(path)
+		actor.size = STANDEE_SIZE
+		# Mirroring happens around the right edge so the fighter keeps its slot.
+		actor.position = Vector2(x + (STANDEE_SIZE.x if mirrored else 0.0), STANDEE_TOP)
+		actor.scale = Vector2(-1.0 if mirrored else 1.0, 1.0)
 		actor.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		actor.stretch_mode = TextureRect.STRETCH_SCALE
 		actor.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(actor)
-		var tween := actor.create_tween().set_loops(3)
-		tween.tween_property(actor, "position:y", 174.0, 2.0).set_trans(Tween.TRANS_SINE)
-		tween.tween_property(actor, "position:y", 180.0, 2.0).set_trans(Tween.TRANS_SINE)
+		var tween := actor.create_tween().set_loops()
+		tween.tween_property(actor, "position:y", STANDEE_TOP - 6.0, bob_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tween.tween_property(actor, "position:y", STANDEE_TOP, bob_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	else:
-		var glyph := _panel(self, Rect2(690, 225, 180, 180), Color("#17304a99"), RED.darkened(0.2), 90)
-		_label(glyph, BattleRules.element_name("fire" if manager.enemy.id == "ember" else "water" if manager.enemy.id == "tide" else "earth"), Vector2.ZERO, Vector2(180, 180), 96, RED, HORIZONTAL_ALIGNMENT_CENTER)
-	var nameplate := _panel(self, Rect2(652, 444, 256, 40), PANEL_DARK, GOLD.darkened(0.35), 6)
-	_label(nameplate, manager.enemy.display_name, Vector2.ZERO, Vector2(256, 40), 20, GOLD, HORIZONTAL_ALIGNMENT_CENTER)
-	var phase_text := "你的行动" if manager.phase == "player_action" else "敌人行动中" if manager.phase.begins_with("enemy") else "战斗结束"
-	var turn_plate := _panel(self, Rect2(660, 493, 240, 45), PANEL_DARK, GOLD.darkened(0.4), 8)
-	_label(turn_plate, "第 %d 回合 · %s" % [manager.round_number, phase_text], Vector2.ZERO, Vector2(240, 45), 21, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+		var glyph := "火" if actor_id == "ember" else "水" if actor_id == "tide" else "行" if actor_id == "harmony" else "云"
+		var box := _panel(self, Rect2(x + 60.0, STANDEE_TOP + 110.0, 180, 180), Color("#17304a99"), RED.darkened(0.2), 90)
+		_label(box, glyph, Vector2.ZERO, Vector2(180, 180), 96, RED if actor_id != "player" else Color("#95d9da"), HORIZONTAL_ALIGNMENT_CENTER)
 
-func _build_player_hud() -> void:
-	var p := _panel(self, Rect2(18, 696, 255, 188), PANEL_DARK, GOLD.darkened(0.42))
-	_portrait(p, "player", Vector2(12, 11), Vector2(76, 76), false)
-	_label(p, manager.player.display_name, Vector2(101, 11), Vector2(142, 33), 24, WHITE)
-	_hp_bar(p, Vector2(99, 51), 142, manager.player)
-	_label(p, "牌库 %d   弃牌 %d" % [manager.player.draw_pile.size(), manager.player.discard_pile.size()], Vector2(12, 90), Vector2(232, 28), 16, MUTED)
-	_label(p, _status_line(manager.player), Vector2(12, 120), Vector2(232, 57), 16, MUTED)
-	var energies := _panel(self, Rect2(275, 840, 600, 43), PANEL_DARK, GOLD.darkened(0.5), 8)
-	_energy_row(energies, manager.player, Vector2(8, 3), true)
+func _build_turn_plate() -> void:
+	var phase_text := "你的行动" if manager.phase == "player_action" else "敌人行动中" if manager.phase.begins_with("enemy") else "战斗结束"
+	var plate := _panel(self, TURN_PLATE, PANEL_DARK, GOLD.darkened(0.4), 8)
+	_label(plate, "第 %d 回合 · %s" % [manager.round_number, phase_text], Vector2.ZERO, TURN_PLATE.size, 21, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+
+# --- cards ------------------------------------------------------------------
 
 func _build_hand() -> void:
 	hand_cards.clear()
@@ -323,9 +408,10 @@ func _hand_card_size(count: int) -> Vector2:
 
 func _hand_card_position(index: int, count: int) -> Vector2:
 	var width := _hand_card_size(count).x
-	var step := minf(width - 2.0, 960.0 / maxf(1.0, float(count - 1)))
+	# 780 keeps even a full 8 card hand clear of the bottom-left HUD panel.
+	var step := minf(width - 2.0, 780.0 / maxf(1.0, float(count - 1)))
 	var offset := float(index) - float(count - 1) / 2.0
-	return Vector2(800.0 + offset * step - width / 2.0, 560.0 + 6.0 * offset * offset)
+	return Vector2(HAND_CENTER_X + offset * step - width / 2.0, HAND_BASE_Y + 6.0 * offset * offset)
 
 func _hand_angle(index: int, count: int) -> float:
 	return (float(index) - float(count - 1) / 2.0) * 3.8
@@ -361,17 +447,17 @@ func _build_enemy_hand() -> void:
 			back.visible = false
 
 func _enemy_card_position(index: int, count: int) -> Vector2:
-	return Vector2(800.0 + (float(index) - float(count - 1) / 2.0) * 57.0 - 34.0, 158.0)
+	return Vector2(ENEMY_HAND_CENTER_X + (float(index) - float(count - 1) / 2.0) * 57.0 - 34.0, ENEMY_HAND_Y)
 
 func _build_decks() -> void:
-	var player_deck := _card_back(Vector2(76, 108))
-	player_deck.position = Vector2(1315, 636)
+	var player_deck := _card_back(DECK_SIZE)
+	player_deck.position = PLAYER_DECK_POS
 	add_child(player_deck)
-	_label(self, str(manager.player.draw_pile.size()), Vector2(1325, 745), Vector2(55, 28), 17, GOLD, HORIZONTAL_ALIGNMENT_CENTER)
-	var enemy_deck := _card_back(Vector2(67, 92))
-	enemy_deck.position = Vector2(1330, 177)
+	_label(self, str(manager.player.draw_pile.size()), PLAYER_DECK_POS + Vector2(0, -26), Vector2(DECK_SIZE.x, 24), 17, GOLD, HORIZONTAL_ALIGNMENT_CENTER)
+	var enemy_deck := _card_back(DECK_SIZE)
+	enemy_deck.position = ENEMY_DECK_POS
 	add_child(enemy_deck)
-	_label(self, str(manager.enemy.draw_pile.size()), Vector2(1336, 268), Vector2(55, 26), 16, GOLD, HORIZONTAL_ALIGNMENT_CENTER)
+	_label(self, str(manager.enemy.draw_pile.size()), ENEMY_DECK_POS + Vector2(0, DECK_SIZE.y + 2), Vector2(DECK_SIZE.x, 24), 17, GOLD, HORIZONTAL_ALIGNMENT_CENTER)
 
 func _on_hand_hover(index: int) -> void:
 	if drag_index >= 0 or action_busy or index >= hand_cards.size():
@@ -398,7 +484,7 @@ func _show_hover_preview(index: int) -> void:
 		return
 	var card: Dictionary = manager.cards[manager.player.hand[index]]
 	hover_preview = _card_front(card, Vector2(270, 378))
-	hover_preview.position = Vector2(clampf(_hand_card_center(index, manager.player.hand.size()).x - 135, 285, 1050), 205)
+	hover_preview.position = Vector2(clampf(_hand_card_center(index, manager.player.hand.size()).x - 135.0, 430.0, 1030.0), 178.0)
 	fx_layer.add_child(hover_preview)
 	hover_preview.modulate.a = 0.0
 	hover_preview.create_tween().tween_property(hover_preview, "modulate:a", 1.0, 0.13)
@@ -441,7 +527,8 @@ func _input(event: InputEvent) -> void:
 		drag_index = -1
 		drag_card.queue_free()
 		drag_card = null
-		if release.y < 610 and release.y > 160 and release.x > 260 and release.x < 1320 and release.distance_to(pointer_down) > 45:
+		# The whole arena above the hand is a legal drop target.
+		if release.y < DROP_ZONE_Y and release.distance_to(pointer_down) > 45:
 			_play_card_from(index, release)
 		else:
 			_refresh()
@@ -460,7 +547,8 @@ func _play_card_from(card_index: int, source: Vector2) -> void:
 	_refresh()
 	await _present_card(card, "player", source)
 	if manager.phase == "player_action" and card_index < manager.player.hand.size():
-		await get_tree().create_timer(battle_fx.cast(card, "player", source)).timeout
+		# The effect leaves the player's standee for whatever the card targets.
+		await get_tree().create_timer(battle_fx.cast(card, "player")).timeout
 		player_hidden_index = -1
 		manager.play_player_card(card_index)
 		await get_tree().create_timer(EFFECT_PAUSE_SECONDS).timeout
@@ -469,7 +557,7 @@ func _play_card_from(card_index: int, source: Vector2) -> void:
 	_refresh()
 
 func _build_end_turn() -> void:
-	var end := _button(self, "结束回合", Rect2(1350, 798, 215, 72), func(): _on_end_turn(), Color("#53402d"), GOLD)
+	var end := _button(self, "结束回合", Rect2(1300, 800, 200, 66), func(): _on_end_turn(), Color("#53402d"), GOLD)
 	end.disabled = manager.phase != "player_action" or action_busy
 
 func _on_end_turn() -> void:
@@ -497,7 +585,7 @@ func _run_enemy_turn() -> void:
 		await _present_card(card, "enemy", source)
 		if manager.phase != "enemy_action":
 			break
-		await get_tree().create_timer(battle_fx.cast(card, "enemy", source)).timeout
+		await get_tree().create_timer(battle_fx.cast(card, "enemy")).timeout
 		manager.enemy_step(chosen_index)
 		enemy_hidden_index = -1
 		await get_tree().create_timer(EFFECT_PAUSE_SECONDS).timeout
@@ -518,7 +606,7 @@ func _present_card(card: Dictionary, side: String, source: Vector2) -> void:
 	stage.position = source - stage.size / 2.0
 	stage.scale = Vector2(0.32, 0.32) if side == "enemy" else Vector2(0.56, 0.56)
 	var entrance := stage.create_tween().set_parallel(true)
-	entrance.tween_property(stage, "position", Vector2(665, 260), 0.55).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	entrance.tween_property(stage, "position", REVEAL_CENTER, 0.55).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	entrance.tween_property(stage, "scale", Vector2.ONE, 0.55).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	entrance.tween_property(dim, "modulate:a", 1.0, 0.4)
 	await entrance.finished
@@ -543,7 +631,7 @@ func _animate_pending_draws(player_count: int, enemy_count: int, generation: int
 			if index < 0 or index >= views.size() or not is_instance_valid(views[index]):
 				continue
 			var target := _hand_card_position(index, views.size()) + _hand_card_size(views.size()) / 2.0 if side == "player" else _enemy_card_position(index, views.size()) + Vector2(34, 48)
-			var source := Vector2(1353, 690) if side == "player" else Vector2(1364, 224)
+			var source := _draw_pile_point(side)
 			var flying := _card_back(Vector2(88, 124))
 			fx_layer.add_child(flying)
 			flying.position = source - flying.size / 2.0
@@ -570,6 +658,10 @@ func _animate_pending_draws(player_count: int, enemy_count: int, generation: int
 		action_busy = false
 	_refresh()
 
+func _draw_pile_point(side: String) -> Vector2:
+	var origin := PLAYER_DECK_POS if side == "player" else ENEMY_DECK_POS
+	return origin + DECK_SIZE / 2.0
+
 func _build_result() -> void:
 	var dim := ColorRect.new()
 	dim.color = Color(0.01, 0.02, 0.04, 0.75)
@@ -583,12 +675,15 @@ func _build_result() -> void:
 	_button(box, "再次挑战", Rect2(70, 296, 225, 62), func(): _start_battle(), Color("#604a31"), GOLD)
 	_button(box, "更换对手 / 牌组", Rect2(345, 296, 225, 62), func(): manager.phase = "menu"; _refresh(), Color("#293e51"), GOLD)
 
+func _anchor(side: String) -> Vector2:
+	return ENEMY_ANCHOR if side == "enemy" else PLAYER_ANCHOR
+
 func _on_action_event(message: String, side: String, kind: String, element: String, amount: int) -> void:
 	if fx_layer == null or not is_inside_tree():
 		return
 	if side not in ["player", "enemy"]:
 		return
-	var target := Vector2(800, 396) if side == "enemy" else Vector2(146, 744)
+	var target := _anchor(side)
 	if kind == "damage":
 		battle_fx.impact(element, target, "shield" if message.contains("护盾抵消") else "")
 	elif kind == "heal" and amount > 0:
@@ -610,7 +705,8 @@ func _on_action_event(message: String, side: String, kind: String, element: Stri
 		return
 	var float_point := Vector2(-1, -1)
 	if kind in ["energy", "energy_loss"]:
-		float_point = _energy_point(side, element) + Vector2(-90, -75 if side == "player" else 35)
+		# Numbers drift away from the HUD panel instead of over its own text.
+		float_point = _energy_point(side, element) + Vector2(-90, 130 if side == "enemy" else -150)
 	_show_floating(("-" if kind in ["damage", "energy_loss"] else "+") + str(amount), side, RED if kind == "damage" else BattleRules.color(element) if element != "" else GOLD, 0.0, float_point)
 	if kind == "damage" and message.contains("克制"):
 		_show_floating("克制", side, GOLD, 39.0)
@@ -620,13 +716,15 @@ func _on_action_event(message: String, side: String, kind: String, element: Stri
 func _energy_point(side: String, element: String) -> Vector2:
 	var index := BattleRules.ELEMENTS.find(element)
 	if index < 0:
-		return Vector2(800, 690)
-	return Vector2(418 + index * 121, 117) if side == "enemy" else Vector2(329 + index * 98, 864)
+		return _hud_origin(side) + HUD_SIZE / 2.0
+	# Both HUDs keep 金木水火土 left to right, so the row is not mirrored.
+	var local := Vector2(ORB_ROW_X + ORB_DIAMETER / 2.0 + float(index) * ORB_STEP, ORB_ROW_Y + ORB_DIAMETER / 2.0)
+	return _hud_origin(side) + local
 
 func _show_floating(value: String, side: String, color: Color, y_offset: float = 0.0, position_override: Vector2 = Vector2(-1, -1)) -> void:
 	var floating := Label.new()
 	floating.text = value
-	floating.position = (position_override if position_override.x >= 0 else Vector2(792, 278) if side == "enemy" else Vector2(170, 655)) + Vector2(0, y_offset)
+	floating.position = (position_override if position_override.x >= 0 else _anchor(side) + Vector2(-90, -25)) + Vector2(0, y_offset)
 	floating.size = Vector2(180, 50)
 	floating.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	floating.add_theme_font_size_override("font_size", 38 if value.is_valid_int() or value.begins_with("+") or value.begins_with("-") else 28)

@@ -27,7 +27,7 @@ func capture() -> void:
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png(output.path_join("%s_cast.png" % element))
 	fx.clear_effects()
-	fx.impact("fire", Vector2(800, 396))
+	fx.impact("fire", Vector2(1308, 452))
 	await create_timer(0.19).timeout
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(output.path_join("fire_impact.png"))

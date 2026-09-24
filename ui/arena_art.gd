@@ -2,7 +2,8 @@ class_name ArenaArt
 extends Control
 
 func _draw() -> void:
-	var center := Vector2(780, 522)
+	# Centred on the arena so the ring sits between the two facing standees.
+	var center := Vector2(800, 512)
 	for radius in [290.0, 245.0, 192.0, 135.0]:
 		draw_arc(center, radius, 0, TAU, 160, Color(0.61, 0.74, 0.77, 0.16), 2.0, true)
 	for i in 40:

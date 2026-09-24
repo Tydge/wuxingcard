@@ -7,6 +7,9 @@ var active: Array[Dictionary] = []
 var ambient_time := 0.0
 var serial := 0
 var ring_texture: Texture2D
+# Where each fighter's standee sits. The battle UI overrides these so casts can
+# travel from one standee to the other.
+var anchors := {"player": Vector2(292, 452), "enemy": Vector2(1308, 452)}
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -26,6 +29,25 @@ func _add(kind: String, element: String, from: Vector2, to: Vector2, duration: f
 		active.remove_at(0)
 	queue_redraw()
 
+func set_anchors(player_anchor: Vector2, enemy_anchor: Vector2) -> void:
+	anchors = {"player": player_anchor, "enemy": enemy_anchor}
+
+func _anchor(side: String) -> Vector2:
+	return anchors.get(side, anchors["player"])
+
+func _opponent(side: String) -> String:
+	return "enemy" if side == "player" else "player"
+
+# A card that hits or hinders the opponent flies across the arena; a card whose
+# effects all target its own side lands back on the caster's own standee.
+func targets_opponent(card: Dictionary) -> bool:
+	for effect in card.get("effects", []):
+		if str(effect.get("type", "")) == "damage":
+			return true
+		if str(effect.get("target", "opponent")) == "opponent":
+			return true
+	return false
+
 func cast(card: Dictionary, side: String, source: Vector2 = Vector2(-1, -1)) -> float:
 	var element: String = str(card.get("element", "metal"))
 	var style := str(card.get("fx_id", ""))
@@ -34,14 +56,8 @@ func cast(card: Dictionary, side: String, source: Vector2 = Vector2(-1, -1)) -> 
 	var scale := float(card.get("fx_scale", 1.0))
 	var speed := maxf(0.25, float(card.get("fx_speed", 1.0)))
 	var intensity := float(card.get("fx_intensity", 1.0)) + float(card.get("cost", 0)) * 0.13
-	var origin := Vector2(590, 700) if side == "player" else Vector2(800, 355)
-	if source.x >= 0.0:
-		origin = source
-	var destination := Vector2(800, 355) if side == "player" else Vector2(147, 742)
-	if style in ["wood_heal", "water_shield", "earth_shield", "generic_buff"]:
-		destination = Vector2(146, 744) if side == "player" else origin
-	elif style in ["energy_gain", "card_draw"]:
-		destination = origin
+	var origin := source if source.x >= 0.0 else _anchor(side)
+	var destination := _anchor(_opponent(side)) if targets_opponent(card) else _anchor(side)
 	var duration := 0.54 / speed
 	_add("cast", element, origin, destination, duration, scale, intensity, style)
 	return duration
@@ -116,8 +132,8 @@ func _draw_ai_ring(point: Vector2, radius: float, angle: float, color: Color) ->
 func _draw_ambient() -> void:
 	# Slow flecks add depth to the AI painted arena without obscuring the UI.
 	for i in 24:
-		var x := 265.0 + fposmod(float(i * 337), 1030.0)
-		var y := 660.0 - fposmod(ambient_time * (8.0 + float(i % 5) * 3.0) + float(i * 59), 500.0)
+		var x := 180.0 + fposmod(float(i * 337), 1240.0)
+		var y := 700.0 - fposmod(ambient_time * (8.0 + float(i % 5) * 3.0) + float(i * 59), 480.0)
 		var element: String = BattleRules.ELEMENTS[i % 5]
 		draw_circle(Vector2(x, y), 1.1 + float(i % 3) * 0.45, _tint(BattleRules.color(element), 0.12))
 
