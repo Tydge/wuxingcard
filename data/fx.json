@@ -1,0 +1,6 @@
+[
+  {
+    "id": "arcane_ring",
+    "art_prompt": "Use case: stylized-concept\nAsset type: reusable transparent VFX overlay texture for a 2D Chinese five-element card battle game\nPrimary request: a single centered circular arcane impact seal made of delicate concentric broken rings and geometric filigree, like engraved luminous energy suspended in air; neutral pearl-white and pale silver only so a game engine can tint it to any of five elemental colors\nStyle/medium: refined dark Eastern fantasy game VFX asset, crisp clean luminous linework, slightly painterly sparks at ring edges\nComposition/framing: exact centered circle filling about 80% of a square image, isolated, generous transparent margins, symmetric enough to rotate cleanly, readable at 128 px\nBackground: genuinely transparent alpha background, no floor, no scene, no vignette, no black fill\nConstraints: no words, no Chinese characters, no numbers, no card frame, no UI, no people, no weapons, no solid center; fine ring lines and small radial glints only\nAvoid: opaque background, gradients filling the whole square, multicolored elements, thick cloudy smoke"
+  }
+]
