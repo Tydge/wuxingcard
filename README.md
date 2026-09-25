@@ -23,7 +23,7 @@ Godot 4.6 的单机 PVE 五行卡牌战斗原型。三份 v0.3 原始设计文�
 - 状态：灼伤、中毒、出血、虚弱、脆弱、再生、护盾、元素封锁。双方的状态以独立图标显示，每排 8 个，层数在图标右下角。敌人根据伤害、恢复、资源和状态评估手牌并连续出牌。
 - 横版对战界面：左我方 / 右敌方立绘面对面，我方 HUD 在左下、敌方 HUD 在右上，圆形五行能量、扇形手牌、悬停放大、拖拽出牌、从牌堆飞入手牌的抽牌动画、敌方卡牌从牌背飞入场中的展示，以及胜负和重开。战斗日志保存在逻辑层，当前战斗画面不显示。
 - 布局以画面中心点对称：我方手牌（底部偏右）对应敌方卡背（顶部偏左），我方抽牌堆（右下角）对应敌方抽牌堆（左上角）。
-- 五行共用的参数化战斗特效：出牌轨迹、命中法阵、护盾、治疗、能量增减、状态与伤害数字。出牌轨迹按卡牌的实际目标决定落点——打向对手的牌从我方立绘飞向敌方立绘，只增益自己的牌落回自己立绘上。抽牌与弃牌不画额外符号，只由卡牌预制体本身的飞牌与手牌变化表现。动态形状由 Godot 绘制，命中法阵复用一张 AI 生成的透明纹理。
+- 五行共用的参数化战斗特效：出牌轨迹、命中法阵、护盾、治疗、能量增减、状态与伤害数字。出牌轨迹按卡牌的实际目标决定落点——打向对手的牌从我方立绘飞向敌方立绘，只增益自己的牌落回自己立绘上。受击时角色和召唤物有短促后仰与闪色，伤害数字使用书法衬线字体、墨色笔触底和厚描边；只有发生五行克制或抵抗时，才在数字旁显示对应文字。抽牌与弃牌不画额外符号，只由卡牌预制体本身的飞牌与手牌变化表现。动态形状由 Godot 绘制，命中法阵复用一张 AI 生成的透明纹理。
 
 ## 状态规则
 
@@ -60,7 +60,7 @@ Godot 4.6 的单机 PVE 五行卡牌战斗原型。三份 v0.3 原始设计文�
 
 横版对峙使用 `assets/characters/fullbody/{id}.webp` 的透明全身立绘，原有 `assets/characters/{id}.webp` 继续用于属性栏肖像。四名角色的全身源图统一面朝画面右侧；敌人放在战场右侧时由界面水平镜像，形成面对面站位。`tools/make_standees.gd` 按 alpha 边界裁切，再等比例放入 **320×480** 的透明画框，不裁掉头、脚或法器，输出到 `assets/characters/{id}_standee.webp`；战斗里以 300×450 显示。执行 `Godot --headless --path . --script res://tools/make_standees.gd -- --force` 可重建全部战场立绘，之后运行 `Godot --headless --path . --import` 导入新图片。
 
-动态特效集中在 `ui/battle_fx.gd`。新增卡牌会按主属性和第一个效果自动选择特效；也可在卡牌 JSON 中填写可选字段 `fx_id`、`fx_scale`、`fx_speed`、`fx_intensity` 调整表现，无须为每张牌单独写脚本。特效的起止点由 `battle_ui.gd` 里的 `PLAYER_ANCHOR` / `ENEMY_ANCHOR` 给出，`cast()` 优先飞向实际选中的角色或召唤物；没有显式目标时按卡牌 `effects` 的 `target` 选择立绘。使用本机 Godot 执行 `--path . --script res://tools/capture_fx.gd` 可自动截取五行轨迹、命中和状态反馈到 `work/fx_previews/`，执行 `--path . --script res://tools/capture_layout.gd` 可把横版布局、双方 HUD、圆形能量和双向特效截到 `work/layout_previews/`，供视觉检查。
+动态特效集中在 `ui/battle_fx.gd`，伤害数字由 `ui/damage_number.gd` 绘制。战场立绘放在常驻节点层里，普通手牌与 HUD 刷新不会重新创建立绘或重启其待机动画。新增卡牌会按主属性和第一个效果自动选择特效；也可在卡牌 JSON 中填写可选字段 `fx_id`、`fx_scale`、`fx_speed`、`fx_intensity` 调整表现，无须为每张牌单独写脚本。特效的起止点由 `battle_ui.gd` 里的 `PLAYER_ANCHOR` / `ENEMY_ANCHOR` 给出，`cast()` 优先飞向实际选中的角色或召唤物；没有显式目标时按卡牌 `effects` 的 `target` 选择立绘。使用本机 Godot 执行 `--path . --script res://tools/capture_fx.gd` 可自动截取五行轨迹、命中和状态反馈到 `work/fx_previews/`，执行 `--path . --script res://tools/capture_layout.gd` 可把横版布局、双方 HUD、圆形能量和双向特效截到 `work/layout_previews/`，供视觉检查。
 
 ## 测试
 

@@ -56,7 +56,8 @@ func run() -> void:
 		quit(1)
 		return
 	var field_view: SummonView
-	for child in ui.get_children():
+	var actor_layer: Control = ui.get("actor_layer")
+	for child in actor_layer.get_children():
 		if child is SummonView:
 			field_view = child
 			break
@@ -71,6 +72,47 @@ func run() -> void:
 		push_error("Summon portrait did not float")
 		quit(1)
 		return
+	var player_standee: Control = ui.get("standee_nodes")["player"]
+	ui.call("_refresh")
+	await process_frame
+	if ui.get("standee_nodes")["player"] != player_standee or ui.get("summon_views")["player_0"] != field_view:
+		push_error("Refreshing the hand recreated the battlefield actors")
+		quit(1)
+		return
+	ui.call("_on_action_event", "测试受击", "player", "damage", "fire", 7)
+	await create_timer(0.12).timeout
+	var plain_number := _latest_damage_number(ui.get("fx_layer"))
+	if player_standee.modulate == Color.WHITE or plain_number == null or plain_number.matchup != "" or plain_number.get_child_count() != 1:
+		push_error("Hero hit feedback or damage number did not appear")
+		quit(1)
+		return
+	await _shot(output.path_join("hero_hit.png"))
+	await create_timer(1.0).timeout
+	ui.call("_on_action_event", "测试受击 · 克制", "player", "damage", "fire", 8)
+	await create_timer(0.12).timeout
+	var strong_number := _latest_damage_number(ui.get("fx_layer"))
+	if strong_number == null or strong_number.matchup != "克制" or strong_number.get_child_count() != 2:
+		push_error("Element advantage was not placed inside the damage number")
+		quit(1)
+		return
+	await _shot(output.path_join("advantage_hit.png"))
+	await create_timer(1.0).timeout
+	ui.call("_on_action_event", "测试受击 · 抵抗", "player", "damage", "water", 4)
+	await create_timer(0.12).timeout
+	var resisted_number := _latest_damage_number(ui.get("fx_layer"))
+	if resisted_number == null or resisted_number.matchup != "抵抗" or resisted_number.get_child_count() != 2:
+		push_error("Element resistance was not placed inside the damage number")
+		quit(1)
+		return
+	await _shot(output.path_join("resisted_hit.png"))
+	await create_timer(1.0).timeout
+	ui.call("_on_summon_event", "player", 0, "damage", "metal", 5)
+	await create_timer(0.12).timeout
+	if field_view.modulate == Color.WHITE:
+		push_error("Summon hit feedback did not appear")
+		quit(1)
+		return
+	await _shot(output.path_join("summon_hit.png"))
 	await _shot(output.path_join("player_summon.png"))
 	ui.call("_on_summon_hover", "player", 0)
 	await process_frame
@@ -161,3 +203,10 @@ func _drag(ui: Control, index: int, destination: Vector2, read_preview: bool = f
 func _shot(path: String) -> void:
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(path)
+
+func _latest_damage_number(layer: Control) -> DamageNumber:
+	for index in range(layer.get_child_count() - 1, -1, -1):
+		var child := layer.get_child(index)
+		if child is DamageNumber:
+			return child
+	return null

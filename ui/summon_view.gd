@@ -2,8 +2,11 @@ class_name SummonView
 extends Panel
 
 const VIEW_SIZE := Vector2(190, 190)
+var summon_ref: Summon
+var hp_label: Label
 
 func configure(summoned: Summon) -> void:
+	summon_ref = summoned
 	size = VIEW_SIZE
 	custom_minimum_size = VIEW_SIZE
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -35,9 +38,13 @@ func configure(summoned: Summon) -> void:
 	badge_style.set_corner_radius_all(13)
 	hp_badge.add_theme_stylebox_override("panel", badge_style)
 	add_child(hp_badge)
-	_label(hp_badge, "%d / %d" % [summoned.hp, summoned.max_hp], Vector2.ZERO, hp_badge.size, 15, Color.WHITE)
+	hp_label = _label(hp_badge, "%d / %d" % [summoned.hp, summoned.max_hp], Vector2.ZERO, hp_badge.size, 15, Color.WHITE)
 
-func _label(parent: Node, value: String, at: Vector2, dimensions: Vector2, font_size: int, color: Color) -> void:
+func refresh_health() -> void:
+	if is_instance_valid(hp_label):
+		hp_label.text = "%d / %d" % [summon_ref.hp, summon_ref.max_hp]
+
+func _label(parent: Node, value: String, at: Vector2, dimensions: Vector2, font_size: int, color: Color) -> Label:
 	var label := Label.new()
 	label.text = value
 	label.position = at
@@ -48,3 +55,4 @@ func _label(parent: Node, value: String, at: Vector2, dimensions: Vector2, font_
 	label.add_theme_color_override("font_color", color)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(label)
+	return label

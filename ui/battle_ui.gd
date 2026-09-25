@@ -12,6 +12,7 @@ const CARD_VIEW_SCENE := preload("res://ui/card_view.tscn")
 const SUMMON_CARD_VIEW_SCENE := preload("res://ui/summon_card_view.tscn")
 const CARD_BACK_SCENE := preload("res://ui/card_back.tscn")
 const SUMMON_VIEW_SCENE := preload("res://ui/summon_view.tscn")
+const DAMAGE_NUMBER_SCRIPT := preload("res://ui/damage_number.gd")
 const TARGET_MARKER_SCRIPT := preload("res://ui/target_marker.gd")
 const STATUS_ICON_SCRIPT := preload("res://ui/status_icon.gd")
 const CARD_REVEAL_SECONDS := 1.45
@@ -63,8 +64,11 @@ const SUMMON_TARGET_RADIUS := 82.0
 const ENEMY_HERO_TARGET := Rect2(1180, 198, 345, 445)
 
 var manager: BattleManager
+var actor_layer: Control
 var fx_layer: Control
 var battle_fx: BattleFX
+var standee_nodes: Dictionary = {}
+var summon_views: Dictionary = {}
 var selected_index := -1
 var hovered_index := -1
 var menu_enemy := "ember"
@@ -103,6 +107,10 @@ func _ready() -> void:
 	manager.changed.connect(_refresh)
 	manager.action_event.connect(_on_action_event)
 	manager.summon_event.connect(_on_summon_event)
+	actor_layer = Control.new()
+	actor_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	actor_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(actor_layer)
 	fx_layer = Control.new()
 	fx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	fx_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -164,7 +172,7 @@ func _refresh() -> void:
 		return
 	_clear_hover_preview()
 	for child in get_children():
-		if child != manager and child != fx_layer:
+		if child != manager and child != actor_layer and child != fx_layer:
 			remove_child(child)
 			child.queue_free()
 	var background := ColorRect.new()
@@ -181,7 +189,9 @@ func _refresh() -> void:
 		art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		add_child(art)
 		move_child(art, 1)
+	move_child(actor_layer, 2 if texture != null else 1)
 	if manager.phase == "menu":
+		_clear_actors()
 		_build_menu()
 	else:
 		_build_battle()
@@ -219,6 +229,7 @@ func _build_menu() -> void:
 	_label(self, "操作：伤害牌拖向角色或召唤物；召唤牌拖向空槽；其他牌拖到战场上方。", Vector2(290, 820), Vector2(1020, 38), 18, MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 
 func _start_battle() -> void:
+	_clear_actors()
 	selected_index = -1
 	hovered_index = -1
 	player_hidden_index = -1
@@ -351,9 +362,18 @@ func _portrait(parent: Node, actor_id: String, pos: Vector2, sz: Vector2, enemy_
 
 # --- arena actors -----------------------------------------------------------
 
+func _clear_actors() -> void:
+	standee_nodes.clear()
+	summon_views.clear()
+	for child in actor_layer.get_children():
+		child.queue_free()
+		actor_layer.remove_child(child)
+
 func _build_standees() -> void:
-	_standee("player", STANDEE_MARGIN, false, 2.4)
-	_standee(manager.enemy.id, VIEW_SIZE.x - STANDEE_MARGIN - STANDEE_SIZE.x, MIRROR_ENEMY_STANDEE, 2.0)
+	if not standee_nodes.is_empty():
+		return
+	standee_nodes["player"] = _standee("player", STANDEE_MARGIN, false, 2.4)
+	standee_nodes["enemy"] = _standee(manager.enemy.id, VIEW_SIZE.x - STANDEE_MARGIN - STANDEE_SIZE.x, MIRROR_ENEMY_STANDEE, 2.0)
 
 func _summon_slot_rect(side: String, slot: int) -> Rect2:
 	var center: Vector2 = SUMMON_CENTERS[slot]
@@ -368,17 +388,29 @@ func _build_summons() -> void:
 	for side in ["player", "enemy"]:
 		var owner: Combatant = manager.player if side == "player" else manager.enemy
 		for slot in owner.summons.size():
+			var key := "%s_%d" % [side, slot]
 			var summoned: Summon = owner.summons[slot]
+			var existing: SummonView = summon_views.get(key)
 			if summoned == null:
+				if is_instance_valid(existing):
+					existing.queue_free()
+					summon_views.erase(key)
 				continue
-			var view: Panel = SUMMON_VIEW_SCENE.instantiate()
+			if is_instance_valid(existing) and existing.summon_ref == summoned:
+				existing.refresh_health()
+				continue
+			if is_instance_valid(existing):
+				existing.queue_free()
+			var view: SummonView = SUMMON_VIEW_SCENE.instantiate()
 			view.call("configure", summoned)
 			view.position = _summon_slot_rect(side, slot).position
+			view.set_meta("rest_x", view.position.x)
 			view.mouse_entered.connect(_on_summon_hover.bind(side, slot))
 			view.mouse_exited.connect(_on_summon_exit.bind(side, slot))
-			add_child(view)
+			actor_layer.add_child(view)
+			summon_views[key] = view
 
-func _standee(actor_id: String, x: float, mirrored: bool, bob_seconds: float) -> void:
+func _standee(actor_id: String, x: float, mirrored: bool, bob_seconds: float) -> Control:
 	var path := "res://assets/characters/%s_standee.webp" % actor_id
 	if not ResourceLoader.exists(path):
 		path = "res://assets/characters/%s.webp" % actor_id
@@ -392,14 +424,18 @@ func _standee(actor_id: String, x: float, mirrored: bool, bob_seconds: float) ->
 		actor.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		actor.stretch_mode = TextureRect.STRETCH_SCALE
 		actor.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(actor)
+		actor_layer.add_child(actor)
+		actor.set_meta("rest_x", actor.position.x)
 		var tween := actor.create_tween().set_loops()
 		tween.tween_property(actor, "position:y", STANDEE_TOP - 6.0, bob_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		tween.tween_property(actor, "position:y", STANDEE_TOP, bob_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		return actor
 	else:
 		var glyph := "火" if actor_id == "ember" else "水" if actor_id == "tide" else "行" if actor_id == "harmony" else "云"
-		var box := _panel(self, Rect2(x + 60.0, STANDEE_TOP + 110.0, 180, 180), Color("#17304a99"), RED.darkened(0.2), 90)
+		var box := _panel(actor_layer, Rect2(x + 60.0, STANDEE_TOP + 110.0, 180, 180), Color("#17304a99"), RED.darkened(0.2), 90)
 		_label(box, glyph, Vector2.ZERO, Vector2(180, 180), 96, RED if actor_id != "player" else Color("#95d9da"), HORIZONTAL_ALIGNMENT_CENTER)
+		box.set_meta("rest_x", box.position.x)
+		return box
 
 func _show_turn_notice(side: String) -> void:
 	if is_instance_valid(turn_notice):
@@ -854,16 +890,50 @@ func _build_result() -> void:
 func _anchor(side: String) -> Vector2:
 	return ENEMY_ANCHOR if side == "enemy" else PLAYER_ANCHOR
 
+func _play_hit_feedback(target: Control, side: String) -> void:
+	if not is_instance_valid(target):
+		return
+	var old_tween: Tween = target.get_meta("hit_tween") if target.has_meta("hit_tween") else null
+	if old_tween != null and old_tween.is_running():
+		old_tween.kill()
+	var rest_x := float(target.get_meta("rest_x", target.position.x))
+	target.position.x = rest_x + (15.0 if side == "enemy" else -15.0)
+	target.modulate = Color("#ff7770")
+	var tween := target.create_tween().set_parallel(true)
+	tween.tween_property(target, "position:x", rest_x, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(target, "modulate", Color.WHITE, 0.38).set_trans(Tween.TRANS_SINE)
+	target.set_meta("hit_tween", tween)
+
+func _show_damage_number(amount: int, point: Vector2, matchup: String = "") -> void:
+	var number: DamageNumber = DAMAGE_NUMBER_SCRIPT.new()
+	number.configure(amount, matchup)
+	number.position = point - Vector2(119, 94)
+	fx_layer.add_child(number)
+	number.play()
+
 func _on_summon_event(side: String, slot: int, kind: String, element: String, amount: int) -> void:
 	if fx_layer == null or not is_inside_tree():
 		return
 	var point := _summon_point(side, slot)
+	var key := "%s_%d" % [side, slot]
 	match kind:
 		"spawn": battle_fx.energy(point, element, true)
 		"damage":
 			battle_fx.impact(element, point)
-			_show_floating("-%d" % amount, side, RED, 0.0, point + Vector2(-90, -45))
-		"destroy": battle_fx.impact(element, point)
+			if amount > 0:
+				_play_hit_feedback(summon_views.get(key), side)
+				_show_damage_number(amount, point)
+		"destroy":
+			battle_fx.impact(element, point)
+			var fallen: SummonView = summon_views.get(key)
+			if is_instance_valid(fallen):
+				summon_views.erase(key)
+				fallen.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				fallen.pivot_offset = fallen.size / 2.0
+				var fade := fallen.create_tween().set_parallel(true)
+				fade.tween_property(fallen, "self_modulate:a", 0.0, 0.4)
+				fade.tween_property(fallen, "scale", Vector2(0.84, 0.84), 0.4)
+				fade.chain().tween_callback(fallen.queue_free)
 
 func _on_action_event(message: String, side: String, kind: String, element: String, amount: int) -> void:
 	if fx_layer == null or not is_inside_tree():
@@ -876,6 +946,10 @@ func _on_action_event(message: String, side: String, kind: String, element: Stri
 	var target := _anchor(side)
 	if kind == "damage":
 		battle_fx.impact(element, target, "shield" if message.contains("护盾抵消") else "")
+		if amount > 0:
+			_play_hit_feedback(standee_nodes.get(side), side)
+			var matchup := "克制" if message.contains("克制") else "抵抗" if message.contains("抵抗") else ""
+			_show_damage_number(amount, target, matchup)
 	elif kind == "heal" and amount > 0:
 		battle_fx.heal(target, element)
 	elif kind in ["energy", "energy_loss", "play"] and amount > 0:
@@ -893,15 +967,13 @@ func _on_action_event(message: String, side: String, kind: String, element: Stri
 		return
 	if kind not in ["damage", "heal", "energy", "energy_loss"] or amount <= 0:
 		return
+	if kind == "damage":
+		return
 	var float_point := Vector2(-1, -1)
 	if kind in ["energy", "energy_loss"]:
 		# Numbers drift away from the HUD panel instead of over its own text.
 		float_point = _energy_point(side, element) + Vector2(-90, 130 if side == "enemy" else -150)
 	_show_floating(("-" if kind in ["damage", "energy_loss"] else "+") + str(amount), side, RED if kind == "damage" else BattleRules.color(element) if element != "" else GOLD, 0.0, float_point)
-	if kind == "damage" and message.contains("克制"):
-		_show_floating("克制", side, GOLD, 39.0)
-	elif kind == "damage" and message.contains("抵抗"):
-		_show_floating("抵抗", side, Color("#bde9ff"), 39.0)
 
 func _energy_point(side: String, element: String) -> Vector2:
 	var index := BattleRules.ELEMENTS.find(element)
