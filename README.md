@@ -47,7 +47,7 @@ Godot 4.6 的单机 PVE 五行卡牌战斗原型。三份 v0.3 原始设计文�
 
 本版使用 AI 生成的 1 张背景、4 张角色立绘、5 张五行通用插画和 1 张透明法阵纹理。每张卡的独立插画尚未生成；数据里已有 `art_prompt`。运行 `python3 tools/art_pipeline.py manifest` 可从游戏数据生成全部 36 个资源任务；生成图片后用 `python3 tools/art_pipeline.py ingest card fire_edge 图片路径` 进行尺寸、构图比例检查、WebP 转换和按 ID 入库。角色、背景、特效纹理可将 `card` 分别换成 `character`、`background`、`fx`。图片内容仍需视觉审查；当前脚本不包含自动调用图像模型或视觉模型的步骤。
 
-横版对峙需要每个角色都有一张战场立绘。立绘由 1024×1536 的透明角色原图按 alpha 边界裁切后缩放到 **320×480**（2:3）生成，存为 `assets/characters/{id}_standee.webp`；对战里以 300×450 显示。执行 `Godot --headless --path . --script res://tools/make_standees.gd` 可为 `data/characters.json` 里所有缺少立绘的角色补齐（加 `-- --force` 可全部重建），之后用 `Godot --headless --path . --import` 让 Godot 导入新图片。
+横版对峙使用 `assets/characters/fullbody/{id}.webp` 的透明全身立绘，原有 `assets/characters/{id}.webp` 继续用于属性栏肖像。四名角色的全身源图统一面朝画面右侧；敌人放在战场右侧时由界面水平镜像，形成面对面站位。`tools/make_standees.gd` 按 alpha 边界裁切，再等比例放入 **320×480** 的透明画框，不裁掉头、脚或法器，输出到 `assets/characters/{id}_standee.webp`；战斗里以 300×450 显示。执行 `Godot --headless --path . --script res://tools/make_standees.gd -- --force` 可重建全部战场立绘，之后运行 `Godot --headless --path . --import` 导入新图片。
 
 动态特效集中在 `ui/battle_fx.gd`。新增卡牌会按主属性和第一个效果自动选择特效；也可在卡牌 JSON 中填写可选字段 `fx_id`、`fx_scale`、`fx_speed`、`fx_intensity` 调整表现，无须为每张牌单独写脚本。特效的起止点由 `battle_ui.gd` 里的 `PLAYER_ANCHOR` / `ENEMY_ANCHOR` 给出，`cast()` 根据卡牌 `effects` 的 `target` 判断该飞向对方立绘还是落回自己立绘。使用本机 Godot 执行 `--path . --script res://tools/capture_fx.gd` 可自动截取五行轨迹、命中和状态反馈到 `work/fx_previews/`，执行 `--path . --script res://tools/capture_layout.gd` 可把横版布局、双方 HUD、圆形能量和双向特效截到 `work/layout_previews/`，供视觉检查。
 

@@ -38,7 +38,7 @@ const STATUS_ICONS_PER_ROW := 8
 const STANDEE_SIZE := Vector2(300, 450)
 const STANDEE_TOP := 228.0
 const STANDEE_MARGIN := 105.0
-const MIRROR_ENEMY_STANDEE := false
+const MIRROR_ENEMY_STANDEE := true
 # Where a card leaves its caster and where effects land on a standee.
 const PLAYER_ANCHOR := Vector2(292, 452)
 const ENEMY_ANCHOR := Vector2(1308, 452)

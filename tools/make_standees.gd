@@ -1,16 +1,18 @@
 extends SceneTree
 
-# Builds the arena standee texture for every character from its transparent
-# portrait, so the side-by-side battle layout has one art asset per fighter.
+# Builds each arena standee from its transparent full-body artwork. The older
+# portraits remain available for HUD headshots.
 #
 #   Godot --headless --path . --script res://tools/make_standees.gd
 #   Godot --headless --path . --script res://tools/make_standees.gd -- --force
 #
-# Portraits are 1024x1536 with an alpha background; standees keep the 2:3
-# framing at 320x480, matching the assets the original prototype shipped.
+# Full-body sources are 1024x1536 with alpha. Fit the complete figure into a
+# 320x480 transparent frame without changing its aspect ratio.
 
 const PORTRAIT_DIR := "res://assets/characters"
+const FULLBODY_DIR := "res://assets/characters/fullbody"
 const STANDEE_SIZE := Vector2i(320, 480)
+const PADDING := 8
 const WEBP_QUALITY := 0.9
 
 func _initialize() -> void:
@@ -22,41 +24,48 @@ func _initialize() -> void:
 	var missing := 0
 	for entry in characters:
 		var id := str(entry["id"])
-		var portrait_path := "%s/%s.webp" % [PORTRAIT_DIR, id]
+		var source_path := "%s/%s.webp" % [FULLBODY_DIR, id]
+		if not FileAccess.file_exists(source_path):
+			source_path = "%s/%s.webp" % [PORTRAIT_DIR, id]
 		var standee_path := "%s/%s_standee.webp" % [PORTRAIT_DIR, id]
-		if not FileAccess.file_exists(portrait_path):
-			push_warning("No portrait for '%s' (%s); skipping" % [id, portrait_path])
+		if not FileAccess.file_exists(source_path):
+			push_warning("No artwork for '%s' (%s); skipping" % [id, source_path])
 			missing += 1
 			continue
 		if FileAccess.file_exists(standee_path) and not force:
 			kept += 1
 			continue
-		var portrait := Image.load_from_file(portrait_path)
-		if portrait == null:
-			push_error("Could not read %s" % portrait_path)
+		var source := Image.load_from_file(source_path)
+		if source == null:
+			push_error("Could not read %s" % source_path)
 			quit(1)
 			return
-		var standee := _build_standee(portrait)
+		var standee := _build_standee(source)
 		var err := standee.save_webp(standee_path, true, WEBP_QUALITY)
 		if err != OK:
 			push_error("Could not write %s (error %d)" % [standee_path, err])
 			quit(1)
 			return
 		print("wrote %s (%dx%d from %dx%d)" % [standee_path, standee.get_width(), standee.get_height(),
-			portrait.get_width(), portrait.get_height()])
+			source.get_width(), source.get_height()])
 		made += 1
 	print("standees: %d written, %d already present, %d without portrait" % [made, kept, missing])
 	quit()
 
-func _build_standee(portrait: Image) -> Image:
-	# Trim to the alpha bounding box first so a portrait with generous padding
-	# still fills the standee frame the way the shipped artwork does.
-	var bounds := _opaque_bounds(portrait)
-	var standee := portrait
-	if bounds.size.x > 0 and bounds.size.y > 0:
-		standee = Image.create_empty(bounds.size.x, bounds.size.y, false, portrait.get_format())
-		standee.blit_rect(portrait, bounds, Vector2i.ZERO)
-	standee.resize(STANDEE_SIZE.x, STANDEE_SIZE.y, Image.INTERPOLATE_LANCZOS)
+func _build_standee(source: Image) -> Image:
+	# Trim transparent margins, then fit the entire silhouette with a small inset.
+	var bounds := _opaque_bounds(source)
+	if bounds.size.x <= 0 or bounds.size.y <= 0:
+		return Image.create_empty(STANDEE_SIZE.x, STANDEE_SIZE.y, false, Image.FORMAT_RGBA8)
+	var cropped := source.get_region(bounds)
+	var available := STANDEE_SIZE - Vector2i(PADDING * 2, PADDING * 2)
+	var fit := minf(float(available.x) / float(bounds.size.x), float(available.y) / float(bounds.size.y))
+	var fitted_size := Vector2i(maxi(1, roundi(bounds.size.x * fit)), maxi(1, roundi(bounds.size.y * fit)))
+	cropped.resize(fitted_size.x, fitted_size.y, Image.INTERPOLATE_LANCZOS)
+	var standee := Image.create_empty(STANDEE_SIZE.x, STANDEE_SIZE.y, false, Image.FORMAT_RGBA8)
+	standee.fill(Color.TRANSPARENT)
+	var target := Vector2i((STANDEE_SIZE.x - fitted_size.x) / 2, STANDEE_SIZE.y - PADDING - fitted_size.y)
+	standee.blit_rect(cropped, Rect2i(Vector2i.ZERO, fitted_size), target)
 	return standee
 
 func _opaque_bounds(image: Image) -> Rect2i:
