@@ -7,17 +7,17 @@ const GOLD := Color("#dec596")
 const MUTED := Color("#9aaabc")
 const WHITE := Color("#f5f1e9")
 const RED := Color("#f48177")
-const HP_FILL := {"player": Color("#6ec9ae"), "enemy": Color("#d95e63")}
+const HP_FILL := Color("#d95e63")
 const CARD_VIEW_SCENE := preload("res://ui/card_view.tscn")
+const CARD_BACK_SCENE := preload("res://ui/card_back.tscn")
 const CARD_REVEAL_SECONDS := 1.45
 const EFFECT_PAUSE_SECONDS := 0.9
 
 # --- horizontal arena layout (1600x900 design viewport) ----------------------
 # The player stands on the left and the enemy on the right, facing each other.
 # Everything is point symmetric about the viewport centre: mirroring a point p
-# gives VIEW_SIZE - p, so the player HUD, hand and draw pile at the bottom left
-# / bottom right are matched by the enemy HUD, card backs and draw pile at the
-# top right / top left.
+# gives VIEW_SIZE - p. The hands use the same opposing fan geometry, with
+# independent offsets from their respective screen edges.
 const VIEW_SIZE := Vector2(1600, 900)
 
 const HUD_SIZE := Vector2(420, 210)
@@ -40,10 +40,11 @@ const MIRROR_ENEMY_STANDEE := false
 const PLAYER_ANCHOR := Vector2(292, 452)
 const ENEMY_ANCHOR := Vector2(1308, 452)
 
-const HAND_CENTER_X := 900.0
-const HAND_BASE_Y := 560.0
-const ENEMY_HAND_CENTER_X := VIEW_SIZE.x - HAND_CENTER_X
-const ENEMY_HAND_Y := 158.0
+const HAND_CENTER_X := 880.0
+const HAND_CARD_SIZE := Vector2(152, 212.8)
+const HAND_MAX_SPAN := 560.0
+const PLAYER_HAND_BASE_Y := 680.0
+const ENEMY_HAND_BASE_Y := 710.0
 const DECK_SIZE := Vector2(72, 102)
 const PLAYER_DECK_POS := Vector2(1512, 764)
 const ENEMY_DECK_POS := Vector2(16, 34)
@@ -274,7 +275,7 @@ func _build_combatant_hud(side: String) -> void:
 	_label(panel, "手牌 %d    牌库 %d    弃牌 %d" % [actor.hand.size(), actor.draw_pile.size(), actor.discard_pile.size()],
 		counts.position, counts.size, 15, MUTED, align)
 
-	_hp_bar(panel, _hud_local(side, HUD_HP), actor, enemy_side)
+	_hp_bar(panel, _hud_local(side, HUD_HP), actor)
 
 	# The orb row is laid out identically on both sides so 金木水火土 always read
 	# left to right; only the surrounding text mirrors.
@@ -289,14 +290,14 @@ func _side_subtitle(side: String) -> String:
 		return str(manager.find_entry(manager.enemies, manager.enemy.id).get("subtitle", ""))
 	return str(manager.find_entry(manager.decks, manager.selected_deck_id).get("name", ""))
 
-func _hp_bar(parent: Node, rect: Rect2, actor: Combatant, enemy_side: bool) -> void:
+func _hp_bar(parent: Node, rect: Rect2, actor: Combatant) -> void:
 	_panel(parent, rect, Color("#1b2631"), Color("#624d49"), 6)
 	var inner := rect.grow(-3.0)
 	var ratio := clampf(float(actor.hp) / float(maxi(1, actor.max_hp)), 0.0, 1.0)
 	var fill := ColorRect.new()
 	fill.position = inner.position
 	fill.size = Vector2(inner.size.x * ratio, inner.size.y)
-	fill.color = HP_FILL["enemy"] if enemy_side else HP_FILL["player"]
+	fill.color = HP_FILL
 	parent.add_child(fill)
 	_label(parent, "%d / %d" % [actor.hp, actor.max_hp], rect.position, rect.size, 14, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 
@@ -381,7 +382,7 @@ func _build_hand() -> void:
 	var count := manager.player.hand.size()
 	if count == 0:
 		return
-	var card_size := _hand_card_size(count)
+	var card_size := HAND_CARD_SIZE
 	for i in count:
 		var card: Dictionary = manager.cards[manager.player.hand[i]]
 		var view := _card_front(card, card_size)
@@ -402,43 +403,44 @@ func _build_hand() -> void:
 		if i >= count - pending_player_draws or i == player_hidden_index:
 			view.visible = false
 
-func _hand_card_size(count: int) -> Vector2:
-	var width := 122.0 if count >= 8 else 132.0 if count == 7 else 152.0
-	return Vector2(width, width * 1.4)
-
 func _hand_card_position(index: int, count: int) -> Vector2:
-	var width := _hand_card_size(count).x
-	# 780 keeps even a full 8 card hand clear of the bottom-left HUD panel.
-	var step := minf(width - 2.0, 780.0 / maxf(1.0, float(count - 1)))
+	return _fan_card_position(index, count, PLAYER_HAND_BASE_Y)
+
+func _fan_card_position(index: int, count: int, base_y: float) -> Vector2:
+	var width := HAND_CARD_SIZE.x
+	# Keep the outer cards between the player HUD and the end-turn button.
+	# Additional cards overlap instead of shrinking.
+	var step := minf(width - 2.0, HAND_MAX_SPAN / maxf(1.0, float(count - 1)))
 	var offset := float(index) - float(count - 1) / 2.0
-	return Vector2(HAND_CENTER_X + offset * step - width / 2.0, HAND_BASE_Y + 6.0 * offset * offset)
+	return Vector2(HAND_CENTER_X + offset * step - width / 2.0, base_y + 6.0 * offset * offset)
 
 func _hand_angle(index: int, count: int) -> float:
 	return (float(index) - float(count - 1) / 2.0) * 3.8
 
 func _hand_card_center(index: int, count: int) -> Vector2:
-	return _hand_card_position(index, count) + Vector2(_hand_card_size(count).x / 2.0, _hand_card_size(count).y * 0.45)
+	return _hand_card_position(index, count) + Vector2(HAND_CARD_SIZE.x / 2.0, HAND_CARD_SIZE.y * 0.45)
 
 func _card_front(card: Dictionary, card_size: Vector2) -> Panel:
 	var view: Panel = CARD_VIEW_SCENE.instantiate()
 	view.call("configure", card, card_size.x)
 	return view
 
-func _card_back(card_size: Vector2) -> Panel:
-	var back: Panel = CARD_VIEW_SCENE.instantiate()
-	back.call("configure_back", card_size)
+func _card_back(card_size: Vector2, upside_down: bool = false) -> Panel:
+	var back: Panel = CARD_BACK_SCENE.instantiate()
+	back.call("configure", card_size, upside_down)
 	return back
 
 func _build_enemy_hand() -> void:
 	enemy_backs.clear()
 	var count := manager.enemy.hand.size()
+	var card_size := HAND_CARD_SIZE
 	for i in count:
-		var back := _card_back(Vector2(68, 96))
+		var back := _card_back(card_size, true)
 		var target_position := _enemy_card_position(i, count)
 		var old_count := count - pending_enemy_draws
 		back.position = _enemy_card_position(i, old_count) if pending_enemy_draws > 0 and i < old_count else target_position
-		back.pivot_offset = Vector2(34, 90)
-		back.rotation_degrees = (float(i) - float(count - 1) / 2.0) * 4.0
+		back.pivot_offset = Vector2(card_size.x / 2.0, card_size.y * 0.18)
+		back.rotation_degrees = -_hand_angle(i, count)
 		add_child(back)
 		enemy_backs.append(back)
 		if back.position != target_position:
@@ -447,14 +449,16 @@ func _build_enemy_hand() -> void:
 			back.visible = false
 
 func _enemy_card_position(index: int, count: int) -> Vector2:
-	return Vector2(ENEMY_HAND_CENTER_X + (float(index) - float(count - 1) / 2.0) * 57.0 - 34.0, ENEMY_HAND_Y)
+	var card_size := HAND_CARD_SIZE
+	var opposite_position := _fan_card_position(count - 1 - index, count, ENEMY_HAND_BASE_Y)
+	return VIEW_SIZE - opposite_position - card_size
 
 func _build_decks() -> void:
 	var player_deck := _card_back(DECK_SIZE)
 	player_deck.position = PLAYER_DECK_POS
 	add_child(player_deck)
 	_label(self, str(manager.player.draw_pile.size()), PLAYER_DECK_POS + Vector2(0, -26), Vector2(DECK_SIZE.x, 24), 17, GOLD, HORIZONTAL_ALIGNMENT_CENTER)
-	var enemy_deck := _card_back(DECK_SIZE)
+	var enemy_deck := _card_back(DECK_SIZE, true)
 	enemy_deck.position = ENEMY_DECK_POS
 	add_child(enemy_deck)
 	_label(self, str(manager.enemy.draw_pile.size()), ENEMY_DECK_POS + Vector2(0, DECK_SIZE.y + 2), Vector2(DECK_SIZE.x, 24), 17, GOLD, HORIZONTAL_ALIGNMENT_CENTER)
@@ -484,7 +488,7 @@ func _show_hover_preview(index: int) -> void:
 		return
 	var card: Dictionary = manager.cards[manager.player.hand[index]]
 	hover_preview = _card_front(card, Vector2(270, 378))
-	hover_preview.position = Vector2(clampf(_hand_card_center(index, manager.player.hand.size()).x - 135.0, 430.0, 1030.0), 178.0)
+	hover_preview.position = Vector2(clampf(_hand_card_center(index, manager.player.hand.size()).x - 135.0, 430.0, 1030.0), 265.0)
 	fx_layer.add_child(hover_preview)
 	hover_preview.modulate.a = 0.0
 	hover_preview.create_tween().tween_property(hover_preview, "modulate:a", 1.0, 0.13)
@@ -504,11 +508,11 @@ func _on_hand_input(event: InputEvent, index: int) -> void:
 			return
 		drag_index = index
 		pointer_down = get_global_mouse_position()
-		drag_offset = _hand_card_size(manager.player.hand.size()) / 2.0
+		drag_offset = HAND_CARD_SIZE / 2.0
 		_clear_hover_preview()
 		if index < hand_cards.size():
 			hand_cards[index].visible = false
-		drag_card = _card_front(card, _hand_card_size(manager.player.hand.size()))
+		drag_card = _card_front(card, HAND_CARD_SIZE)
 		drag_card.position = pointer_down - drag_offset
 		fx_layer.add_child(drag_card)
 		get_viewport().set_input_as_handled()
@@ -579,7 +583,8 @@ func _run_enemy_turn() -> void:
 			manager.enemy_step(-1)
 			break
 		var card: Dictionary = manager.cards[manager.enemy.hand[chosen_index]]
-		var source := _enemy_card_position(chosen_index, manager.enemy.hand.size()) + Vector2(34, 48)
+		var enemy_card_size := HAND_CARD_SIZE
+		var source := _enemy_card_position(chosen_index, manager.enemy.hand.size()) + enemy_card_size / 2.0
 		enemy_hidden_index = chosen_index
 		_refresh()
 		await _present_card(card, "enemy", source)
@@ -630,13 +635,14 @@ func _animate_pending_draws(player_count: int, enemy_count: int, generation: int
 			var index := views.size() - count + offset
 			if index < 0 or index >= views.size() or not is_instance_valid(views[index]):
 				continue
-			var target := _hand_card_position(index, views.size()) + _hand_card_size(views.size()) / 2.0 if side == "player" else _enemy_card_position(index, views.size()) + Vector2(34, 48)
+			var hand_size := HAND_CARD_SIZE
+			var target := _hand_card_position(index, views.size()) + hand_size / 2.0 if side == "player" else _enemy_card_position(index, views.size()) + hand_size / 2.0
 			var source := _draw_pile_point(side)
-			var flying := _card_back(Vector2(88, 124))
+			var flying := _card_back(hand_size, side == "enemy")
 			fx_layer.add_child(flying)
 			flying.position = source - flying.size / 2.0
 			flying.pivot_offset = flying.size / 2.0
-			flying.scale = Vector2(0.6, 0.6)
+			flying.scale = Vector2.ONE * (DECK_SIZE.x / hand_size.x)
 			var tween := flying.create_tween().set_parallel(true)
 			tween.tween_property(flying, "position", target - flying.size / 2.0, 0.43).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 			tween.tween_property(flying, "scale", Vector2.ONE, 0.43)

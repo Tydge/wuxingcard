@@ -63,30 +63,6 @@ func _reapply_designed_sizes(node: Node) -> void:
 			child.size = child.get_meta("designed_size")
 		_reapply_designed_sizes(child)
 
-func configure_back(card_size: Vector2) -> void:
-	size = card_size
-	custom_minimum_size = card_size
-	clip_contents = true
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var border := StyleBoxFlat.new()
-	border.bg_color = Color("#172844")
-	border.border_color = Color("#a28f6e")
-	border.set_border_width_all(2)
-	border.set_corner_radius_all(9)
-	add_theme_stylebox_override("panel", border)
-	var inset := Panel.new()
-	inset.position = Vector2(5, 5)
-	inset.size = card_size - Vector2(10, 10)
-	var inner_style := StyleBoxFlat.new()
-	inner_style.bg_color = Color("#233956")
-	inner_style.border_color = Color("#73664f")
-	inner_style.set_border_width_all(1)
-	inner_style.set_corner_radius_all(6)
-	inset.add_theme_stylebox_override("panel", inner_style)
-	inset.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(inset)
-	_add_label(inset, "行", Vector2.ZERO, inset.size, 34, Color("#dec596"))
-
 func _add_label(parent: Node, value: String, at: Vector2, dimensions: Vector2, font_size: int, color: Color) -> Label:
 	var label := Label.new()
 	label.text = value
