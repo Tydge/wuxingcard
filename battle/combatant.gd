@@ -1,6 +1,8 @@
 class_name Combatant
 extends RefCounted
 
+const NO_DURATION_STATUSES := ["burn", "poison", "bleed", "weak", "vulnerable", "regen", "shield"]
+
 var id := ""
 var display_name := ""
 var max_hp := 100
@@ -42,12 +44,25 @@ func status_stacks(status_id: String, element: String = "") -> int:
 func add_status(status_id: String, stacks: int, turns: int, element: String = "") -> void:
 	if stacks <= 0:
 		return
+	var duration := 0 if status_id in NO_DURATION_STATUSES else maxi(1, turns)
 	for status in statuses:
 		if status["id"] == status_id and status.get("element", "") == element:
 			status["stacks"] = int(status["stacks"]) + stacks
-			status["turns"] = maxi(int(status["turns"]), turns)
+			status["turns"] = maxi(int(status["turns"]), duration)
 			return
-	statuses.append({"id": status_id, "stacks": stacks, "turns": turns, "element": element})
+	statuses.append({"id": status_id, "stacks": stacks, "turns": duration, "element": element})
+
+func decay_status(status_id: String) -> void:
+	for i in range(statuses.size() - 1, -1, -1):
+		if statuses[i]["id"] == status_id:
+			statuses[i]["stacks"] = int(statuses[i]["stacks"]) - 1
+			if int(statuses[i]["stacks"]) <= 0:
+				statuses.remove_at(i)
+
+func halve_shield() -> void:
+	for status in statuses:
+		if status["id"] == "shield":
+			status["stacks"] = ceili(float(status["stacks"]) / 2.0)
 
 func remove_status(status_id: String) -> void:
 	for i in range(statuses.size() - 1, -1, -1):
@@ -56,8 +71,9 @@ func remove_status(status_id: String) -> void:
 
 func tick_status_durations() -> void:
 	for i in range(statuses.size() - 1, -1, -1):
-		statuses[i]["turns"] = int(statuses[i]["turns"]) - 1
-		if int(statuses[i]["turns"]) <= 0 or int(statuses[i]["stacks"]) <= 0:
+		if int(statuses[i]["turns"]) > 0:
+			statuses[i]["turns"] = int(statuses[i]["turns"]) - 1
+		if int(statuses[i]["stacks"]) <= 0 or (statuses[i]["id"] not in NO_DURATION_STATUSES and int(statuses[i]["turns"]) <= 0):
 			statuses.remove_at(i)
 
 func can_pay(card: Dictionary) -> bool:

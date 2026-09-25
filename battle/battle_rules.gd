@@ -21,13 +21,14 @@ static func counter_of(element: String) -> String:
 			return key
 	return ""
 
-static func damage_breakdown(target: Combatant, amount: int, element: String) -> Dictionary:
+static func damage_breakdown(target: Combatant, amount: int, element: String, source: Combatant = null) -> Dictionary:
 	var same: int = target.energy[element]
 	var weak: int = target.energy[countered_by(element)]
 	var multiplier: float = maxf(0.0, 1.0 - same * 0.1 + weak * 0.1)
 	var vulnerable: int = target.status_stacks("vulnerable")
-	var before_shield: int = roundi(amount * multiplier * (1.0 + vulnerable * 0.25))
+	var weak_stacks := source.status_stacks("weak") if source != null else 0
+	var before_shield: int = roundi(amount * multiplier * maxf(0.0, 1.0 - weak_stacks * 0.1) * (1.0 + vulnerable * 0.1))
 	return {"base": amount, "same": same, "weak": weak, "multiplier": multiplier,
-		"vulnerable": vulnerable, "raw": before_shield,
+		"vulnerable": vulnerable, "weak_stacks": weak_stacks, "raw": before_shield,
 		"shield": mini(before_shield, target.status_stacks("shield")),
 		"hp": maxi(0, before_shield - target.status_stacks("shield"))}

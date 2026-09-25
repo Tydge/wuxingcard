@@ -37,6 +37,7 @@ func run_tests() -> void:
 	manager.draw_card(manager.player)
 	check(manager.player.hp == before_fatigue - 3, "fatigue increases 1 then 2")
 	check(manager.player.fatigue_level == 2, "fatigue level")
+	test_status_rules(manager)
 
 	var simulations := 0
 	var victories := 0
@@ -72,3 +73,65 @@ func run_tests() -> void:
 				simulations += 1
 	print("Smoke test: %d battles, %d victories, %d failures" % [simulations, victories, failures])
 	quit(1 if failures > 0 else 0)
+
+func test_status_rules(manager: BattleManager) -> void:
+	manager.start_battle("ember", "balanced", 2468)
+	var actor := manager.player
+	var opponent := manager.enemy
+	actor.statuses.clear()
+	for element in BattleRules.ELEMENTS:
+		actor.energy[element] = 0
+	actor.energy["fire"] = 6
+	actor.hand.clear()
+	for i in 3:
+		actor.hand.append("fire_strike")
+	actor.hp = 100
+	actor.add_status("burn", 2, 3)
+	actor.add_status("shield", 1, 2)
+	manager._end_turn(actor)
+	check(actor.hp == 99, "burn uses hand size, fire resistance, and shield")
+	check(actor.status_stacks("burn") == 1, "burn loses one stack at turn end")
+	check(actor.status_stacks("shield") == 0, "shield absorbs burn damage")
+	check(int(actor.statuses[0]["turns"]) == 0, "burn has no duration")
+
+	actor.statuses.clear()
+	actor.hp = 80
+	actor.add_status("regen", 3, 2)
+	actor.add_status("weak", 2, 2)
+	actor.add_status("vulnerable", 3, 2)
+	manager._end_turn(actor)
+	check(actor.hp == 83 and actor.status_stacks("regen") == 2, "regen heals current stacks at turn end, then decays")
+	check(actor.status_stacks("weak") == 1 and actor.status_stacks("vulnerable") == 2, "weak and vulnerable decay at turn end")
+	check(manager.status_tooltip(actor.statuses[0]).contains("回合结束"), "status tooltip explains trigger")
+
+	var source := Combatant.new()
+	var target := Combatant.new()
+	for element in BattleRules.ELEMENTS:
+		source.energy[element] = 0
+		target.energy[element] = 0
+	source.add_status("weak", 2, 0)
+	target.add_status("vulnerable", 3, 0)
+	check(BattleRules.damage_breakdown(target, 20, "fire", source)["hp"] == 21, "weak and vulnerable change damage by 10% per stack")
+
+	actor.statuses.clear()
+	actor.hp = 100
+	actor.energy["metal"] = 0
+	actor.add_status("poison", 3, 0)
+	manager._resolve_effect(actor, opponent, {"type":"gain_energy", "target":"self", "element":"metal", "amount":3}, "metal")
+	check(actor.hp == 97 and actor.status_stacks("poison") == 2, "poison triggers once for one multi-point energy gain")
+	actor.statuses.clear()
+	actor.hp = 100
+	actor.hand.clear()
+	actor.hand.append("fire_strike")
+	actor.energy["fire"] = 3
+	actor.add_status("bleed", 2, 0)
+	manager.phase = "player_action"
+	manager.play_player_card(0)
+	check(actor.hp == 98 and actor.status_stacks("bleed") == 1, "bleed triggers on card play")
+
+	actor.statuses.clear()
+	actor.add_status("shield", 7, 2)
+	manager._start_turn(actor)
+	check(actor.status_stacks("shield") == 4, "shield halves upward at turn start")
+	manager._end_turn(actor)
+	check(actor.status_stacks("shield") == 4, "shield has no turn limit")

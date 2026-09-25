@@ -6,7 +6,7 @@ signal action_event(message: String, side: String, kind: String, element: String
 
 const CARD_PATH := "res://data/cards.json"
 const BATTLE_PATH := "res://data/battles.json"
-const STATUS_NAMES := {"burn":"灼烧", "shield":"护盾", "vulnerable":"易伤", "regen":"再生", "lock":"封锁"}
+const STATUS_NAMES := {"burn":"灼伤", "poison":"中毒", "bleed":"出血", "weak":"虚弱", "vulnerable":"脆弱", "regen":"再生", "shield":"护盾", "lock":"封锁"}
 
 var cards: Dictionary = {}
 var decks: Array = []
@@ -43,6 +43,29 @@ func find_entry(entries: Array, entry_id: String) -> Dictionary:
 		if entry["id"] == entry_id:
 			return entry
 	return entries[0]
+
+func status_tooltip(status: Dictionary) -> String:
+	var status_id: String = status["id"]
+	var stacks := int(status["stacks"])
+	var element: String = status.get("element", "")
+	var name: String = STATUS_NAMES.get(status_id, status_id)
+	if element != "":
+		name += "·" + BattleRules.element_name(element)
+	var effect := ""
+	match status_id:
+		"burn": effect = "回合结束时受到手牌数 × %d 的火属性伤害，再减少 1 层。火伤受五行抗性、克制和护盾影响。" % stacks
+		"poison": effect = "每获得一次能量，失去 %d 点生命，再减少 1 层；一次获得多点能量只触发一次。" % stacks
+		"bleed": effect = "每打出一张牌，失去 %d 点生命，再减少 1 层。" % stacks
+		"weak": effect = "造成的元素伤害降低 %d%%，回合结束时减少 1 层。" % (stacks * 10)
+		"vulnerable": effect = "受到的元素伤害增加 %d%%，回合结束时减少 1 层。" % (stacks * 10)
+		"regen": effect = "回合结束时恢复 %d 点生命，再减少 1 层。" % stacks
+		"shield": effect = "抵消 %d 点元素伤害。每次回合开始时层数向上取整减半。" % stacks
+		"lock": effect = "不能获得该属性能量，也不能打出该属性卡。"
+		_: effect = "当前效果：%d 层。" % stacks
+	var duration := int(status.get("turns", 0))
+	if duration > 0:
+		effect += "\n剩余 %d 回合。" % duration
+	return "%s %d 层\n%s" % [name, stacks, effect]
 
 func start_battle(enemy_id: String, deck_id: String, seed_value: int = -1) -> void:
 	selected_enemy_id = enemy_id
@@ -99,8 +122,10 @@ func generate_natural_energy(actor: Combatant) -> String:
 	for element in BattleRules.ELEMENTS:
 		roll -= int(weights[element])
 		if roll <= 0:
-			actor.gain_energy(element, 1)
+			var gained := actor.gain_energy(element, 1)
 			_report("%s 获得 1 %s自然能量" % [actor.display_name, BattleRules.element_name(element)], _side(actor), "energy", element, 1)
+			if gained > 0:
+				_trigger_poison(actor)
 			return element
 	return ""
 
@@ -127,15 +152,17 @@ func _start_turn(actor: Combatant) -> void:
 	else:
 		phase = "enemy_turn_start"
 		_report("%s 的回合" % actor.display_name, "system", "turn")
-	var regen := actor.status_stacks("regen")
-	if regen > 0:
-		var healed := mini(actor.max_hp - actor.hp, regen * 3)
-		actor.hp += healed
-		if healed > 0:
-			_report("%s 再生，恢复 %d 生命" % [actor.display_name, healed], _side(actor), "heal", "wood", healed)
+	var shield_before := actor.status_stacks("shield")
+	if shield_before > 0:
+		actor.halve_shield()
+		var shield_after := actor.status_stacks("shield")
+		if shield_after < shield_before:
+			_report("%s 护盾从 %d 减为 %d" % [actor.display_name, shield_before, shield_after], _side(actor), "status_shield", "", shield_before - shield_after)
 	if _check_finish():
 		return
 	generate_natural_energy(actor)
+	if _check_finish():
+		return
 	draw_card(actor)
 	if _check_finish():
 		return
@@ -157,6 +184,7 @@ func _play_card(actor: Combatant, target: Combatant, index: int) -> bool:
 	actor.hand.remove_at(index)
 	actor.lose_energy(card["element"], int(card["cost"]))
 	_report("%s 使用「%s」" % [actor.display_name, card["name"]], _side(actor), "play", card["element"], int(card["cost"]))
+	_trigger_bleed(actor)
 	for effect in card["effects"]:
 		if phase == "victory" or phase == "defeat":
 			break
@@ -185,6 +213,8 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 		"gain_energy":
 			var gained := target.gain_energy(effect["element"], amount)
 			_report("%s 获得 %d %s能量" % [target.display_name, gained, BattleRules.element_name(effect["element"])], _side(target), "energy", effect["element"], gained)
+			if gained > 0:
+				_trigger_poison(target)
 		"lose_energy":
 			var lost := target.lose_energy(effect["element"], amount)
 			if actor == player:
@@ -196,12 +226,14 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 				target.lose_energy(from_element, amount)
 				var gained := target.gain_energy(effect["to"], int(effect["gain"]))
 				_report("%s 将 %d %s转为 %d %s" % [target.display_name, amount, BattleRules.element_name(from_element), gained, BattleRules.element_name(effect["to"])], _side(target), "energy", effect["to"], gained)
+				if gained > 0:
+					_trigger_poison(target)
 		"status":
 			var status_id: String = effect["status"]
 			var element: String = effect.get("element", "")
-			target.add_status(status_id, int(effect["stacks"]), int(effect["turns"]), element)
+			target.add_status(status_id, int(effect["stacks"]), int(effect.get("turns", 0)), element)
 			var detail := " · %s" % BattleRules.element_name(element) if element != "" else ""
-			_report("%s 获得 %s%s ×%d" % [target.display_name, STATUS_NAMES[status_id], detail, int(effect["stacks"])], _side(target), "status_" + status_id, card_element, int(effect["stacks"]))
+			_report("%s 获得 %d 层%s%s" % [target.display_name, int(effect["stacks"]), STATUS_NAMES.get(status_id, status_id), detail], _side(target), "status_" + status_id, card_element, int(effect["stacks"]))
 		"discard":
 			for i in amount:
 				if target.hand.is_empty():
@@ -212,7 +244,7 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 				_report("%s 被弃掉 1 张手牌" % target.display_name, _side(target), "discard")
 
 func apply_damage(source: Combatant, target: Combatant, base_amount: int, element: String) -> int:
-	var breakdown := BattleRules.damage_breakdown(target, base_amount, element)
+	var breakdown := BattleRules.damage_breakdown(target, base_amount, element, source)
 	var raw: int = breakdown["raw"]
 	var shielded: int = breakdown["shield"]
 	var dealt: int = breakdown["hp"]
@@ -241,12 +273,43 @@ func apply_damage(source: Combatant, target: Combatant, base_amount: int, elemen
 func _end_turn(actor: Combatant) -> void:
 	var burn := actor.status_stacks("burn")
 	if burn > 0:
-		var amount := burn * 2
-		actor.hp = maxi(0, actor.hp - amount)
-		_report("%s 灼烧：失去 %d 生命" % [actor.display_name, amount], _side(actor), "damage", "fire", amount)
+		var amount := actor.hand.size() * burn
+		if amount > 0:
+			apply_damage(null, actor, amount, "fire")
+		actor.decay_status("burn")
+	if phase in ["victory", "defeat"]:
+		changed.emit()
+		return
+	var regen := actor.status_stacks("regen")
+	if regen > 0:
+		var healed := mini(actor.max_hp - actor.hp, regen)
+		actor.hp += healed
+		if healed > 0:
+			_report("%s 再生，恢复 %d 生命" % [actor.display_name, healed], _side(actor), "heal", "wood", healed)
+		actor.decay_status("regen")
+	actor.decay_status("weak")
+	actor.decay_status("vulnerable")
 	actor.tick_status_durations()
 	_check_finish()
 	changed.emit()
+
+func _trigger_poison(actor: Combatant) -> void:
+	var stacks := actor.status_stacks("poison")
+	if stacks <= 0:
+		return
+	actor.hp = maxi(0, actor.hp - stacks)
+	actor.decay_status("poison")
+	_report("%s 中毒：失去 %d 生命" % [actor.display_name, stacks], _side(actor), "damage", "", stacks)
+	_check_finish()
+
+func _trigger_bleed(actor: Combatant) -> void:
+	var stacks := actor.status_stacks("bleed")
+	if stacks <= 0:
+		return
+	actor.hp = maxi(0, actor.hp - stacks)
+	actor.decay_status("bleed")
+	_report("%s 出血：失去 %d 生命" % [actor.display_name, stacks], _side(actor), "damage", "", stacks)
+	_check_finish()
 
 func end_player_turn() -> void:
 	if phase != "player_action":
@@ -285,7 +348,7 @@ func _choose_enemy_card() -> int:
 		for effect in card["effects"]:
 			match effect["type"]:
 				"damage":
-					var preview := BattleRules.damage_breakdown(player, int(effect["amount"]), effect["element"])
+					var preview := BattleRules.damage_breakdown(player, int(effect["amount"]), effect["element"], enemy)
 					score += float(preview["hp"]) + float(preview["shield"]) * 0.65
 				"heal":
 					score += mini(enemy.max_hp - enemy.hp, int(effect["amount"])) * 0.9

@@ -10,6 +10,7 @@ const RED := Color("#f48177")
 const HP_FILL := Color("#d95e63")
 const CARD_VIEW_SCENE := preload("res://ui/card_view.tscn")
 const CARD_BACK_SCENE := preload("res://ui/card_back.tscn")
+const STATUS_ICON_SCRIPT := preload("res://ui/status_icon.gd")
 const CARD_REVEAL_SECONDS := 1.45
 const EFFECT_PAUSE_SECONDS := 0.9
 
@@ -20,17 +21,19 @@ const EFFECT_PAUSE_SECONDS := 0.9
 # independent offsets from their respective screen edges.
 const VIEW_SIZE := Vector2(1600, 900)
 
-const HUD_SIZE := Vector2(420, 210)
+const HUD_SIZE := Vector2(460, 160)
 const HUD_MARGIN := 16.0
 const HUD_PORTRAIT := Rect2(10, 10, 72, 72)
-const HUD_NAME := Rect2(92, 8, 316, 32)
-const HUD_COUNTS := Rect2(92, 40, 316, 22)
-const HUD_HP := Rect2(92, 66, 316, 18)
-const HUD_STATUS := Rect2(10, 154, 400, 48)
+const HUD_NAME := Rect2(92, 8, 356, 32)
+const HUD_COUNTS := Rect2(92, 40, 356, 22)
+const HUD_HP := Rect2(92, 66, 356, 18)
 const ORB_DIAMETER := 52.0
 const ORB_STEP := 60.0
-const ORB_ROW_X := 64.0
+const ORB_ROW_X := 84.0
 const ORB_ROW_Y := 94.0
+const STATUS_ICON_SIZE := Vector2(44, 44)
+const STATUS_ICON_STEP := 48.0
+const STATUS_ICONS_PER_ROW := 8
 
 const STANDEE_SIZE := Vector2(300, 450)
 const STANDEE_TOP := 228.0
@@ -281,9 +284,7 @@ func _build_combatant_hud(side: String) -> void:
 	# left to right; only the surrounding text mirrors.
 	for i in BattleRules.ELEMENTS.size():
 		_energy_orb(panel, actor, side, i)
-
-	var status := _hud_local(side, HUD_STATUS)
-	_label(panel, _status_line(actor), status.position, status.size, 15, MUTED)
+	_build_status_icons(actor, side)
 
 func _side_subtitle(side: String) -> String:
 	if side == "enemy":
@@ -311,16 +312,19 @@ func _energy_orb(parent: Node, actor: Combatant, side: String, index: int) -> vo
 	_label(orb, BattleRules.element_name(element), Vector2(0, 2), Vector2(ORB_DIAMETER, 18), 14, tint, HORIZONTAL_ALIGNMENT_CENTER)
 	_label(orb, str(actor.energy[element]), Vector2(0, 17), Vector2(ORB_DIAMETER, 30), 24, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 
-func _status_line(actor: Combatant) -> String:
-	if actor.statuses.is_empty():
-		return "状态：无"
-	var parts: Array[String] = []
-	for status in actor.statuses:
-		var word: String = manager.STATUS_NAMES.get(status["id"], status["id"])
-		if status.get("element", "") != "":
-			word += "·" + BattleRules.element_name(status["element"])
-		parts.append("%s %d (%d回合)" % [word, int(status["stacks"]), int(status["turns"])])
-	return "   ".join(parts)
+func _build_status_icons(actor: Combatant, side: String) -> void:
+	for i in actor.statuses.size():
+		var status: Dictionary = actor.statuses[i]
+		var icon: Control = STATUS_ICON_SCRIPT.new()
+		icon.call("configure", status, manager.status_tooltip(status))
+		var row := int(i / STATUS_ICONS_PER_ROW)
+		var column := i % STATUS_ICONS_PER_ROW
+		var origin := _hud_origin(side)
+		if side == "player":
+			icon.position = origin + Vector2(12.0 + column * STATUS_ICON_STEP, -8.0 - STATUS_ICON_SIZE.y - row * STATUS_ICON_STEP)
+		else:
+			icon.position = origin + Vector2(HUD_SIZE.x - 12.0 - STATUS_ICON_SIZE.x - column * STATUS_ICON_STEP, HUD_SIZE.y + 8.0 + row * STATUS_ICON_STEP)
+		add_child(icon)
 
 func _portrait(parent: Node, actor_id: String, pos: Vector2, sz: Vector2, enemy_side: bool) -> void:
 	var frame := _panel(parent, Rect2(pos, sz), Color("#182839"), GOLD.darkened(0.15), 12)

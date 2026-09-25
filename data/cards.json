@@ -2,36 +2,36 @@
   {"id":"metal_strike","name":"断金击","element":"metal","cost":1,"text":"造成 10 点金伤害。","art_prompt":"银刃斩过黑色山石，迸出金色火花","effects":[{"type":"damage","amount":10,"element":"metal"}]},
   {"id":"metal_edge","name":"锋芒","element":"metal","cost":2,"text":"造成 20 点金伤害。","art_prompt":"长剑在冷月下划出锐利金光","effects":[{"type":"damage","amount":20,"element":"metal"}]},
   {"id":"metal_storm","name":"万刃归宗","element":"metal","cost":3,"text":"造成 32 点金伤害。","art_prompt":"万千金色飞剑穿过暗云","effects":[{"type":"damage","amount":32,"element":"metal"}]},
-  {"id":"metal_ward","name":"玄铁护身","element":"metal","cost":1,"text":"获得 8 点护盾。","art_prompt":"玄铁碎片环绕修士形成护盾","effects":[{"type":"status","target":"self","status":"shield","stacks":8,"turns":2}]},
+  {"id":"metal_ward","name":"玄铁护身","element":"metal","cost":1,"text":"获得 8 层护盾。","art_prompt":"玄铁碎片环绕修士形成护盾","effects":[{"type":"status","target":"self","status":"shield","stacks":8}]},
   {"id":"metal_sever","name":"伐木诀","element":"metal","cost":1,"text":"敌人失去 2 木能量。","art_prompt":"银色剑光截断巨树根脉","effects":[{"type":"lose_energy","target":"opponent","element":"wood","amount":2}]},
 
   {"id":"wood_strike","name":"藤刺","element":"wood","cost":1,"text":"造成 10 点木伤害。","art_prompt":"翠绿藤蔓穿出石板刺向远方","effects":[{"type":"damage","amount":10,"element":"wood"}]},
   {"id":"wood_edge","name":"青木刃","element":"wood","cost":2,"text":"造成 20 点木伤害。","art_prompt":"发光竹叶化作锋利刀刃","effects":[{"type":"damage","amount":20,"element":"wood"}]},
   {"id":"wood_storm","name":"森罗缠击","element":"wood","cost":3,"text":"造成 32 点木伤害。","art_prompt":"古树根须从地面围困敌人","effects":[{"type":"damage","amount":32,"element":"wood"}]},
-  {"id":"wood_heal","name":"生息","element":"wood","cost":2,"text":"恢复 18 生命。","art_prompt":"绿色灵叶围绕伤者温柔愈合","effects":[{"type":"heal","target":"self","amount":18}]},
-  {"id":"wood_regen","name":"回春","element":"wood","cost":1,"text":"获得 2 层再生，持续 2 回合。","art_prompt":"古树枝芽在掌心快速新生","effects":[{"type":"status","target":"self","status":"regen","stacks":2,"turns":2}]},
+  {"id":"wood_heal","name":"生息","element":"wood","cost":2,"text":"恢复 18 点生命。","art_prompt":"绿色灵叶围绕伤者温柔愈合","effects":[{"type":"heal","target":"self","amount":18}]},
+  {"id":"wood_regen","name":"回春","element":"wood","cost":1,"text":"获得 2 层再生。","art_prompt":"古树枝芽在掌心快速新生","effects":[{"type":"status","target":"self","status":"regen","stacks":2}]},
 
   {"id":"water_strike","name":"溯流","element":"water","cost":1,"text":"造成 10 点水伤害。","art_prompt":"蓝色激流卷起碎石","effects":[{"type":"damage","amount":10,"element":"water"}]},
   {"id":"water_edge","name":"潮汐之刃","element":"water","cost":2,"text":"造成 20 点水伤害。","art_prompt":"弯月形海浪化为锋刃","effects":[{"type":"damage","amount":20,"element":"water"}]},
   {"id":"water_storm","name":"沧海覆天","element":"water","cost":3,"text":"造成 32 点水伤害。","art_prompt":"巨大的海潮从天际倾覆","effects":[{"type":"damage","amount":32,"element":"water"}]},
   {"id":"water_drain","name":"断流","element":"water","cost":1,"text":"敌人失去 2 火能量。","art_prompt":"冰冷水流熄灭燃烧的法阵","effects":[{"type":"lose_energy","target":"opponent","element":"fire","amount":2}]},
   {"id":"water_thought","name":"潮思","element":"water","cost":1,"text":"抽 2 张牌。","art_prompt":"水面倒映无数流动的符文","effects":[{"type":"draw","target":"self","amount":2}]},
-  {"id":"water_mist","name":"寒雾","element":"water","cost":1,"text":"敌人获得 1 层易伤，持续 2 回合。","art_prompt":"冰蓝薄雾笼罩敌人破绽","effects":[{"type":"status","target":"opponent","status":"vulnerable","stacks":1,"turns":2}]},
+  {"id":"water_mist","name":"寒雾","element":"water","cost":1,"text":"敌人获得 1 层脆弱。","art_prompt":"冰蓝薄雾笼罩敌人破绽","effects":[{"type":"status","target":"opponent","status":"vulnerable","stacks":1}]},
 
   {"id":"fire_strike","name":"火星","element":"fire","cost":1,"text":"造成 10 点火伤害。","art_prompt":"一束赤红火星穿过黑暗","effects":[{"type":"damage","amount":10,"element":"fire"}]},
   {"id":"fire_edge","name":"烈焰斩","element":"fire","cost":2,"text":"造成 20 点火伤害。","art_prompt":"黑发剑士挥出炽烈横向火焰剑气","effects":[{"type":"damage","amount":20,"element":"fire"}]},
   {"id":"fire_storm","name":"焚天","element":"fire","cost":3,"text":"造成 32 点火伤害。","art_prompt":"火焰龙卷冲上夜空","effects":[{"type":"damage","amount":32,"element":"fire"}]},
-  {"id":"fire_brand","name":"余烬印","element":"fire","cost":1,"text":"敌人获得 2 层灼烧，持续 3 回合。","art_prompt":"赤红烙印在铠甲上燃烧","effects":[{"type":"status","target":"opponent","status":"burn","stacks":2,"turns":3}]},
+  {"id":"fire_brand","name":"余烬印","element":"fire","cost":1,"text":"敌人获得 2 层灼伤。","art_prompt":"赤红烙印在铠甲上燃烧","effects":[{"type":"status","target":"opponent","status":"burn","stacks":2}]},
   {"id":"fire_gather","name":"聚火","element":"fire","cost":0,"text":"获得 1 火能量。","art_prompt":"掌心汇聚一团纯净火焰","effects":[{"type":"gain_energy","target":"self","element":"fire","amount":1}]},
 
   {"id":"earth_strike","name":"碎岩","element":"earth","cost":1,"text":"造成 10 点土伤害。","art_prompt":"地面突起的碎岩打击前方","effects":[{"type":"damage","amount":10,"element":"earth"}]},
   {"id":"earth_edge","name":"岩崩","element":"earth","cost":2,"text":"造成 20 点土伤害。","art_prompt":"巨大岩块坠落并震裂石台","effects":[{"type":"damage","amount":20,"element":"earth"}]},
   {"id":"earth_storm","name":"山岳倾覆","element":"earth","cost":3,"text":"造成 32 点土伤害。","art_prompt":"古老山岳幻象重压战场","effects":[{"type":"damage","amount":32,"element":"earth"}]},
-  {"id":"earth_bastion","name":"厚土壁","element":"earth","cost":1,"text":"获得 10 点护盾。","art_prompt":"厚重岩壁环绕人物升起","effects":[{"type":"status","target":"self","status":"shield","stacks":10,"turns":2}]},
+  {"id":"earth_bastion","name":"厚土壁","element":"earth","cost":1,"text":"获得 10 层护盾。","art_prompt":"厚重岩壁环绕人物升起","effects":[{"type":"status","target":"self","status":"shield","stacks":10}]},
   {"id":"earth_quake","name":"震手","element":"earth","cost":2,"text":"敌人随机弃 1 张手牌。","art_prompt":"震荡波击落对手握住的符卡","effects":[{"type":"discard","target":"opponent","amount":1}]},
 
   {"id":"metal_forge","name":"炼金","element":"metal","cost":0,"text":"获得 1 金能量。","art_prompt":"金色矿石在炉中凝聚为灵气","effects":[{"type":"gain_energy","target":"self","element":"metal","amount":1}]},
   {"id":"wood_sprout","name":"萌发","element":"wood","cost":0,"text":"获得 1 木能量。","art_prompt":"新芽在石缝中迅速生长","effects":[{"type":"gain_energy","target":"self","element":"wood","amount":1}]},
-  {"id":"wood_to_fire","name":"木生火","element":"wood","cost":1,"text":"再失去 1 木，获得 3 火；木不足则不转换。","art_prompt":"翠绿木灵转化成温暖火焰","effects":[{"type":"convert_energy","target":"self","from":"wood","to":"fire","amount":1,"gain":3}]},
+  {"id":"wood_to_fire","name":"木生火","element":"wood","cost":1,"text":"额外失去 1 木能量，获得 3 火能量。","art_prompt":"翠绿木灵转化成温暖火焰","effects":[{"type":"convert_energy","target":"self","from":"wood","to":"fire","amount":1,"gain":3}]},
   {"id":"metal_lock","name":"封火令","element":"metal","cost":2,"text":"封锁敌人火能量 2 回合。","art_prompt":"金色符印封住赤红火脉","effects":[{"type":"status","target":"opponent","status":"lock","element":"fire","stacks":1,"turns":2}]}
 ]
