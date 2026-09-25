@@ -3,12 +3,15 @@ extends Node
 
 signal changed
 signal action_event(message: String, side: String, kind: String, element: String, amount: int)
+signal summon_event(side: String, slot: int, kind: String, element: String, amount: int)
 
 const CARD_PATH := "res://data/cards.json"
 const BATTLE_PATH := "res://data/battles.json"
+const SUMMON_PATH := "res://data/summons.json"
 const STATUS_NAMES := {"burn":"灼伤", "poison":"中毒", "bleed":"出血", "weak":"虚弱", "vulnerable":"脆弱", "regen":"再生", "shield":"护盾", "lock":"封锁"}
 
 var cards: Dictionary = {}
+var summon_templates: Dictionary = {}
 var decks: Array = []
 var enemies: Array = []
 var player := Combatant.new()
@@ -32,6 +35,11 @@ func load_content() -> void:
 	var card_list: Array = JSON.parse_string(card_file.get_as_text())
 	for card in card_list:
 		cards[card["id"]] = card
+	var summon_file := FileAccess.open(SUMMON_PATH, FileAccess.READ)
+	assert(summon_file != null, "Missing summons.json")
+	var summon_list: Array = JSON.parse_string(summon_file.get_as_text())
+	for summon in summon_list:
+		summon_templates[summon["id"]] = summon
 	var battle_file := FileAccess.open(BATTLE_PATH, FileAccess.READ)
 	assert(battle_file != null, "Missing battles.json")
 	var data: Dictionary = JSON.parse_string(battle_file.get_as_text())
@@ -160,6 +168,9 @@ func _start_turn(actor: Combatant) -> void:
 			_report("%s 护盾从 %d 减为 %d" % [actor.display_name, shield_before, shield_after], _side(actor), "status_shield", "", shield_before - shield_after)
 	if _check_finish():
 		return
+	_trigger_summons(actor)
+	if _check_finish():
+		return
 	generate_natural_energy(actor)
 	if _check_finish():
 		return
@@ -169,17 +180,79 @@ func _start_turn(actor: Combatant) -> void:
 	phase = "player_action" if actor == player else "enemy_action"
 	changed.emit()
 
-func play_player_card(index: int) -> bool:
+func _trigger_summons(actor: Combatant) -> void:
+	for slot in actor.summons.size():
+		var summoned: Summon = actor.summons[slot]
+		if summoned == null:
+			continue
+		for effect in summoned.turn_start_effects:
+			if effect["type"] == "gain_energy":
+				var element: String = effect["element"]
+				var gained := actor.gain_energy(element, int(effect["amount"]))
+				_report("%s 的%s产生 %d 点%s灵气" % [actor.display_name, summoned.display_name, gained, BattleRules.element_name(element)], _side(actor), "energy", element, gained)
+				if gained > 0:
+					_trigger_poison(actor)
+			if phase in ["victory", "defeat"]:
+				return
+
+func card_target_mode(card: Dictionary) -> String:
+	for effect in card["effects"]:
+		if effect["type"] == "summon":
+			return "slot"
+		if effect["type"] == "damage":
+			return "damage"
+	return "none"
+
+func valid_card_target(actor: Combatant, card: Dictionary, selection: Dictionary) -> bool:
+	var mode := card_target_mode(card)
+	if mode == "none":
+		return true
+	var kind := str(selection.get("kind", ""))
+	var slot := int(selection.get("slot", -1))
+	if mode == "slot":
+		return kind == "slot" and slot >= 0 and slot < actor.summons.size() and actor.summons[slot] == null
+	if kind == "hero":
+		return true
+	var opponent := enemy if actor == player else player
+	return kind == "summon" and slot >= 0 and slot < opponent.summons.size() and opponent.summons[slot] != null
+
+func preview_damage_segments(actor: Combatant, card: Dictionary, selection: Dictionary) -> Array[int]:
+	var segments: Array[int] = []
+	if card_target_mode(card) != "damage" or not valid_card_target(actor, card, selection):
+		return segments
+	var opponent := enemy if actor == player else player
+	var remaining_hp := opponent.hp
+	var remaining_shield := opponent.status_stacks("shield")
+	if selection.get("kind", "") == "summon":
+		var summoned: Summon = opponent.summons[int(selection["slot"])]
+		remaining_hp = summoned.hp
+	for effect in card["effects"]:
+		if effect["type"] != "damage":
+			continue
+		var raw := 0
+		if selection.get("kind", "") == "summon":
+			raw = BattleRules.summon_damage(int(effect["amount"]), actor)
+		else:
+			raw = int(BattleRules.damage_breakdown(opponent, int(effect["amount"]), str(effect.get("element", card["element"])), actor)["raw"])
+			var absorbed := mini(raw, remaining_shield)
+			remaining_shield -= absorbed
+			raw -= absorbed
+		var dealt := mini(raw, remaining_hp)
+		remaining_hp -= dealt
+		segments.append(dealt)
+	return segments
+
+func play_player_card(index: int, selection: Dictionary = {}) -> bool:
 	if phase != "player_action":
 		return false
-	return _play_card(player, enemy, index)
+	return _play_card(player, enemy, index, selection)
 
-func _play_card(actor: Combatant, target: Combatant, index: int) -> bool:
+func _play_card(actor: Combatant, target: Combatant, index: int, selection: Dictionary = {}) -> bool:
 	if index < 0 or index >= actor.hand.size():
 		return false
 	var card_id := actor.hand[index]
 	var card: Dictionary = cards[card_id]
-	if not actor.can_pay(card):
+	if not actor.can_pay(card) or not valid_card_target(actor, card, selection):
 		return false
 	actor.hand.remove_at(index)
 	actor.lose_energy(card["element"], int(card["cost"]))
@@ -188,19 +261,31 @@ func _play_card(actor: Combatant, target: Combatant, index: int) -> bool:
 	for effect in card["effects"]:
 		if phase == "victory" or phase == "defeat":
 			break
-		_resolve_effect(actor, target, effect, card["element"])
+		_resolve_effect(actor, target, effect, card["element"], selection)
 	actor.discard_pile.append(card_id)
 	played_cards += 1
 	_check_finish()
 	changed.emit()
 	return true
 
-func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, card_element: String) -> void:
+func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, card_element: String, selection: Dictionary = {}) -> void:
 	var target: Combatant = actor if effect.get("target", "opponent") == "self" else opponent
 	var amount := int(effect.get("amount", 0))
 	match effect["type"]:
 		"damage":
-			apply_damage(actor, opponent, amount, str(effect.get("element", card_element)))
+			var attack_element := str(effect.get("element", card_element))
+			if selection.get("kind", "hero") == "summon":
+				apply_summon_damage(actor, opponent, int(selection["slot"]), amount, attack_element)
+			else:
+				apply_damage(actor, opponent, amount, attack_element)
+		"summon":
+			var slot := int(selection["slot"])
+			var template: Dictionary = summon_templates[effect["summon"]]
+			var summoned := Summon.new()
+			summoned.setup(template)
+			actor.summons[slot] = summoned
+			_report("%s 在槽位 %d 召唤%s" % [actor.display_name, slot + 1, summoned.display_name], _side(actor), "summon", summoned.element, 1)
+			summon_event.emit(_side(actor), slot, "spawn", summoned.element, 1)
 		"heal":
 			var actual := mini(amount, target.max_hp - target.hp)
 			target.hp += actual
@@ -247,7 +332,7 @@ func apply_damage(source: Combatant, target: Combatant, base_amount: int, elemen
 	var breakdown := BattleRules.damage_breakdown(target, base_amount, element, source)
 	var raw: int = breakdown["raw"]
 	var shielded: int = breakdown["shield"]
-	var dealt: int = breakdown["hp"]
+	var dealt := mini(target.hp, int(breakdown["hp"]))
 	if shielded > 0:
 		for status in target.statuses:
 			if status["id"] == "shield":
@@ -268,6 +353,22 @@ func apply_damage(source: Combatant, target: Combatant, base_amount: int, elemen
 		note += " · 抵抗"
 	_report("%s 受到 %d 点%s伤害%s" % [target.display_name, dealt, BattleRules.element_name(element), note], _side(target), "damage", element, dealt)
 	_check_finish()
+	return dealt
+
+func apply_summon_damage(source: Combatant, owner: Combatant, slot: int, base_amount: int, element: String) -> int:
+	if slot < 0 or slot >= owner.summons.size() or owner.summons[slot] == null:
+		return 0
+	var summoned: Summon = owner.summons[slot]
+	var dealt := mini(summoned.hp, BattleRules.summon_damage(base_amount, source))
+	summoned.hp -= dealt
+	if source == player:
+		player_damage += dealt
+	_report("%s 受到 %d 点%s伤害" % [summoned.display_name, dealt, BattleRules.element_name(element)], _side(owner), "summon_damage", element, dealt)
+	summon_event.emit(_side(owner), slot, "damage", element, dealt)
+	if summoned.hp <= 0:
+		owner.summons[slot] = null
+		_report("%s 被摧毁，槽位 %d 空出" % [summoned.display_name, slot + 1], _side(owner), "summon_destroy", element)
+		summon_event.emit(_side(owner), slot, "destroy", element, 0)
 	return dealt
 
 func _end_turn(actor: Combatant) -> void:
@@ -319,62 +420,97 @@ func end_player_turn() -> void:
 	if phase != "victory" and phase != "defeat":
 		_start_turn(enemy)
 
-func peek_enemy_card_index() -> int:
+func peek_enemy_action() -> Dictionary:
 	if phase != "enemy_action":
-		return -1
-	return _choose_enemy_card()
+		return {"index": -1, "target": {}}
+	return _choose_enemy_action()
 
-func enemy_step(chosen_index: int = -2) -> bool:
+func peek_enemy_card_index() -> int:
+	return int(peek_enemy_action()["index"])
+
+func enemy_step(chosen_index: int = -2, selection: Dictionary = {}) -> bool:
 	if phase != "enemy_action":
 		return false
-	var index := _choose_enemy_card() if chosen_index == -2 else chosen_index
+	if chosen_index == -2:
+		var action := _choose_enemy_action()
+		chosen_index = int(action["index"])
+		selection = action["target"]
+	var index := chosen_index
 	if index < 0:
 		phase = "enemy_turn_end"
 		_end_turn(enemy)
 		if phase != "victory" and phase != "defeat":
 			_start_turn(player)
 		return false
-	_play_card(enemy, player, index)
+	if selection.is_empty() and index < enemy.hand.size():
+		var card: Dictionary = cards[enemy.hand[index]]
+		match card_target_mode(card):
+			"damage": selection = {"kind": "hero"}
+			"slot": selection = {"kind": "slot", "slot": enemy.first_free_summon_slot()}
+	_play_card(enemy, player, index, selection)
 	return phase == "enemy_action"
 
-func _choose_enemy_card() -> int:
-	var best_index := -1
+func _choose_enemy_action() -> Dictionary:
+	var best_action := {"index": -1, "target": {}}
 	var best_score := 3.0
 	for i in enemy.hand.size():
 		var card: Dictionary = cards[enemy.hand[i]]
 		if not enemy.can_pay(card):
 			continue
-		var score := 0.0
-		for effect in card["effects"]:
-			match effect["type"]:
-				"damage":
+		var candidates: Array[Dictionary] = [{}]
+		match card_target_mode(card):
+			"damage":
+				candidates = [{"kind": "hero"}]
+				for slot in player.summons.size():
+					if player.summons[slot] != null:
+						candidates.append({"kind": "summon", "slot": slot})
+			"slot":
+				candidates = []
+				for slot in enemy.summons.size():
+					if enemy.summons[slot] == null:
+						candidates.append({"kind": "slot", "slot": slot})
+		for selection in candidates:
+			var score := _enemy_action_score(card, selection)
+			score -= float(card["cost"]) * 0.8
+			score += rng.randf_range(-3.0, 3.0)
+			if score > best_score:
+				best_score = score
+				best_action = {"index": i, "target": selection}
+	return best_action
+
+func _enemy_action_score(card: Dictionary, selection: Dictionary) -> float:
+	var score := 0.0
+	for effect in card["effects"]:
+		match effect["type"]:
+			"damage":
+				if selection.get("kind", "hero") == "summon":
+					var summoned: Summon = player.summons[int(selection["slot"])]
+					var dealt := mini(summoned.hp, BattleRules.summon_damage(int(effect["amount"]), enemy))
+					score += float(dealt) * 1.2 + (9.0 if dealt >= summoned.hp else 0.0)
+				else:
 					var preview := BattleRules.damage_breakdown(player, int(effect["amount"]), effect["element"], enemy)
 					score += float(preview["hp"]) + float(preview["shield"]) * 0.65
-				"heal":
-					score += mini(enemy.max_hp - enemy.hp, int(effect["amount"])) * 0.9
-				"gain_energy":
-					score += mini(10 - int(enemy.energy[effect["element"]]), int(effect["amount"])) * 3.5
-				"lose_energy":
-					score += mini(int(player.energy[effect["element"]]), int(effect["amount"])) * 6.0
-				"convert_energy":
-					score += 7.0
-				"draw":
-					score += 4.0 if not enemy.draw_pile.is_empty() else -5.0
-				"discard":
-					score += 8.0 if not player.hand.is_empty() else 0.0
-				"status":
-					match effect["status"]:
-						"burn": score += 9.0 if player.status_stacks("burn") < 3 else 2.0
-						"vulnerable": score += 10.0 if player.status_stacks("vulnerable") == 0 else 2.0
-						"shield": score += 7.0 if enemy.status_stacks("shield") < 10 else 1.0
-						"regen": score += 7.0 if enemy.hp < 75 else 1.0
-						"lock": score += 9.0 if player.status_stacks("lock", effect["element"]) == 0 else 1.0
-		score -= float(card["cost"]) * 0.8
-		score += rng.randf_range(-3.0, 3.0)
-		if score > best_score:
-			best_score = score
-			best_index = i
-	return best_index
+			"summon":
+				var template: Dictionary = summon_templates[effect["summon"]]
+				score += 6.0
+				for turn_effect in template.get("turn_start", []):
+					if turn_effect["type"] == "gain_energy":
+						var produced := str(turn_effect["element"])
+						score += 5.0 if int(enemy.energy[produced]) < 8 else 0.0
+			"heal": score += mini(enemy.max_hp - enemy.hp, int(effect["amount"])) * 0.9
+			"gain_energy": score += mini(10 - int(enemy.energy[effect["element"]]), int(effect["amount"])) * 3.5
+			"lose_energy": score += mini(int(player.energy[effect["element"]]), int(effect["amount"])) * 6.0
+			"convert_energy": score += 7.0
+			"draw": score += 4.0 if not enemy.draw_pile.is_empty() else -5.0
+			"discard": score += 8.0 if not player.hand.is_empty() else 0.0
+			"status":
+				match effect["status"]:
+					"burn": score += 9.0 if player.status_stacks("burn") < 3 else 2.0
+					"vulnerable": score += 10.0 if player.status_stacks("vulnerable") == 0 else 2.0
+					"shield": score += 7.0 if enemy.status_stacks("shield") < 10 else 1.0
+					"regen": score += 7.0 if enemy.hp < 75 else 1.0
+					"lock": score += 9.0 if player.status_stacks("lock", effect["element"]) == 0 else 1.0
+	return score
 
 func _check_finish() -> bool:
 	if enemy.hp <= 0:

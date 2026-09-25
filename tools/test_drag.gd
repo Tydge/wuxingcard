@@ -27,8 +27,15 @@ func run() -> void:
 		push_error("Hand press did not start a drag")
 		quit(1)
 		return
-	Input.warp_mouse(Vector2(980, 360))
+	Input.warp_mouse(Vector2(1308, 452))
 	await process_frame
+	var motion := InputEventMouseMotion.new()
+	ui.call("_input", motion)
+	var preview: Panel = ui.get("damage_preview")
+	if preview == null or not preview.visible or not str(ui.get("damage_preview_label").text).begins_with("预计伤害 "):
+		push_error("Damage target did not show calculated damage preview")
+		quit(1)
+		return
 	var release := InputEventMouseButton.new()
 	release.button_index = MOUSE_BUTTON_LEFT
 	release.pressed = false

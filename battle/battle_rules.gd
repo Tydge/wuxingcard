@@ -32,3 +32,7 @@ static func damage_breakdown(target: Combatant, amount: int, element: String, so
 		"vulnerable": vulnerable, "weak_stacks": weak_stacks, "raw": before_shield,
 		"shield": mini(before_shield, target.status_stacks("shield")),
 		"hp": maxi(0, before_shield - target.status_stacks("shield"))}
+
+static func summon_damage(amount: int, source: Combatant = null) -> int:
+	var weak_stacks := source.status_stacks("weak") if source != null else 0
+	return maxi(0, roundi(amount * maxf(0.0, 1.0 - weak_stacks * 0.1)))

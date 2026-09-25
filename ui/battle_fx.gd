@@ -48,7 +48,7 @@ func targets_opponent(card: Dictionary) -> bool:
 			return true
 	return false
 
-func cast(card: Dictionary, side: String, source: Vector2 = Vector2(-1, -1)) -> float:
+func cast(card: Dictionary, side: String, source: Vector2 = Vector2(-1, -1), target: Vector2 = Vector2(-1, -1)) -> float:
 	var element: String = str(card.get("element", "metal"))
 	var style := str(card.get("fx_id", ""))
 	if style == "":
@@ -57,7 +57,9 @@ func cast(card: Dictionary, side: String, source: Vector2 = Vector2(-1, -1)) -> 
 	var speed := maxf(0.25, float(card.get("fx_speed", 1.0)))
 	var intensity := float(card.get("fx_intensity", 1.0)) + float(card.get("cost", 0)) * 0.13
 	var origin := source if source.x >= 0.0 else _anchor(side)
-	var destination := _anchor(_opponent(side)) if targets_opponent(card) else _anchor(side)
+	var destination := target
+	if destination.x < 0.0:
+		destination = _anchor(_opponent(side)) if targets_opponent(card) else _anchor(side)
 	var duration := 0.54 / speed
 	_add("cast", element, origin, destination, duration, scale, intensity, style)
 	return duration
@@ -67,6 +69,7 @@ func _default_style(card: Dictionary) -> String:
 	var first: Dictionary = effects[0] if not effects.is_empty() else {}
 	match str(first.get("type", "")):
 		"damage": return {"metal":"metal_slash", "wood":"wood_grow", "water":"water_wave", "fire":"fire_slash", "earth":"earth_impact"}.get(card["element"], "generic_buff")
+		"summon": return "energy_gain"
 		"heal": return "wood_heal"
 		"draw": return "card_draw"
 		"gain_energy", "convert_energy": return "energy_gain"

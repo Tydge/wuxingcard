@@ -49,7 +49,7 @@ func capture() -> void:
 	manager.player.hand.append("fire_edge")
 	manager.player.energy["fire"] = 3
 	ui.call("_refresh")
-	ui.call("_play_card_from", 0, Vector2(780, 530))
+	ui.call("_play_card_from", 0, Vector2(780, 530), {"kind": "hero"})
 	await create_timer(2.65).timeout
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(output.path_join("player_cast.png"))

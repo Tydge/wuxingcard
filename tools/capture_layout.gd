@@ -71,7 +71,7 @@ func capture() -> void:
 	manager.player.hand.append("fire_edge")
 	manager.player.energy["fire"] = 3
 	ui.call("_refresh")
-	ui.call("_play_card_from", 0, Vector2(800, 470))
+	ui.call("_play_card_from", 0, Vector2(800, 470), {"kind": "hero"})
 	await create_timer(2.6).timeout
 	await _shot(output.path_join("played_attack.png"))
 	await create_timer(0.6).timeout

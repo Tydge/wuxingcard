@@ -30,7 +30,7 @@ func run_tests() -> void:
 	manager.start_battle("ember", "balanced", 12345)
 	check(manager.player.hand.size() == 5, "opening hand plus first-turn draw")
 	check(manager.enemy.hand.size() == 4, "enemy hand hidden but drawn")
-	check(manager.player.draw_pile.size() == 25, "draw pile after opening")
+	check(manager.player.draw_pile.size() == 30, "draw pile after opening")
 	var before_fatigue := manager.player.hp
 	manager.player.draw_pile.clear()
 	manager.draw_card(manager.player)
@@ -38,6 +38,7 @@ func run_tests() -> void:
 	check(manager.player.hp == before_fatigue - 3, "fatigue increases 1 then 2")
 	check(manager.player.fatigue_level == 2, "fatigue level")
 	test_status_rules(manager)
+	test_summon_rules(manager)
 
 	var simulations := 0
 	var victories := 0
@@ -55,7 +56,12 @@ func run_tests() -> void:
 								chosen = i
 								break
 						if chosen >= 0:
-							manager.play_player_card(chosen)
+							var card: Dictionary = manager.cards[manager.player.hand[chosen]]
+							var selection := {}
+							match manager.card_target_mode(card):
+								"damage": selection = {"kind": "hero"}
+								"slot": selection = {"kind": "slot", "slot": manager.player.first_free_summon_slot()}
+							manager.play_player_card(chosen, selection)
 						else:
 							manager.end_player_turn()
 					elif manager.phase == "enemy_action":
@@ -126,7 +132,7 @@ func test_status_rules(manager: BattleManager) -> void:
 	actor.energy["fire"] = 3
 	actor.add_status("bleed", 2, 0)
 	manager.phase = "player_action"
-	manager.play_player_card(0)
+	manager.play_player_card(0, {"kind": "hero"})
 	check(actor.hp == 98 and actor.status_stacks("bleed") == 1, "bleed triggers on card play")
 
 	actor.statuses.clear()
@@ -135,3 +141,89 @@ func test_status_rules(manager: BattleManager) -> void:
 	check(actor.status_stacks("shield") == 4, "shield halves upward at turn start")
 	manager._end_turn(actor)
 	check(actor.status_stacks("shield") == 4, "shield has no turn limit")
+
+func test_summon_rules(manager: BattleManager) -> void:
+	manager.start_battle("ember", "balanced", 4321)
+	var actor := manager.player
+	var opponent := manager.enemy
+	actor.hand = ["metal_furnace_card"]
+	actor.energy["metal"] = 3
+	check(not manager.play_player_card(0, {"kind": "slot", "slot": 3}), "summon rejects invalid slot")
+	check(actor.hand.size() == 1 and actor.energy["metal"] == 3, "invalid summon does not spend resources")
+	check(manager.play_player_card(0, {"kind": "slot", "slot": 0}), "summon card uses chosen empty slot")
+	var summoned: Summon = actor.summons[0]
+	check(summoned != null and summoned.hp == 10 and summoned.max_hp == 10, "summon starts with 10 HP")
+	actor.energy["water"] = 0
+	actor.add_status("poison", 2, 0)
+	var hp_before := actor.hp
+	manager._trigger_summons(actor)
+	check(actor.energy["water"] == 1, "metal summon generates water energy at turn start")
+	check(actor.hp == hp_before - 2 and actor.status_stacks("poison") == 1, "summon energy triggers poison once")
+	for summon_id in ["wood_seedling", "water_spring", "fire_lantern", "earth_stele"]:
+		var template: Dictionary = manager.summon_templates[summon_id]
+		var produced: String = template["turn_start"][0]["element"]
+		actor.summons[0] = Summon.new()
+		actor.summons[0].setup(template)
+		actor.energy[produced] = 0
+		actor.statuses.clear()
+		manager._trigger_summons(actor)
+		check(actor.energy[produced] == 1, "%s produces its listed element" % summon_id)
+	actor.summons[0] = null
+	opponent.summons[1] = Summon.new()
+	opponent.summons[1].setup(manager.summon_templates["wood_seedling"])
+	for element in BattleRules.ELEMENTS:
+		opponent.energy[element] = 0
+	opponent.energy["fire"] = 10
+	actor.hand = ["fire_strike"]
+	actor.energy["fire"] = 3
+	manager.phase = "player_action"
+	var attack: Dictionary = manager.cards["fire_strike"]
+	check(manager.preview_damage_segments(actor, attack, {"kind": "summon", "slot": 1}) == [10], "summon preview ignores fire resistance")
+	check(manager.preview_damage_segments(actor, attack, {"kind": "hero"}) == [0], "hero preview still uses fire resistance")
+	opponent.energy["fire"] = 0
+	actor.hand = ["fire_strike"]
+	check(manager.play_player_card(0, {"kind": "hero"}), "hero remains targetable while a summon is present")
+	check(opponent.hp == 90 and opponent.summons[1] != null, "hero attack leaves summon untouched")
+	actor.hand = ["fire_strike"]
+	actor.energy["fire"] = 3
+	var hero_hp := opponent.hp
+	check(manager.play_player_card(0, {"kind": "summon", "slot": 1}), "damage card can target a summon")
+	check(opponent.summons[1] == null and opponent.hp == hero_hp, "damage destroys summon without hitting hero")
+	var multi := {"element": "fire", "effects": [
+		{"type": "damage", "amount": 3, "element": "fire"},
+		{"type": "damage", "amount": 2, "element": "fire"},
+		{"type": "damage", "amount": 1, "element": "fire"}]}
+	opponent.energy["fire"] = 0
+	check(manager.preview_damage_segments(actor, multi, {"kind": "hero"}) == [3, 2, 1], "multi-hit preview lists every hit")
+	opponent.add_status("shield", 2, 0)
+	check(manager.preview_damage_segments(actor, multi, {"kind": "hero"}) == [1, 2, 1], "multi-hit preview consumes shield only once")
+	manager.cards["test_multi"] = {"id": "test_multi", "name": "测试连击", "element": "fire", "cost": 0, "effects": multi["effects"]}
+	actor.hand = ["test_multi"]
+	manager.phase = "player_action"
+	var before_multi := opponent.hp
+	check(manager.play_player_card(0, {"kind": "hero"}), "multi-hit card can target hero")
+	check(opponent.hp == before_multi - 4 and opponent.status_stacks("shield") == 0, "actual multi-hit matches shield-aware preview")
+	opponent.summons[2] = Summon.new()
+	opponent.summons[2].setup(manager.summon_templates["earth_stele"])
+	opponent.summons[2].hp = 4
+	check(manager.preview_damage_segments(actor, multi, {"kind": "summon", "slot": 2}) == [3, 1, 0], "multi-hit preview caps each hit at remaining summon HP")
+	actor.hand = ["test_multi"]
+	manager.phase = "player_action"
+	check(manager.play_player_card(0, {"kind": "summon", "slot": 2}), "multi-hit card can target summon")
+	check(opponent.summons[2] == null, "multi-hit destroys summon and frees its slot")
+	manager.cards.erase("test_multi")
+	for slot in actor.summons.size():
+		actor.summons[slot] = Summon.new()
+		actor.summons[slot].setup(manager.summon_templates["metal_furnace"])
+	check(not actor.can_pay(manager.cards["metal_furnace_card"]), "full summon slots block another summon card")
+	for element in BattleRules.ELEMENTS:
+		actor.energy[element] = 0
+	actor.energy["fire"] = 10
+	opponent.hand = ["fire_edge"]
+	opponent.energy["fire"] = 3
+	manager.phase = "enemy_action"
+	var enemy_action := manager.peek_enemy_action()
+	check(enemy_action["target"].get("kind", "") == "summon", "enemy can choose player summon over resistant hero")
+	var chosen_slot := int(enemy_action["target"].get("slot", -1))
+	manager.enemy_step(int(enemy_action["index"]), enemy_action["target"])
+	check(chosen_slot >= 0 and actor.summons[chosen_slot] == null, "enemy damage destroys a player summon")

@@ -12,6 +12,7 @@ var draw_pile: Array[String] = []
 var hand: Array[String] = []
 var discard_pile: Array[String] = []
 var statuses: Array[Dictionary] = []
+var summons: Array = []
 var fatigue_level := 0
 
 func setup(new_id: String, new_name: String, deck: Array, random: RandomNumberGenerator) -> void:
@@ -26,6 +27,7 @@ func setup(new_id: String, new_name: String, deck: Array, random: RandomNumberGe
 	hand.clear()
 	discard_pile.clear()
 	statuses.clear()
+	summons = [null, null, null]
 	for card_id in deck:
 		draw_pile.append(str(card_id))
 	for i in range(draw_pile.size() - 1, 0, -1):
@@ -81,12 +83,20 @@ func can_pay(card: Dictionary) -> bool:
 	if int(energy[element]) < int(card["cost"]) or status_stacks("lock", element) > 0:
 		return false
 	for effect in card["effects"]:
+		if effect["type"] == "summon" and first_free_summon_slot() < 0:
+			return false
 		if effect["type"] == "convert_energy" and effect.get("target", "self") == "self":
 			var from_element: String = effect["from"]
 			var paid_from := int(card["cost"]) if from_element == element else 0
 			if int(energy[from_element]) - paid_from < int(effect["amount"]):
 				return false
 	return true
+
+func first_free_summon_slot() -> int:
+	for i in summons.size():
+		if summons[i] == null:
+			return i
+	return -1
 
 func gain_energy(element: String, amount: int) -> int:
 	if status_stacks("lock", element) > 0:

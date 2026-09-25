@@ -31,7 +31,7 @@ func capture() -> void:
 	var card: Dictionary = manager.cards[manager.player.hand[2]]
 	manager.player.energy[card["element"]] = 10
 	ui.call("_refresh")
-	ui.call("_play_card_from", 2, Vector2(910, 500))
+	ui.call("_play_card_from", 2, Vector2(910, 500), {"kind": "hero"})
 	await create_timer(0.7).timeout
 	await _shot(output.path_join("player_reveal.png"))
 	await create_timer(3.3).timeout

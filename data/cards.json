@@ -33,5 +33,11 @@
   {"id":"metal_forge","name":"炼金","element":"metal","cost":0,"text":"获得 1 金能量。","art_prompt":"金色矿石在炉中凝聚为灵气","effects":[{"type":"gain_energy","target":"self","element":"metal","amount":1}]},
   {"id":"wood_sprout","name":"萌发","element":"wood","cost":0,"text":"获得 1 木能量。","art_prompt":"新芽在石缝中迅速生长","effects":[{"type":"gain_energy","target":"self","element":"wood","amount":1}]},
   {"id":"wood_to_fire","name":"木生火","element":"wood","cost":1,"text":"额外失去 1 木能量，获得 3 火能量。","art_prompt":"翠绿木灵转化成温暖火焰","effects":[{"type":"convert_energy","target":"self","from":"wood","to":"fire","amount":1,"gain":3}]},
-  {"id":"metal_lock","name":"封火令","element":"metal","cost":2,"text":"封锁敌人火能量 2 回合。","art_prompt":"金色符印封住赤红火脉","effects":[{"type":"status","target":"opponent","status":"lock","element":"fire","stacks":1,"turns":2}]}
+  {"id":"metal_lock","name":"封火令","element":"metal","cost":2,"text":"封锁敌人火能量 2 回合。","art_prompt":"金色符印封住赤红火脉","effects":[{"type":"status","target":"opponent","status":"lock","element":"fire","stacks":1,"turns":2}]},
+
+  {"id":"metal_furnace_card","name":"金灵炉","element":"metal","cost":3,"text":"召唤金灵炉。回合开始时获得 1 水能量。","art_prompt":"悬浮的古铜炼金炉，流出湛蓝水灵气，暗色东方幻想","effects":[{"type":"summon","target":"self","summon":"metal_furnace"}]},
+  {"id":"wood_seedling_card","name":"青藤苗","element":"wood","cost":3,"text":"召唤青藤苗。回合开始时获得 1 火能量。","art_prompt":"石台上的青藤幼苗，叶脉燃起温暖火光，暗色东方幻想","effects":[{"type":"summon","target":"self","summon":"wood_seedling"}]},
+  {"id":"water_spring_card","name":"玄水泉","element":"water","cost":3,"text":"召唤玄水泉。回合开始时获得 1 木能量。","art_prompt":"悬浮石盆里的清澈灵泉，生出翠绿灵枝，暗色东方幻想","effects":[{"type":"summon","target":"self","summon":"water_spring"}]},
+  {"id":"fire_lantern_card","name":"赤焰灯","element":"fire","cost":3,"text":"召唤赤焰灯。回合开始时获得 1 土能量。","art_prompt":"赤色悬灯内燃不灭灵火，下方凝成岩石，暗色东方幻想","effects":[{"type":"summon","target":"self","summon":"fire_lantern"}]},
+  {"id":"earth_stele_card","name":"坤土碑","element":"earth","cost":3,"text":"召唤坤土碑。回合开始时获得 1 金能量。","art_prompt":"刻有金色符文的古老土石碑，生出金属晶脉，暗色东方幻想","effects":[{"type":"summon","target":"self","summon":"earth_stele"}]}
 ]

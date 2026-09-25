@@ -8,7 +8,7 @@ Godot 4.6 的单机 PVE 五行卡牌战斗原型。三份 v0.3 原始设计文�
 
 在这台 MacBook 上，Godot 应用位于 `/Users/wangtaizhi/Desktop/Godot.app`，命令行可用 `/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path .` 启动游戏；后面的测试和截图命令也使用同一个可执行文件。
 
-在主菜单选择一个敌人和一套牌组，点击“进入战斗”。鼠标悬停手牌可放大查看效果；按住并往上拖到战场任意位置（手牌上方）松开即可打出。松开在手牌区域会取消出牌。点击“结束回合”让敌人行动。胜负后可重开或返回选择。
+在主菜单选择一个敌人和一套牌组，点击“进入战斗”。鼠标悬停手牌可放大查看效果。伤害牌须拖到敌方角色或召唤物上，指向目标时会显示预计伤害；召唤牌须拖到我方空槽位，拖拽时才会显示空槽位。其他牌拖到手牌上方即可打出。松开在无效位置会取消出牌。点击“结束回合”让敌人行动。胜负后可重开或返回选择。
 
 战斗采用横版对峙格局：我方立绘在左、敌方立绘在右，两者面对面。我方血条和五行能量在左下角，敌方对应的 HUD 中心对称地放在右上角；两侧数值面板共用同一套排版，只有内部顺序左右镜像。状态以小圆图标显示在我方属性栏上方、敌方属性栏下方，悬停可查看规则。能量是五个圆形灵石，敌我双方都按「金木水火土」从左到右排列。
 
@@ -18,7 +18,8 @@ Godot 4.6 的单机 PVE 五行卡牌战斗原型。三份 v0.3 原始设计文�
 - 每回合先按实时抽牌堆属性比例生成自然能量，再抽 1 张；能量已满或封锁的属性从随机池排除。
 - 初始 4 张手牌、上限 8 张，弃牌不洗回，递增无属性疲劳。
 - 敌我共用能量、抽牌、出牌、伤害和状态逻辑；敌方手牌显示牌背，不公开内容。
-- 30 种数据定义卡牌、3 种敌人、3 套玩家牌组。效果通过 `effects` 顺序结算，包括伤害、治疗、抽牌、获得/削减/转换能量、随机弃牌及状态。
+- 35 种数据定义卡牌、3 种敌人、3 套玩家牌组。效果通过 `effects` 顺序结算，包括伤害、治疗、抽牌、获得/削减/转换能量、随机弃牌、状态及召唤。
+- 双方各有 3 个召唤槽。五张基础召唤牌消耗 3 点对应属性灵气，召唤 10 生命的物体；物体在持有者回合开始时产生 1 点相生属性灵气。召唤物不获得状态，也不受五行抗性与克制影响。伤害牌可自由指定敌方角色或召唤物；多段伤害预览按结算顺序逐段显示，并计入护盾和剩余生命。
 - 状态：灼伤、中毒、出血、虚弱、脆弱、再生、护盾、元素封锁。双方的状态以独立图标显示，每排 8 个，层数在图标右下角。敌人根据伤害、恢复、资源和状态评估手牌并连续出牌。
 - 横版对战界面：左我方 / 右敌方立绘面对面，我方 HUD 在左下、敌方 HUD 在右上，圆形五行能量、扇形手牌、悬停放大、拖拽出牌、从牌堆飞入手牌的抽牌动画、敌方卡牌从牌背飞入场中的展示，以及胜负和重开。战斗日志保存在逻辑层，当前战斗画面不显示。
 - 布局以画面中心点对称：我方手牌（底部偏右）对应敌方卡背（顶部偏左），我方抽牌堆（右下角）对应敌方抽牌堆（左上角）。
@@ -51,15 +52,15 @@ Godot 4.6 的单机 PVE 五行卡牌战斗原型。三份 v0.3 原始设计文�
 
 ## 数据与美术
 
-卡牌、牌组和敌人在 `data/cards.json`、`data/battles.json`。卡牌插画使用 `assets/cards/generated/{card_id}.webp`；未生成时自动使用 `assets/cards/elements/{element}.webp`。角色和背景也按 ID 从 `assets/` 自动读取。界面、卡框、文字与数值由 Godot 绘制。
+卡牌、牌组和敌人在 `data/cards.json`、`data/battles.json`；召唤物模板在 `data/summons.json`，回合开始效果按数据逐项执行，后续可定义其他种类的召唤物。战场召唤物使用独立的 `ui/summon_view.tscn` 预制场景显示名称与生命。卡牌插画使用 `assets/cards/generated/{card_id}.webp`；未生成时自动使用 `assets/cards/elements/{element}.webp`。角色和背景也按 ID 从 `assets/` 自动读取。界面、卡框、文字与数值由 Godot 绘制。
 
 卡牌定义与外观分开：`data/cards.json` 定义费用、属性、效果等规则，玩家和敌人的手牌保存卡牌 ID；`ui/card_view.tscn` 是正面卡牌预制场景，`ui/card_back.tscn` 是牌背预制场景，使用 `assets/cards/card_back.webp` 美术图。敌方手牌、双方牌堆和抽牌飞行动画共用牌背；敌方的牌背美术旋转 180°。双方手牌固定为同一尺寸，张数增加时只收紧间距，让相邻卡牌互相遮挡；扇形上下翻转并贴近画面边缘，允许部分牌面超出屏幕，但避开我方状态栏和结束回合按钮。悬停可看完整卡牌。所有正面卡牌始终显示相同的费用、属性、插画、名称与效果文字，只做等比例缩放。卡牌外框固定为 **5:7**；插画窗口固定为 **4:3 横向**，建议生成 **1024×768** 图片。早期 2:3 竖版五行占位图会在插画窗口内居中裁切；后续生成的独立卡图按新的 4:3 规格制作。
 
-本版使用 AI 生成的 1 张背景、4 张角色立绘、5 张五行通用插画和 1 张透明法阵纹理。每张卡的独立插画尚未生成；数据里已有 `art_prompt`。运行 `python3 tools/art_pipeline.py manifest` 可从游戏数据生成全部 36 个资源任务；生成图片后用 `python3 tools/art_pipeline.py ingest card fire_edge 图片路径` 进行尺寸、构图比例检查、WebP 转换和按 ID 入库。角色、背景、特效纹理可将 `card` 分别换成 `character`、`background`、`fx`。图片内容仍需视觉审查；当前脚本不包含自动调用图像模型或视觉模型的步骤。
+本版使用 AI 生成的 1 张背景、4 张角色立绘、5 张五行通用插画和 1 张透明法阵纹理。每张卡的独立插画尚未生成；数据里已有 `art_prompt`。运行 `python3 tools/art_pipeline.py manifest` 可从游戏数据生成全部 41 个资源任务；生成图片后用 `python3 tools/art_pipeline.py ingest card fire_edge 图片路径` 进行尺寸、构图比例检查、WebP 转换和按 ID 入库。角色、背景、特效纹理可将 `card` 分别换成 `character`、`background`、`fx`。图片内容仍需视觉审查；当前脚本不包含自动调用图像模型或视觉模型的步骤。
 
 横版对峙使用 `assets/characters/fullbody/{id}.webp` 的透明全身立绘，原有 `assets/characters/{id}.webp` 继续用于属性栏肖像。四名角色的全身源图统一面朝画面右侧；敌人放在战场右侧时由界面水平镜像，形成面对面站位。`tools/make_standees.gd` 按 alpha 边界裁切，再等比例放入 **320×480** 的透明画框，不裁掉头、脚或法器，输出到 `assets/characters/{id}_standee.webp`；战斗里以 300×450 显示。执行 `Godot --headless --path . --script res://tools/make_standees.gd -- --force` 可重建全部战场立绘，之后运行 `Godot --headless --path . --import` 导入新图片。
 
-动态特效集中在 `ui/battle_fx.gd`。新增卡牌会按主属性和第一个效果自动选择特效；也可在卡牌 JSON 中填写可选字段 `fx_id`、`fx_scale`、`fx_speed`、`fx_intensity` 调整表现，无须为每张牌单独写脚本。特效的起止点由 `battle_ui.gd` 里的 `PLAYER_ANCHOR` / `ENEMY_ANCHOR` 给出，`cast()` 根据卡牌 `effects` 的 `target` 判断该飞向对方立绘还是落回自己立绘。使用本机 Godot 执行 `--path . --script res://tools/capture_fx.gd` 可自动截取五行轨迹、命中和状态反馈到 `work/fx_previews/`，执行 `--path . --script res://tools/capture_layout.gd` 可把横版布局、双方 HUD、圆形能量和双向特效截到 `work/layout_previews/`，供视觉检查。
+动态特效集中在 `ui/battle_fx.gd`。新增卡牌会按主属性和第一个效果自动选择特效；也可在卡牌 JSON 中填写可选字段 `fx_id`、`fx_scale`、`fx_speed`、`fx_intensity` 调整表现，无须为每张牌单独写脚本。特效的起止点由 `battle_ui.gd` 里的 `PLAYER_ANCHOR` / `ENEMY_ANCHOR` 给出，`cast()` 优先飞向实际选中的角色或召唤物；没有显式目标时按卡牌 `effects` 的 `target` 选择立绘。使用本机 Godot 执行 `--path . --script res://tools/capture_fx.gd` 可自动截取五行轨迹、命中和状态反馈到 `work/fx_previews/`，执行 `--path . --script res://tools/capture_layout.gd` 可把横版布局、双方 HUD、圆形能量和双向特效截到 `work/layout_previews/`，供视觉检查。
 
 ## 测试
 
@@ -67,10 +68,11 @@ Godot 4.6 的单机 PVE 五行卡牌战斗原型。三份 v0.3 原始设计文�
 /Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tests/smoke_test.gd
 ```
 
-测试覆盖伤害公式、护盾预览、状态触发与衰减、递增疲劳，并以固定种子完整运行 90 场战斗。游戏 UI 也通过本机 Godot 实际启动、选牌、拖拽出牌和结束回合检查：
+测试覆盖伤害公式、护盾和多段伤害预览、召唤物行动与受击、状态触发与衰减、递增疲劳，并以固定种子完整运行 90 场战斗。游戏 UI 也通过本机 Godot 实际启动，检查指定槽位召唤、伤害目标选择和无效拖拽：
 
 ```sh
 /Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/test_drag.gd
+/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/test_summon_drag.gd
 /Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/capture_interaction.gd
 ```
 

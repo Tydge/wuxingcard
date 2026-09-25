@@ -10,6 +10,7 @@ const RED := Color("#f48177")
 const HP_FILL := Color("#d95e63")
 const CARD_VIEW_SCENE := preload("res://ui/card_view.tscn")
 const CARD_BACK_SCENE := preload("res://ui/card_back.tscn")
+const SUMMON_VIEW_SCENE := preload("res://ui/summon_view.tscn")
 const STATUS_ICON_SCRIPT := preload("res://ui/status_icon.gd")
 const CARD_REVEAL_SECONDS := 1.45
 const EFFECT_PAUSE_SECONDS := 0.9
@@ -53,7 +54,11 @@ const PLAYER_DECK_POS := Vector2(1512, 764)
 const ENEMY_DECK_POS := Vector2(16, 34)
 const DROP_ZONE_Y := 600.0
 const REVEAL_CENTER := Vector2(665, 260)
-const TURN_PLATE := Rect2(640, 492, 320, 44)
+const TURN_PLATE := Rect2(640, 330, 320, 44)
+const SUMMON_SIZE := Vector2(104, 136)
+const SUMMON_BASE := Vector2(420, 438)
+const SUMMON_STEP := 120.0
+const ENEMY_HERO_TARGET := Rect2(1180, 198, 345, 445)
 
 var manager: BattleManager
 var fx_layer: Control
@@ -68,6 +73,9 @@ var hand_cards: Array[Control] = []
 var enemy_backs: Array[Control] = []
 var hover_preview: Control
 var drag_card: Control
+var drag_hints: Array[Control] = []
+var damage_preview: Panel
+var damage_preview_label: Label
 var drag_index := -1
 var drag_offset := Vector2.ZERO
 var pointer_down := Vector2.ZERO
@@ -89,6 +97,7 @@ func _ready() -> void:
 	add_child(manager)
 	manager.changed.connect(_refresh)
 	manager.action_event.connect(_on_action_event)
+	manager.summon_event.connect(_on_summon_event)
 	fx_layer = Control.new()
 	fx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	fx_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -220,6 +229,7 @@ func _start_battle() -> void:
 	draw_animation_active = false
 	draw_generation += 1
 	action_busy = true
+	_clear_drag_hints()
 	battle_fx.clear_effects()
 	manager.start_battle(menu_enemy, menu_deck)
 
@@ -230,6 +240,7 @@ func _build_battle() -> void:
 	arena.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(arena)
 	_build_standees()
+	_build_summons()
 	_build_turn_plate()
 	_build_enemy_hand()
 	_build_combatant_hud("enemy")
@@ -350,6 +361,27 @@ func _portrait(parent: Node, actor_id: String, pos: Vector2, sz: Vector2, enemy_
 func _build_standees() -> void:
 	_standee("player", STANDEE_MARGIN, false, 2.4)
 	_standee(manager.enemy.id, VIEW_SIZE.x - STANDEE_MARGIN - STANDEE_SIZE.x, MIRROR_ENEMY_STANDEE, 2.0)
+
+func _summon_slot_rect(side: String, slot: int) -> Rect2:
+	var x := SUMMON_BASE.x + float(slot) * SUMMON_STEP
+	if side == "enemy":
+		x = VIEW_SIZE.x - x - SUMMON_SIZE.x
+	return Rect2(Vector2(x, SUMMON_BASE.y), SUMMON_SIZE)
+
+func _summon_point(side: String, slot: int) -> Vector2:
+	return _summon_slot_rect(side, slot).get_center()
+
+func _build_summons() -> void:
+	for side in ["player", "enemy"]:
+		var owner: Combatant = manager.player if side == "player" else manager.enemy
+		for slot in owner.summons.size():
+			var summoned: Summon = owner.summons[slot]
+			if summoned == null:
+				continue
+			var view: Panel = SUMMON_VIEW_SCENE.instantiate()
+			view.call("configure", summoned)
+			view.position = _summon_slot_rect(side, slot).position
+			add_child(view)
 
 func _standee(actor_id: String, x: float, mirrored: bool, bob_seconds: float) -> void:
 	var path := "res://assets/characters/%s_standee.webp" % actor_id
@@ -508,7 +540,8 @@ func _on_hand_input(event: InputEvent, index: int) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		var card: Dictionary = manager.cards[manager.player.hand[index]]
 		if not manager.player.can_pay(card):
-			_show_floating("灵气不足", "player", RED, 0, _hand_card_center(index, manager.player.hand.size()) + Vector2(-90, -120))
+			var reason := "召唤位已满" if manager.card_target_mode(card) == "slot" and manager.player.first_free_summon_slot() < 0 else "灵气不足"
+			_show_floating(reason, "player", RED, 0, _hand_card_center(index, manager.player.hand.size()) + Vector2(-90, -120))
 			return
 		drag_index = index
 		pointer_down = get_global_mouse_position()
@@ -518,8 +551,90 @@ func _on_hand_input(event: InputEvent, index: int) -> void:
 			hand_cards[index].visible = false
 		drag_card = _card_front(card, HAND_CARD_SIZE)
 		drag_card.position = pointer_down - drag_offset
+		_show_drag_hints(card)
 		fx_layer.add_child(drag_card)
 		get_viewport().set_input_as_handled()
+
+func _drop_selection(card: Dictionary, point: Vector2) -> Dictionary:
+	match manager.card_target_mode(card):
+		"slot":
+			for slot in manager.player.summons.size():
+				if manager.player.summons[slot] == null and _summon_slot_rect("player", slot).grow(8.0).has_point(point):
+					return {"kind": "slot", "slot": slot}
+		"damage":
+			for slot in manager.enemy.summons.size():
+				if manager.enemy.summons[slot] != null and _summon_slot_rect("enemy", slot).grow(8.0).has_point(point):
+					return {"kind": "summon", "slot": slot}
+			if ENEMY_HERO_TARGET.has_point(point):
+				return {"kind": "hero"}
+		"none":
+			if point.y < DROP_ZONE_Y:
+				return {}
+	return {"kind": "invalid"}
+
+func _show_drag_hints(card: Dictionary) -> void:
+	_clear_drag_hints()
+	var mode := manager.card_target_mode(card)
+	var choices: Array[Dictionary] = []
+	if mode == "slot":
+		for slot in manager.player.summons.size():
+			if manager.player.summons[slot] == null:
+				choices.append({"selection": {"kind": "slot", "slot": slot}, "rect": _summon_slot_rect("player", slot), "label": "召唤位 %d" % (slot + 1)})
+	elif mode == "damage":
+		choices.append({"selection": {"kind": "hero"}, "rect": ENEMY_HERO_TARGET, "label": "敌方角色"})
+		for slot in manager.enemy.summons.size():
+			var summoned: Summon = manager.enemy.summons[slot]
+			if summoned != null:
+				choices.append({"selection": {"kind": "summon", "slot": slot}, "rect": _summon_slot_rect("enemy", slot), "label": summoned.display_name})
+	for choice in choices:
+		var rect: Rect2 = choice["rect"]
+		var hint := _panel(fx_layer, rect.grow(5.0), Color("#2d667240"), GOLD.darkened(0.15), 10, 2)
+		hint.set_meta("selection", choice["selection"])
+		drag_hints.append(hint)
+		_label(hint, choice["label"], Vector2(0, -32), Vector2(hint.size.x, 28), 17, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	if mode == "damage":
+		damage_preview = _panel(fx_layer, Rect2(Vector2.ZERO, Vector2(200, 42)), Color("#09121ff2"), GOLD, 8)
+		damage_preview.z_index = 20
+		damage_preview.visible = false
+		damage_preview_label = _label(damage_preview, "", Vector2(8, 0), Vector2(184, 42), 18, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+
+func _clear_drag_hints() -> void:
+	for hint in drag_hints:
+		if is_instance_valid(hint):
+			hint.queue_free()
+	drag_hints.clear()
+	if is_instance_valid(damage_preview):
+		damage_preview.queue_free()
+	damage_preview = null
+	damage_preview_label = null
+
+func _update_drag_hints(card: Dictionary, pointer: Vector2) -> void:
+	var selection := _drop_selection(card, pointer)
+	for hint in drag_hints:
+		var selected: Dictionary = hint.get_meta("selection")
+		hint.modulate = Color.WHITE if selected == selection else Color(0.8, 0.9, 1.0, 0.55)
+	if not is_instance_valid(damage_preview):
+		return
+	var segments := manager.preview_damage_segments(manager.player, card, selection)
+	if segments.is_empty():
+		damage_preview.visible = false
+		return
+	var parts: Array[String] = []
+	var total := 0
+	for damage in segments:
+		parts.append(str(damage))
+		total += damage
+	var value := parts[0] if parts.size() == 1 else "%s=%d" % ["+".join(parts), total]
+	var caption := "预计伤害 " + value
+	var width := clampf(44.0 + caption.length() * 12.0, 180.0, 520.0)
+	damage_preview.size = Vector2(width, 42)
+	damage_preview_label.text = caption
+	damage_preview_label.size = Vector2(width - 16.0, 42)
+	var preview_x := pointer.x + HAND_CARD_SIZE.x / 2.0 + 20.0
+	if preview_x + width > VIEW_SIZE.x - 8.0:
+		preview_x = pointer.x - HAND_CARD_SIZE.x / 2.0 - width - 20.0
+	damage_preview.position = Vector2(clampf(preview_x, 8.0, VIEW_SIZE.x - width - 8.0), clampf(pointer.y - 21.0, 8.0, VIEW_SIZE.y - 50.0))
+	damage_preview.visible = true
 
 func _input(event: InputEvent) -> void:
 	if drag_index < 0 or not is_instance_valid(drag_card):
@@ -528,25 +643,34 @@ func _input(event: InputEvent) -> void:
 		var pointer := get_global_mouse_position()
 		drag_card.position = pointer - drag_offset
 		drag_card.rotation_degrees = 0
+		if drag_index < manager.player.hand.size():
+			_update_drag_hints(manager.cards[manager.player.hand[drag_index]], pointer)
 		get_viewport().set_input_as_handled()
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
 		var release := get_global_mouse_position()
 		var index := drag_index
+		var card: Dictionary = manager.cards[manager.player.hand[index]]
+		var selection := _drop_selection(card, release)
 		drag_index = -1
 		drag_card.queue_free()
 		drag_card = null
-		# The whole arena above the hand is a legal drop target.
-		if release.y < DROP_ZONE_Y and release.distance_to(pointer_down) > 45:
-			_play_card_from(index, release)
+		_clear_drag_hints()
+		if release.distance_to(pointer_down) > 45 and manager.valid_card_target(manager.player, card, selection) and selection.get("kind", "") != "invalid":
+			_play_card_from(index, release, selection)
 		else:
 			_refresh()
 		get_viewport().set_input_as_handled()
 
-func _play_card_from(card_index: int, source: Vector2) -> void:
+func _target_point(side: String, selection: Dictionary) -> Vector2:
+	if selection.get("kind", "") in ["slot", "summon"]:
+		return _summon_point(side, int(selection["slot"]))
+	return _anchor(side)
+
+func _play_card_from(card_index: int, source: Vector2, selection: Dictionary = {}) -> void:
 	if manager.phase != "player_action" or card_index < 0 or card_index >= manager.player.hand.size() or action_busy:
 		return
 	var card: Dictionary = manager.cards[manager.player.hand[card_index]]
-	if not manager.player.can_pay(card):
+	if not manager.player.can_pay(card) or not manager.valid_card_target(manager.player, card, selection):
 		_refresh()
 		return
 	action_busy = true
@@ -555,10 +679,11 @@ func _play_card_from(card_index: int, source: Vector2) -> void:
 	_refresh()
 	await _present_card(card, "player", source)
 	if manager.phase == "player_action" and card_index < manager.player.hand.size():
-		# The effect leaves the player's standee for whatever the card targets.
-		await get_tree().create_timer(battle_fx.cast(card, "player")).timeout
+		var mode := manager.card_target_mode(card)
+		var destination := _target_point("player" if mode == "slot" else "enemy", selection) if mode != "none" else Vector2(-1, -1)
+		await get_tree().create_timer(battle_fx.cast(card, "player", Vector2(-1, -1), destination)).timeout
 		player_hidden_index = -1
-		manager.play_player_card(card_index)
+		manager.play_player_card(card_index, selection)
 		await get_tree().create_timer(EFFECT_PAUSE_SECONDS).timeout
 	player_hidden_index = -1
 	action_busy = false
@@ -582,10 +707,12 @@ func _run_enemy_turn() -> void:
 	enemy_animating = true
 	await get_tree().create_timer(0.75).timeout
 	while manager.phase == "enemy_action":
-		var chosen_index := manager.peek_enemy_card_index()
+		var action := manager.peek_enemy_action()
+		var chosen_index := int(action["index"])
 		if chosen_index < 0:
 			manager.enemy_step(-1)
 			break
+		var selection: Dictionary = action["target"]
 		var card: Dictionary = manager.cards[manager.enemy.hand[chosen_index]]
 		var enemy_card_size := HAND_CARD_SIZE
 		var source := _enemy_card_position(chosen_index, manager.enemy.hand.size()) + enemy_card_size / 2.0
@@ -594,8 +721,10 @@ func _run_enemy_turn() -> void:
 		await _present_card(card, "enemy", source)
 		if manager.phase != "enemy_action":
 			break
-		await get_tree().create_timer(battle_fx.cast(card, "enemy")).timeout
-		manager.enemy_step(chosen_index)
+		var mode := manager.card_target_mode(card)
+		var destination := _target_point("enemy" if mode == "slot" else "player", selection) if mode != "none" else Vector2(-1, -1)
+		await get_tree().create_timer(battle_fx.cast(card, "enemy", Vector2(-1, -1), destination)).timeout
+		manager.enemy_step(chosen_index, selection)
 		enemy_hidden_index = -1
 		await get_tree().create_timer(EFFECT_PAUSE_SECONDS).timeout
 	enemy_animating = false
@@ -687,6 +816,17 @@ func _build_result() -> void:
 
 func _anchor(side: String) -> Vector2:
 	return ENEMY_ANCHOR if side == "enemy" else PLAYER_ANCHOR
+
+func _on_summon_event(side: String, slot: int, kind: String, element: String, amount: int) -> void:
+	if fx_layer == null or not is_inside_tree():
+		return
+	var point := _summon_point(side, slot)
+	match kind:
+		"spawn": battle_fx.energy(point, element, true)
+		"damage":
+			battle_fx.impact(element, point)
+			_show_floating("-%d" % amount, side, RED, 0.0, point + Vector2(-90, -45))
+		"destroy": battle_fx.impact(element, point)
 
 func _on_action_event(message: String, side: String, kind: String, element: String, amount: int) -> void:
 	if fx_layer == null or not is_inside_tree():

@@ -1,0 +1,7 @@
+[
+  {"id":"metal_furnace","name":"金灵炉","element":"metal","glyph":"炉","hp":10,"turn_start":[{"type":"gain_energy","element":"water","amount":1}]},
+  {"id":"wood_seedling","name":"青藤苗","element":"wood","glyph":"苗","hp":10,"turn_start":[{"type":"gain_energy","element":"fire","amount":1}]},
+  {"id":"water_spring","name":"玄水泉","element":"water","glyph":"泉","hp":10,"turn_start":[{"type":"gain_energy","element":"wood","amount":1}]},
+  {"id":"fire_lantern","name":"赤焰灯","element":"fire","glyph":"灯","hp":10,"turn_start":[{"type":"gain_energy","element":"earth","amount":1}]},
+  {"id":"earth_stele","name":"坤土碑","element":"earth","glyph":"碑","hp":10,"turn_start":[{"type":"gain_energy","element":"metal","amount":1}]}
+]
