@@ -16,6 +16,14 @@ func configure(summoned: Summon) -> void:
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(portrait)
+	portrait.pivot_offset = portrait.size / 2.0
+	var float_seconds := 1.65 + float(abs(hash(summoned.id)) % 5) * 0.13
+	var float_tween := portrait.create_tween().set_loops()
+	float_tween.tween_property(portrait, "position:y", -6.0, float_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	float_tween.tween_property(portrait, "position:y", 2.0, float_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	var breath_tween := portrait.create_tween().set_loops()
+	breath_tween.tween_property(portrait, "scale", Vector2(1.025, 1.025), float_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	breath_tween.tween_property(portrait, "scale", Vector2.ONE, float_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	var hp_badge := Panel.new()
 	hp_badge.position = Vector2(57, 160)
 	hp_badge.size = Vector2(76, 26)

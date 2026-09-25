@@ -31,6 +31,20 @@ func run() -> void:
 		push_error("Summon hand card did not use its dedicated prefab")
 		quit(1)
 		return
+	var health_badge: Control = summon_card.get_child(summon_card.get_child_count() - 1)
+	if summon_card.clip_contents or health_badge.position.x + health_badge.size.x <= summon_card.size.x:
+		push_error("Summon health badge is not hanging outside the card frame")
+		quit(1)
+		return
+	var description: Label
+	for child in summon_card.get_children():
+		if child is Label and child.text.contains("回合开始"):
+			description = child
+			break
+	if description == null or absf(description.position.x + description.size.x / 2.0 - summon_card.size.x / 2.0) > 1.0:
+		push_error("Summon description is not centred in the card")
+		quit(1)
+		return
 	var output := ProjectSettings.globalize_path("res://work/summon_previews")
 	DirAccess.make_dir_recursive_absolute(output)
 	await _shot(output.path_join("summon_card_in_hand.png"))
@@ -39,6 +53,22 @@ func run() -> void:
 	await create_timer(3.9).timeout
 	if manager.player.summons[0] == null or manager.player.summons[0].hp != 15:
 		push_error("Summon drag did not place a 15-HP summon in the selected slot")
+		quit(1)
+		return
+	var field_view: SummonView
+	for child in ui.get_children():
+		if child is SummonView:
+			field_view = child
+			break
+	if field_view == null:
+		push_error("Summon battlefield view was not created")
+		quit(1)
+		return
+	var portrait: TextureRect = field_view.get_child(0)
+	var initial_y := portrait.position.y
+	await create_timer(0.45).timeout
+	if absf(portrait.position.y - initial_y) < 0.5:
+		push_error("Summon portrait did not float")
 		quit(1)
 		return
 	await _shot(output.path_join("player_summon.png"))

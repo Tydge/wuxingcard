@@ -52,9 +52,9 @@ Godot 4.6 的单机 PVE 五行卡牌战斗原型。三份 v0.3 原始设计文�
 
 ## 数据与美术
 
-卡牌、牌组和敌人在 `data/cards.json`、`data/battles.json`；召唤物模板在 `data/summons.json`，回合开始效果按数据逐项执行，后续可定义其他种类的召唤物。召唤手牌使用独立的 `ui/summon_card_view.tscn`，右下角显示召唤物基础生命；场上使用 `ui/summon_view.tscn`，显示透明立绘与当前生命，悬停后在旁边显示放大的召唤牌。透明立绘位于 `assets/summons/standee/{summon_id}.webp`，对应的 4:3 手牌插画位于 `assets/cards/generated/{card_id}.webp`。其他卡牌插画未生成时自动使用 `assets/cards/elements/{element}.webp`。角色和背景也按 ID 从 `assets/` 自动读取。界面、卡框、文字与数值由 Godot 绘制。
+卡牌、牌组和敌人在 `data/cards.json`、`data/battles.json`；召唤物模板在 `data/summons.json`，回合开始效果按数据逐项执行，后续可定义其他种类的召唤物。召唤手牌使用独立的 `ui/summon_card_view.tscn`，右下角外挂徽章显示召唤物基础生命；场上使用 `ui/summon_view.tscn`，显示轻微浮动的透明立绘与固定位置的当前生命标记，悬停后在旁边显示放大的召唤牌。透明立绘位于 `assets/summons/standee/{summon_id}.webp`，对应的 4:3 手牌插画位于 `assets/cards/generated/{card_id}.webp`。其他卡牌插画未生成时自动使用 `assets/cards/elements/{element}.webp`。角色和背景也按 ID 从 `assets/` 自动读取。界面、卡框、文字与数值由 Godot 绘制。
 
-卡牌定义与外观分开：`data/cards.json` 定义费用、属性、效果等规则，玩家和敌人的手牌保存卡牌 ID；`ui/card_view.tscn` 是普通正面卡牌预制场景，召唤牌另有 `ui/summon_card_view.tscn`，`ui/card_back.tscn` 是牌背预制场景，使用 `assets/cards/card_back.webp` 美术图。敌方手牌、双方牌堆和抽牌飞行动画共用牌背；敌方的牌背美术旋转 180°。双方手牌固定为同一尺寸，张数增加时只收紧间距，让相邻卡牌互相遮挡；扇形上下翻转并贴近画面边缘，允许部分牌面超出屏幕，但避开我方状态栏和结束回合按钮。悬停可看完整卡牌。所有正面卡牌始终显示相同的费用、属性、插画、名称与效果文字；召唤牌额外在右下角显示基础生命，所有元素只做等比例缩放。卡牌外框固定为 **5:7**；插画窗口固定为 **4:3 横向**，建议生成 **1024×768** 图片。早期 2:3 竖版五行占位图会在插画窗口内居中裁切；后续生成的独立卡图按新的 4:3 规格制作。
+卡牌定义与外观分开：`data/cards.json` 定义费用、属性、效果等规则，玩家和敌人的手牌保存卡牌 ID；`ui/card_view.tscn` 是普通正面卡牌预制场景，召唤牌另有 `ui/summon_card_view.tscn`，`ui/card_back.tscn` 是牌背预制场景，使用 `assets/cards/card_back.webp` 美术图。敌方手牌、双方牌堆和抽牌飞行动画共用牌背；敌方的牌背美术旋转 180°。双方手牌固定为同一尺寸，张数增加时只收紧间距，让相邻卡牌互相遮挡；扇形上下翻转并贴近画面边缘，允许部分牌面超出屏幕，但避开我方状态栏和结束回合按钮。悬停可看完整卡牌。所有正面卡牌始终显示相同的费用、属性、插画、名称与效果文字；召唤牌额外把基础生命作为右下角外挂徽章，保留完整的居中文字区，所有元素只做等比例缩放。卡牌外框固定为 **5:7**；插画窗口固定为 **4:3 横向**，建议生成 **1024×768** 图片。早期 2:3 竖版五行占位图会在插画窗口内居中裁切；后续生成的独立卡图按新的 4:3 规格制作。
 
 本版使用 AI 生成的 1 张背景、4 张角色立绘、5 张五行通用插画、1 张透明法阵纹理，以及 5 对召唤物透明立绘与 4:3 手牌插画。其余卡牌的独立插画尚未生成；数据里已有 `art_prompt`。运行 `python3 tools/art_pipeline.py manifest` 可从游戏数据生成全部 41 个资源任务；生成图片后用 `python3 tools/art_pipeline.py ingest card fire_edge 图片路径` 进行尺寸、构图比例检查、WebP 转换和按 ID 入库。角色、背景、特效纹理可将 `card` 分别换成 `character`、`background`、`fx`。图片内容仍需视觉审查；当前脚本不包含自动调用图像模型或视觉模型的步骤。召唤物美术提示词记录在 `docs/summon_art_prompts.md`。
 
