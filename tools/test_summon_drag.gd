@@ -12,28 +12,53 @@ func run() -> void:
 	await process_frame
 	var ui: Control = current_scene
 	ui.call("_start_battle")
+	await create_timer(0.2).timeout
+	if not is_instance_valid(ui.get("turn_notice")):
+		push_error("Turn announcement did not appear")
+		quit(1)
+		return
 	await create_timer(5.5).timeout
+	if is_instance_valid(ui.get("turn_notice")):
+		push_error("Turn announcement did not fade away")
+		quit(1)
+		return
 	var manager: BattleManager = ui.get("manager")
 	manager.player.hand[0] = "metal_furnace_card"
-	manager.player.energy["metal"] = 3
+	manager.player.energy["metal"] = 2
 	ui.call("_refresh")
-	var slot_rect: Rect2 = ui.call("_summon_slot_rect", "player", 0)
-	await _drag(ui, 0, slot_rect.get_center())
-	await create_timer(3.9).timeout
-	if manager.player.summons[0] == null or manager.player.summons[0].hp != 10:
-		push_error("Summon drag did not place a 10-HP summon in the selected slot")
+	var summon_card: Control = ui.get("hand_cards")[0]
+	if not summon_card is SummonCardView:
+		push_error("Summon hand card did not use its dedicated prefab")
 		quit(1)
 		return
 	var output := ProjectSettings.globalize_path("res://work/summon_previews")
 	DirAccess.make_dir_recursive_absolute(output)
+	await _shot(output.path_join("summon_card_in_hand.png"))
+	var slot_rect: Rect2 = ui.call("_summon_slot_rect", "player", 0)
+	await _drag(ui, 0, slot_rect.get_center())
+	await create_timer(3.9).timeout
+	if manager.player.summons[0] == null or manager.player.summons[0].hp != 15:
+		push_error("Summon drag did not place a 15-HP summon in the selected slot")
+		quit(1)
+		return
 	await _shot(output.path_join("player_summon.png"))
+	ui.call("_on_summon_hover", "player", 0)
+	await process_frame
+	var enlarged: Control = ui.get("hover_preview")
+	if not enlarged is SummonCardView:
+		push_error("Hovering a battlefield summon did not show its enlarged card")
+		quit(1)
+		return
+	await _shot(output.path_join("summon_hover.png"))
+	ui.call("_on_summon_exit", "player", 0)
 	manager.enemy.summons[1] = Summon.new()
 	manager.enemy.summons[1].setup(manager.summon_templates["wood_seedling"])
 	manager.player.hand[0] = "fire_edge"
 	manager.player.energy["fire"] = 3
 	ui.call("_refresh")
+	await _shot(output.path_join("both_summons.png"))
 	var before := manager.player.hand.size()
-	await _drag(ui, 0, Vector2(800, 400))
+	await _drag(ui, 0, Vector2(800, 250))
 	await process_frame
 	if manager.player.hand.size() != before:
 		push_error("Damage card played without a selected target")
@@ -42,8 +67,8 @@ func run() -> void:
 	var enemy_rect: Rect2 = ui.call("_summon_slot_rect", "enemy", 1)
 	var hero_hp := manager.enemy.hp
 	var preview := await _drag(ui, 0, enemy_rect.get_center(), true)
-	if preview != "预计伤害 10":
-		push_error("Expected summon damage preview 10, got: " + preview)
+	if preview != "预计伤害 15":
+		push_error("Expected summon damage preview 15, got: " + preview)
 		quit(1)
 		return
 	await create_timer(3.9).timeout

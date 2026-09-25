@@ -4,7 +4,6 @@ extends Control
 # All effects are drawn by Godot. New cards inherit a style from their element and
 # effects; optional fx_id / fx_scale / fx_speed / fx_intensity data can override it.
 var active: Array[Dictionary] = []
-var ambient_time := 0.0
 var serial := 0
 var ring_texture: Texture2D
 # Where each fighter's standee sits. The battle UI overrides these so casts can
@@ -95,7 +94,6 @@ func status(point: Vector2, element: String, status_id: String) -> void:
 	_add("status", element, point, point, 1.1, 1.0, 1.0, status_id)
 
 func _process(delta: float) -> void:
-	ambient_time += delta
 	for i in range(active.size() - 1, -1, -1):
 		active[i]["age"] = float(active[i]["age"]) + delta
 		if float(active[i]["age"]) >= float(active[i]["duration"]):
@@ -103,7 +101,6 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	_draw_ambient()
 	for effect in active:
 		var p := clampf(float(effect["age"]) / float(effect["duration"]), 0.0, 1.0)
 		var c := _color(str(effect["element"]))
@@ -131,14 +128,6 @@ func _draw_ai_ring(point: Vector2, radius: float, angle: float, color: Color) ->
 	draw_set_transform(point, angle, Vector2.ONE)
 	draw_texture_rect(ring_texture, Rect2(-radius, -radius, radius * 2.0, radius * 2.0), false, color)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-
-func _draw_ambient() -> void:
-	# Slow flecks add depth to the AI painted arena without obscuring the UI.
-	for i in 24:
-		var x := 180.0 + fposmod(float(i * 337), 1240.0)
-		var y := 700.0 - fposmod(ambient_time * (8.0 + float(i % 5) * 3.0) + float(i * 59), 480.0)
-		var element: String = BattleRules.ELEMENTS[i % 5]
-		draw_circle(Vector2(x, y), 1.1 + float(i % 3) * 0.45, _tint(BattleRules.color(element), 0.12))
 
 func _draw_cast(e: Dictionary, p: float, c: Color) -> void:
 	var origin: Vector2 = e["from"]

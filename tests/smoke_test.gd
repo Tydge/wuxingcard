@@ -144,15 +144,19 @@ func test_status_rules(manager: BattleManager) -> void:
 
 func test_summon_rules(manager: BattleManager) -> void:
 	manager.start_battle("ember", "balanced", 4321)
+	for summon_id in ["metal_furnace", "wood_seedling", "water_spring", "fire_lantern", "earth_stele"]:
+		var template: Dictionary = manager.summon_templates[summon_id]
+		check(int(template["hp"]) == 15, "%s has 15 starting HP" % summon_id)
+		check(int(manager.cards[template["card_id"]]["cost"]) == 2, "%s costs 2 energy" % summon_id)
 	var actor := manager.player
 	var opponent := manager.enemy
 	actor.hand = ["metal_furnace_card"]
-	actor.energy["metal"] = 3
+	actor.energy["metal"] = 2
 	check(not manager.play_player_card(0, {"kind": "slot", "slot": 3}), "summon rejects invalid slot")
-	check(actor.hand.size() == 1 and actor.energy["metal"] == 3, "invalid summon does not spend resources")
+	check(actor.hand.size() == 1 and actor.energy["metal"] == 2, "invalid summon does not spend resources")
 	check(manager.play_player_card(0, {"kind": "slot", "slot": 0}), "summon card uses chosen empty slot")
 	var summoned: Summon = actor.summons[0]
-	check(summoned != null and summoned.hp == 10 and summoned.max_hp == 10, "summon starts with 10 HP")
+	check(summoned != null and summoned.hp == 15 and summoned.max_hp == 15, "summon starts with 15 HP")
 	actor.energy["water"] = 0
 	actor.add_status("poison", 2, 0)
 	var hp_before := actor.hp
@@ -174,17 +178,17 @@ func test_summon_rules(manager: BattleManager) -> void:
 	for element in BattleRules.ELEMENTS:
 		opponent.energy[element] = 0
 	opponent.energy["fire"] = 10
-	actor.hand = ["fire_strike"]
+	actor.hand = ["fire_edge"]
 	actor.energy["fire"] = 3
 	manager.phase = "player_action"
-	var attack: Dictionary = manager.cards["fire_strike"]
-	check(manager.preview_damage_segments(actor, attack, {"kind": "summon", "slot": 1}) == [10], "summon preview ignores fire resistance")
+	var attack: Dictionary = manager.cards["fire_edge"]
+	check(manager.preview_damage_segments(actor, attack, {"kind": "summon", "slot": 1}) == [15], "summon preview ignores fire resistance")
 	check(manager.preview_damage_segments(actor, attack, {"kind": "hero"}) == [0], "hero preview still uses fire resistance")
 	opponent.energy["fire"] = 0
-	actor.hand = ["fire_strike"]
+	actor.hand = ["fire_edge"]
 	check(manager.play_player_card(0, {"kind": "hero"}), "hero remains targetable while a summon is present")
-	check(opponent.hp == 90 and opponent.summons[1] != null, "hero attack leaves summon untouched")
-	actor.hand = ["fire_strike"]
+	check(opponent.hp == 80 and opponent.summons[1] != null, "hero attack leaves summon untouched")
+	actor.hand = ["fire_edge"]
 	actor.energy["fire"] = 3
 	var hero_hp := opponent.hp
 	check(manager.play_player_card(0, {"kind": "summon", "slot": 1}), "damage card can target a summon")

@@ -1,7 +1,7 @@
 [
-  {"id":"metal_furnace","name":"金灵炉","element":"metal","glyph":"炉","hp":10,"turn_start":[{"type":"gain_energy","element":"water","amount":1}]},
-  {"id":"wood_seedling","name":"青藤苗","element":"wood","glyph":"苗","hp":10,"turn_start":[{"type":"gain_energy","element":"fire","amount":1}]},
-  {"id":"water_spring","name":"玄水泉","element":"water","glyph":"泉","hp":10,"turn_start":[{"type":"gain_energy","element":"wood","amount":1}]},
-  {"id":"fire_lantern","name":"赤焰灯","element":"fire","glyph":"灯","hp":10,"turn_start":[{"type":"gain_energy","element":"earth","amount":1}]},
-  {"id":"earth_stele","name":"坤土碑","element":"earth","glyph":"碑","hp":10,"turn_start":[{"type":"gain_energy","element":"metal","amount":1}]}
+  {"id":"metal_furnace","card_id":"metal_furnace_card","name":"金灵炉","element":"metal","hp":15,"turn_start":[{"type":"gain_energy","element":"water","amount":1}]},
+  {"id":"wood_seedling","card_id":"wood_seedling_card","name":"青藤苗","element":"wood","hp":15,"turn_start":[{"type":"gain_energy","element":"fire","amount":1}]},
+  {"id":"water_spring","card_id":"water_spring_card","name":"玄水泉","element":"water","hp":15,"turn_start":[{"type":"gain_energy","element":"wood","amount":1}]},
+  {"id":"fire_lantern","card_id":"fire_lantern_card","name":"赤焰灯","element":"fire","hp":15,"turn_start":[{"type":"gain_energy","element":"earth","amount":1}]},
+  {"id":"earth_stele","card_id":"earth_stele_card","name":"坤土碑","element":"earth","hp":15,"turn_start":[{"type":"gain_energy","element":"metal","amount":1}]}
 ]

@@ -9,8 +9,10 @@ const WHITE := Color("#f5f1e9")
 const RED := Color("#f48177")
 const HP_FILL := Color("#d95e63")
 const CARD_VIEW_SCENE := preload("res://ui/card_view.tscn")
+const SUMMON_CARD_VIEW_SCENE := preload("res://ui/summon_card_view.tscn")
 const CARD_BACK_SCENE := preload("res://ui/card_back.tscn")
 const SUMMON_VIEW_SCENE := preload("res://ui/summon_view.tscn")
+const TARGET_MARKER_SCRIPT := preload("res://ui/target_marker.gd")
 const STATUS_ICON_SCRIPT := preload("res://ui/status_icon.gd")
 const CARD_REVEAL_SECONDS := 1.45
 const EFFECT_PAUSE_SECONDS := 0.9
@@ -55,9 +57,9 @@ const ENEMY_DECK_POS := Vector2(16, 34)
 const DROP_ZONE_Y := 600.0
 const REVEAL_CENTER := Vector2(665, 260)
 const TURN_PLATE := Rect2(640, 330, 320, 44)
-const SUMMON_SIZE := Vector2(104, 136)
-const SUMMON_BASE := Vector2(420, 438)
-const SUMMON_STEP := 120.0
+const SUMMON_SIZE := Vector2(190, 190)
+const SUMMON_CENTERS := [Vector2(540, 320), Vector2(700, 452), Vector2(540, 584)]
+const SUMMON_TARGET_RADIUS := 82.0
 const ENEMY_HERO_TARGET := Rect2(1180, 198, 345, 445)
 
 var manager: BattleManager
@@ -72,10 +74,13 @@ var action_busy := false
 var hand_cards: Array[Control] = []
 var enemy_backs: Array[Control] = []
 var hover_preview: Control
+var hovered_summon_side := ""
+var hovered_summon_slot := -1
 var drag_card: Control
 var drag_hints: Array[Control] = []
 var damage_preview: Panel
 var damage_preview_label: Label
+var turn_notice: Panel
 var drag_index := -1
 var drag_offset := Vector2.ZERO
 var pointer_down := Vector2.ZERO
@@ -174,14 +179,8 @@ func _refresh() -> void:
 		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		art.modulate = Color(0.85, 0.9, 1.0, 0.65)
 		add_child(art)
 		move_child(art, 1)
-	var shade := ColorRect.new()
-	shade.color = Color(0.015, 0.025, 0.05, 0.39)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(shade)
-	move_child(shade, 2)
 	if manager.phase == "menu":
 		_build_menu()
 	else:
@@ -217,7 +216,7 @@ func _build_menu() -> void:
 	var deck_info := manager.find_entry(manager.decks, menu_deck)
 	_label(center, deck_info["description"], Vector2(90, 475), Vector2(720, 45), 18, MUTED)
 	_button(center, "进入战斗", Rect2(270, 545, 360, 64), func(): _start_battle(), Color("#704e35"), GOLD)
-	_label(self, "操作：悬停查看卡牌，往战场上任意位置拖出即可打出；点击「结束回合」让对手行动。", Vector2(290, 820), Vector2(1020, 38), 18, MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	_label(self, "操作：伤害牌拖向角色或召唤物；召唤牌拖向空槽；其他牌拖到战场上方。", Vector2(290, 820), Vector2(1020, 38), 18, MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 
 func _start_battle() -> void:
 	selected_index = -1
@@ -234,14 +233,8 @@ func _start_battle() -> void:
 	manager.start_battle(menu_enemy, menu_deck)
 
 func _build_battle() -> void:
-	var arena := ArenaArt.new()
-	arena.position = Vector2.ZERO
-	arena.size = VIEW_SIZE
-	arena.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(arena)
 	_build_standees()
 	_build_summons()
-	_build_turn_plate()
 	_build_enemy_hand()
 	_build_combatant_hud("enemy")
 	_build_combatant_hud("player")
@@ -363,10 +356,10 @@ func _build_standees() -> void:
 	_standee(manager.enemy.id, VIEW_SIZE.x - STANDEE_MARGIN - STANDEE_SIZE.x, MIRROR_ENEMY_STANDEE, 2.0)
 
 func _summon_slot_rect(side: String, slot: int) -> Rect2:
-	var x := SUMMON_BASE.x + float(slot) * SUMMON_STEP
+	var center: Vector2 = SUMMON_CENTERS[slot]
 	if side == "enemy":
-		x = VIEW_SIZE.x - x - SUMMON_SIZE.x
-	return Rect2(Vector2(x, SUMMON_BASE.y), SUMMON_SIZE)
+		center.x = VIEW_SIZE.x - center.x
+	return Rect2(center - SUMMON_SIZE / 2.0, SUMMON_SIZE)
 
 func _summon_point(side: String, slot: int) -> Vector2:
 	return _summon_slot_rect(side, slot).get_center()
@@ -381,6 +374,8 @@ func _build_summons() -> void:
 			var view: Panel = SUMMON_VIEW_SCENE.instantiate()
 			view.call("configure", summoned)
 			view.position = _summon_slot_rect(side, slot).position
+			view.mouse_entered.connect(_on_summon_hover.bind(side, slot))
+			view.mouse_exited.connect(_on_summon_exit.bind(side, slot))
 			add_child(view)
 
 func _standee(actor_id: String, x: float, mirrored: bool, bob_seconds: float) -> void:
@@ -406,10 +401,18 @@ func _standee(actor_id: String, x: float, mirrored: bool, bob_seconds: float) ->
 		var box := _panel(self, Rect2(x + 60.0, STANDEE_TOP + 110.0, 180, 180), Color("#17304a99"), RED.darkened(0.2), 90)
 		_label(box, glyph, Vector2.ZERO, Vector2(180, 180), 96, RED if actor_id != "player" else Color("#95d9da"), HORIZONTAL_ALIGNMENT_CENTER)
 
-func _build_turn_plate() -> void:
-	var phase_text := "你的行动" if manager.phase == "player_action" else "敌人行动中" if manager.phase.begins_with("enemy") else "战斗结束"
-	var plate := _panel(self, TURN_PLATE, PANEL_DARK, GOLD.darkened(0.4), 8)
-	_label(plate, "第 %d 回合 · %s" % [manager.round_number, phase_text], Vector2.ZERO, TURN_PLATE.size, 21, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+func _show_turn_notice(side: String) -> void:
+	if is_instance_valid(turn_notice):
+		turn_notice.queue_free()
+	var caption := "第 %d 回合 · %s" % [manager.round_number, "你的行动" if side == "player" else "敌人行动"]
+	turn_notice = _panel(fx_layer, TURN_PLATE, PANEL_DARK, GOLD.darkened(0.4), 8)
+	_label(turn_notice, caption, Vector2.ZERO, TURN_PLATE.size, 21, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	turn_notice.modulate.a = 0.0
+	var tween := turn_notice.create_tween()
+	tween.tween_property(turn_notice, "modulate:a", 1.0, 0.18)
+	tween.tween_interval(1.2)
+	tween.tween_property(turn_notice, "modulate:a", 0.0, 0.42)
+	tween.tween_callback(turn_notice.queue_free)
 
 # --- cards ------------------------------------------------------------------
 
@@ -457,6 +460,14 @@ func _hand_card_center(index: int, count: int) -> Vector2:
 	return _hand_card_position(index, count) + Vector2(HAND_CARD_SIZE.x / 2.0, HAND_CARD_SIZE.y * 0.45)
 
 func _card_front(card: Dictionary, card_size: Vector2) -> Panel:
+	for effect in card["effects"]:
+		if effect["type"] == "summon":
+			var summon_data: Dictionary = manager.summon_templates[effect["summon"]]
+			var summon_card: Panel = SUMMON_CARD_VIEW_SCENE.instantiate()
+			var display_card := card.duplicate()
+			display_card["summon_hp"] = int(summon_data["hp"])
+			summon_card.call("configure", display_card, card_size.x)
+			return summon_card
 	var view: Panel = CARD_VIEW_SCENE.instantiate()
 	view.call("configure", card, card_size.x)
 	return view
@@ -529,10 +540,34 @@ func _show_hover_preview(index: int) -> void:
 	hover_preview.modulate.a = 0.0
 	hover_preview.create_tween().tween_property(hover_preview, "modulate:a", 1.0, 0.13)
 
+func _on_summon_hover(side: String, slot: int) -> void:
+	if drag_index >= 0 or action_busy:
+		return
+	var owner: Combatant = manager.player if side == "player" else manager.enemy
+	var summoned: Summon = owner.summons[slot]
+	if summoned == null or not manager.cards.has(summoned.card_id):
+		return
+	_clear_hover_preview()
+	hovered_summon_side = side
+	hovered_summon_slot = slot
+	hover_preview = _card_front(manager.cards[summoned.card_id], Vector2(270, 378))
+	var slot_rect := _summon_slot_rect(side, slot)
+	var preview_x := slot_rect.end.x + 18.0 if side == "player" else slot_rect.position.x - 288.0
+	hover_preview.position = Vector2(clampf(preview_x, 8.0, VIEW_SIZE.x - 278.0), clampf(slot_rect.get_center().y - 189.0, 145.0, 480.0))
+	fx_layer.add_child(hover_preview)
+	hover_preview.modulate.a = 0.0
+	hover_preview.create_tween().tween_property(hover_preview, "modulate:a", 1.0, 0.13)
+
+func _on_summon_exit(side: String, slot: int) -> void:
+	if hovered_summon_side == side and hovered_summon_slot == slot:
+		_clear_hover_preview()
+
 func _clear_hover_preview() -> void:
 	if is_instance_valid(hover_preview):
 		hover_preview.queue_free()
 	hover_preview = null
+	hovered_summon_side = ""
+	hovered_summon_slot = -1
 
 func _on_hand_input(event: InputEvent, index: int) -> void:
 	if manager.phase != "player_action" or action_busy or index >= manager.player.hand.size():
@@ -559,11 +594,11 @@ func _drop_selection(card: Dictionary, point: Vector2) -> Dictionary:
 	match manager.card_target_mode(card):
 		"slot":
 			for slot in manager.player.summons.size():
-				if manager.player.summons[slot] == null and _summon_slot_rect("player", slot).grow(8.0).has_point(point):
+				if manager.player.summons[slot] == null and point.distance_to(_summon_point("player", slot)) <= SUMMON_TARGET_RADIUS:
 					return {"kind": "slot", "slot": slot}
 		"damage":
 			for slot in manager.enemy.summons.size():
-				if manager.enemy.summons[slot] != null and _summon_slot_rect("enemy", slot).grow(8.0).has_point(point):
+				if manager.enemy.summons[slot] != null and point.distance_to(_summon_point("enemy", slot)) <= SUMMON_TARGET_RADIUS:
 					return {"kind": "summon", "slot": slot}
 			if ENEMY_HERO_TARGET.has_point(point):
 				return {"kind": "hero"}
@@ -579,19 +614,21 @@ func _show_drag_hints(card: Dictionary) -> void:
 	if mode == "slot":
 		for slot in manager.player.summons.size():
 			if manager.player.summons[slot] == null:
-				choices.append({"selection": {"kind": "slot", "slot": slot}, "rect": _summon_slot_rect("player", slot), "label": "召唤位 %d" % (slot + 1)})
+				choices.append({"selection": {"kind": "slot", "slot": slot}, "point": _summon_point("player", slot)})
 	elif mode == "damage":
-		choices.append({"selection": {"kind": "hero"}, "rect": ENEMY_HERO_TARGET, "label": "敌方角色"})
+		choices.append({"selection": {"kind": "hero"}, "point": _anchor("enemy")})
 		for slot in manager.enemy.summons.size():
 			var summoned: Summon = manager.enemy.summons[slot]
 			if summoned != null:
-				choices.append({"selection": {"kind": "summon", "slot": slot}, "rect": _summon_slot_rect("enemy", slot), "label": summoned.display_name})
+				choices.append({"selection": {"kind": "summon", "slot": slot}, "point": _summon_point("enemy", slot)})
 	for choice in choices:
-		var rect: Rect2 = choice["rect"]
-		var hint := _panel(fx_layer, rect.grow(5.0), Color("#2d667240"), GOLD.darkened(0.15), 10, 2)
-		hint.set_meta("selection", choice["selection"])
-		drag_hints.append(hint)
-		_label(hint, choice["label"], Vector2(0, -32), Vector2(hint.size.x, 28), 17, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+		var marker := TARGET_MARKER_SCRIPT.new()
+		marker.configure(mode == "slot")
+		var point: Vector2 = choice["point"]
+		marker.position = point - marker.size / 2.0
+		marker.set_meta("selection", choice["selection"])
+		fx_layer.add_child(marker)
+		drag_hints.append(marker)
 	if mode == "damage":
 		damage_preview = _panel(fx_layer, Rect2(Vector2.ZERO, Vector2(200, 42)), Color("#09121ff2"), GOLD, 8)
 		damage_preview.z_index = 20
@@ -612,7 +649,7 @@ func _update_drag_hints(card: Dictionary, pointer: Vector2) -> void:
 	var selection := _drop_selection(card, pointer)
 	for hint in drag_hints:
 		var selected: Dictionary = hint.get_meta("selection")
-		hint.modulate = Color.WHITE if selected == selection else Color(0.8, 0.9, 1.0, 0.55)
+		hint.call("set_highlighted", selected == selection)
 	if not is_instance_valid(damage_preview):
 		return
 	var segments := manager.preview_damage_segments(manager.player, card, selection)
@@ -830,6 +867,9 @@ func _on_summon_event(side: String, slot: int, kind: String, element: String, am
 
 func _on_action_event(message: String, side: String, kind: String, element: String, amount: int) -> void:
 	if fx_layer == null or not is_inside_tree():
+		return
+	if kind == "turn":
+		_show_turn_notice("enemy" if manager.phase.begins_with("enemy") else "player")
 		return
 	if side not in ["player", "enemy"]:
 		return
