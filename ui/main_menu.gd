@@ -13,8 +13,10 @@ const PAGE_SIZE := 14
 const INSPECT_WIDTH := 400.0
 
 var cards: Dictionary
+var summons: Dictionary
+var inspect_keywords: CardKeywordPopup
 var card_factory: Callable
-var brush_font: SystemFont
+var brush_font: Font
 var content: Control
 var atmosphere: Control
 var view_mode := "home"
@@ -32,21 +34,14 @@ var inspect_tween: Tween
 var closing_inspector := false
 var page_label: Label
 
-func configure(card_data: Dictionary, factory: Callable) -> void:
+func configure(card_data: Dictionary, factory: Callable, summon_data: Dictionary = {}) -> void:
 	cards = card_data
+	summons = summon_data
 	card_factory = factory
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	brush_font = SystemFont.new()
-	# Only request installed families; optional macOS fonts can trigger a download.
-	var installed := OS.get_system_fonts()
-	var family := "serif"
-	for candidate in ["Kaiti SC", "KaiTi", "STKaiti", "Songti SC", "Noto Serif CJK SC"]:
-		if installed.has(candidate):
-			family = candidate
-			break
-	brush_font.font_names = PackedStringArray([family])
+	brush_font = GameFonts.title()
 	var background := TextureRect.new()
 	var path := "res://assets/backgrounds/mountain_gate.webp"
 	background.texture = load(path) if ResourceLoader.exists(path) else load("res://assets/backgrounds/arena.webp")
@@ -237,6 +232,11 @@ func _open_inspector(card: Dictionary, source: Control) -> void:
 	source.visible = false
 	var hint := _text(inspector, "点击空白处收起 · Esc 返回", Rect2(500, 775, 600, 40), 18, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
 	hint.modulate.a = 0.0
+	var entries := CardKeywords.entries(card, summons)
+	if not entries.is_empty():
+		inspect_keywords = CardKeywordPopup.new()
+		inspector.add_child(inspect_keywords)
+		inspect_keywords.configure(entries, Rect2(600, 133, INSPECT_WIDTH, INSPECT_WIDTH * 1.4), size)
 	inspect_tween = inspector.create_tween().set_parallel(true)
 	inspect_tween.tween_property(inspect_card, "position", Vector2(600, 133), 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	inspect_tween.tween_property(inspect_card, "scale", Vector2.ONE, 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
@@ -246,6 +246,10 @@ func _open_inspector(card: Dictionary, source: Control) -> void:
 func _close_inspector() -> void:
 	if not is_instance_valid(inspector) or closing_inspector: return
 	closing_inspector = true
+	if is_instance_valid(inspect_keywords):
+		inspect_keywords.hide()
+		inspect_keywords.queue_free()
+	inspect_keywords = null
 	if inspect_tween != null and inspect_tween.is_running(): inspect_tween.kill()
 	inspect_tween = inspector.create_tween().set_parallel(true)
 	inspect_tween.tween_property(inspect_card, "position", inspect_origin, 0.32).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)

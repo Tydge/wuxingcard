@@ -71,7 +71,7 @@ func _default_style(card: Dictionary) -> String:
 		"summon": return "energy_gain"
 		"heal": return "wood_heal"
 		"draw": return "card_draw"
-		"gain_energy", "convert_energy": return "energy_gain"
+		"gain_energy", "gain_random_energy", "convert_energy": return "energy_gain"
 		"lose_energy": return "energy_loss"
 		"discard": return "generic_debuff"
 		"status":

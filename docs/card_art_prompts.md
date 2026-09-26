@@ -1,6 +1,6 @@
 # 普通卡牌独立插画
 
-本轮以 **内置 imagegen** 为保留下来的 20 张普通牌分别生成插画。所有卡牌均独立生成，使用 4:3 横向完整画面，按 ID 放入 `assets/cards/generated/`。召唤牌沿用之前独立生成的 10 套美术。
+本轮以 **内置 imagegen** 为保留下来的 19 张普通牌分别生成插画。所有卡牌均独立生成，使用 4:3 横向完整画面，按 ID 放入 `assets/cards/generated/`。召唤牌沿用之前独立生成的 10 套美术。
 
 ## 完整提示词模板
 
@@ -51,7 +51,7 @@ Constraints: only the illustration, no card frame, no interface, no words, no nu
 - 画面内容：一枚凝练的蓝色弯月水刃掠过浅水石台，刃缘透亮锋利，留下细小水珠与一道切开的水痕；月色溪谷背景，初级水术
 - 输出：`assets/cards/generated/water_strike.webp`
 
-### 断流（`water_drain`）
+### 熄焰（`water_drain`）
 
 - 画面内容：一股清冷湛蓝水流冲入燃烧的石制法阵，赤红火焰被水流切断并熄灭，白色水汽升起；蓝水与余火形成对比
 - 输出：`assets/cards/generated/water_drain.webp`
@@ -66,7 +66,7 @@ Constraints: only the illustration, no card frame, no interface, no words, no nu
 - 画面内容：冰蓝薄雾包围一位背向镜头的古装敌人，衣袖边缘结霜，透明护身屏障出现细小裂纹；冷色山谷，表现防御被削弱
 - 输出：`assets/cards/generated/water_mist.webp`
 
-### 赤焰诀（`fire_strike`）
+### 炎咒（`fire_strike`）
 
 - 画面内容：一团拳头大小的赤橙火焰被古装施法者的手掌向前击出，形成短促有力的火焰冲击，散开几颗亮火星；暗色石台近景，初级火术
 - 输出：`assets/cards/generated/fire_strike.webp`
@@ -110,9 +110,3 @@ Constraints: only the illustration, no card frame, no interface, no words, no nu
 
 - 画面内容：一截悬浮的翠绿灵木从左侧绿色生机逐渐转化成右侧橙红火焰，木纹、叶脉与飞散火星相接；深色石室背景，清晰相生转化
 - 输出：`assets/cards/generated/wood_to_fire.webp`
-
-### 封火令（`metal_lock`）
-
-- 画面内容：悬浮的金属符令与细金锁链封住一团躁动的赤红火焰，圆形几何封印收紧火脉；背景为暗色古殿，令牌无可读文字
-- 输出：`assets/cards/generated/metal_lock.webp`
-

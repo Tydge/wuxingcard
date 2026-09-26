@@ -80,6 +80,7 @@ var action_busy := false
 var hand_cards: Array[Control] = []
 var enemy_backs: Array[Control] = []
 var hover_preview: Control
+var hover_keywords: CardKeywordPopup
 var hovered_summon_side := ""
 var hovered_summon_slot := -1
 var drag_card: Control
@@ -98,10 +99,8 @@ var draw_generation := 0
 var draw_animation_active := false
 
 func _ready() -> void:
-	var font := SystemFont.new()
-	font.font_names = PackedStringArray(["PingFang SC", "Hiragino Sans GB", "Arial Unicode MS"])
 	var custom_theme := Theme.new()
-	custom_theme.default_font = font
+	custom_theme.default_font = GameFonts.body()
 	custom_theme.default_font_size = 18
 	theme = custom_theme
 	manager = BattleManager.new()
@@ -203,7 +202,7 @@ func _refresh() -> void:
 
 func _build_menu() -> void:
 	var screen := MAIN_MENU_SCRIPT.new()
-	screen.configure(manager.cards, _card_front)
+	screen.configure(manager.cards, _card_front, manager.summon_templates)
 	screen.test_requested.connect(_start_test_battle)
 	add_child(screen)
 
@@ -211,7 +210,7 @@ func _start_test_battle() -> void:
 	var random := RandomNumberGenerator.new()
 	random.randomize()
 	menu_enemy = manager.enemies[random.randi_range(0, manager.enemies.size() - 1)]["id"]
-	menu_deck = manager.decks[random.randi_range(0, manager.decks.size() - 1)]["id"]
+	menu_deck = "random"
 	_start_battle()
 
 func _start_battle() -> void:
@@ -289,6 +288,7 @@ func _build_combatant_hud(side: String) -> void:
 	_build_status_icons(actor, side)
 
 func _side_subtitle(side: String) -> String:
+	if manager.selected_deck_id == "random": return "随机牌组"
 	if side == "enemy":
 		return str(manager.find_entry(manager.enemies, manager.enemy.id).get("subtitle", ""))
 	return str(manager.find_entry(manager.decks, manager.selected_deck_id).get("name", ""))
@@ -562,6 +562,7 @@ func _show_hover_preview(index: int) -> void:
 	fx_layer.add_child(hover_preview)
 	hover_preview.modulate.a = 0.0
 	hover_preview.create_tween().tween_property(hover_preview, "modulate:a", 1.0, 0.13)
+	_show_hover_keywords(card)
 
 func _on_summon_hover(side: String, slot: int) -> void:
 	if drag_index >= 0 or action_busy:
@@ -573,19 +574,32 @@ func _on_summon_hover(side: String, slot: int) -> void:
 	_clear_hover_preview()
 	hovered_summon_side = side
 	hovered_summon_slot = slot
-	hover_preview = _card_front(manager.cards[summoned.card_id], Vector2(270, 378))
+	var card: Dictionary = manager.cards[summoned.card_id]
+	hover_preview = _card_front(card, Vector2(270, 378))
 	var slot_rect := _summon_slot_rect(side, slot)
 	var preview_x := slot_rect.end.x + 18.0 if side == "player" else slot_rect.position.x - 288.0
 	hover_preview.position = Vector2(clampf(preview_x, 8.0, VIEW_SIZE.x - 278.0), clampf(slot_rect.get_center().y - 189.0, 145.0, 480.0))
 	fx_layer.add_child(hover_preview)
 	hover_preview.modulate.a = 0.0
 	hover_preview.create_tween().tween_property(hover_preview, "modulate:a", 1.0, 0.13)
+	_show_hover_keywords(card)
 
 func _on_summon_exit(side: String, slot: int) -> void:
 	if hovered_summon_side == side and hovered_summon_slot == slot:
 		_clear_hover_preview()
 
+func _show_hover_keywords(card: Dictionary) -> void:
+	var entries := CardKeywords.entries(card, manager.summon_templates)
+	if entries.is_empty(): return
+	hover_keywords = CardKeywordPopup.new()
+	fx_layer.add_child(hover_keywords)
+	hover_keywords.configure(entries, Rect2(hover_preview.position, hover_preview.size), VIEW_SIZE)
+
 func _clear_hover_preview() -> void:
+	if is_instance_valid(hover_keywords):
+		hover_keywords.hide()
+		hover_keywords.queue_free()
+	hover_keywords = null
 	if is_instance_valid(hover_preview):
 		hover_preview.queue_free()
 	hover_preview = null
@@ -672,7 +686,10 @@ func _update_drag_hints(card: Dictionary, pointer: Vector2) -> void:
 	var selection := _drop_selection(card, pointer)
 	for hint in drag_hints:
 		var selected: Dictionary = hint.get_meta("selection")
-		hint.call("set_highlighted", selected == selection)
+		var all_targets := false
+		for effect in card["effects"]:
+			if effect.get("scope", "single") == "all_opponents": all_targets = true
+		hint.call("set_highlighted", selected == selection or (all_targets and manager.valid_card_target(manager.player, card, selection)))
 	if not is_instance_valid(damage_preview):
 		return
 	var segments := manager.preview_damage_segments(manager.player, card, selection)
@@ -741,7 +758,7 @@ func _play_card_from(card_index: int, source: Vector2, selection: Dictionary = {
 	if manager.phase == "player_action" and card_index < manager.player.hand.size():
 		var mode := manager.card_target_mode(card)
 		var destination := _target_point("player" if mode == "slot" else "enemy", selection) if mode != "none" else Vector2(-1, -1)
-		await get_tree().create_timer(battle_fx.cast(card, "player", Vector2(-1, -1), destination)).timeout
+		await get_tree().create_timer(_cast_card(card, "player", destination)).timeout
 		player_hidden_index = -1
 		manager.play_player_card(card_index, selection)
 		await get_tree().create_timer(EFFECT_PAUSE_SECONDS).timeout
@@ -795,7 +812,7 @@ func _run_enemy_turn() -> void:
 			break
 		var mode := manager.card_target_mode(card)
 		var destination := _target_point("enemy" if mode == "slot" else "player", selection) if mode != "none" else Vector2(-1, -1)
-		await get_tree().create_timer(battle_fx.cast(card, "enemy", Vector2(-1, -1), destination)).timeout
+		await get_tree().create_timer(_cast_card(card, "enemy", destination)).timeout
 		if generation != manager.battle_generation:
 			return
 		await manager.enemy_step(chosen_index, selection)
@@ -806,6 +823,18 @@ func _run_enemy_turn() -> void:
 	enemy_animating = false
 	enemy_hidden_index = -1
 	_refresh()
+
+func _cast_card(card: Dictionary, side: String, destination: Vector2) -> float:
+	for effect in card["effects"]:
+		if effect.get("scope", "single") != "all_opponents": continue
+		var target_side := "enemy" if side == "player" else "player"
+		var owner := manager.enemy if side == "player" else manager.player
+		var duration := battle_fx.cast(card, side, Vector2(-1, -1), _anchor(target_side))
+		for slot in owner.summons.size():
+			if owner.summons[slot] != null:
+				battle_fx.cast(card, side, Vector2(-1, -1), _summon_point(target_side, slot))
+		return duration
+	return battle_fx.cast(card, side, Vector2(-1, -1), destination)
 
 func _present_card(card: Dictionary, side: String, source: Vector2) -> void:
 	var dim := ColorRect.new()
@@ -914,7 +943,7 @@ func _show_damage_number(amount: int, point: Vector2, matchup: String = "") -> v
 	fx_layer.add_child(number)
 	number.play()
 
-func _on_summon_event(side: String, slot: int, kind: String, element: String, amount: int) -> void:
+func _on_summon_event(side: String, slot: int, kind: String, element: String, amount: int, matchup: String = "") -> void:
 	if fx_layer == null or not is_inside_tree():
 		return
 	var point := _summon_point(side, slot)
@@ -925,7 +954,7 @@ func _on_summon_event(side: String, slot: int, kind: String, element: String, am
 			battle_fx.impact(element, point)
 			if amount > 0:
 				_play_hit_feedback(summon_views.get(key), side)
-				_show_damage_number(amount, point)
+				_show_damage_number(amount, point, matchup)
 		"destroy":
 			battle_fx.impact(element, point)
 			var fallen: SummonView = summon_views.get(key)

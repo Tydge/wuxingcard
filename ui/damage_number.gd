@@ -4,7 +4,7 @@ extends Control
 # A short ink-and-cinnabar hit callout. The heavy outline keeps the number
 # readable over both the light sky and the dark arena floor.
 const SIZE := Vector2(238, 96)
-var brush_font: SystemFont
+var brush_font: Font
 var matchup := ""
 
 func configure(amount: int, outcome: String = "") -> void:
@@ -12,8 +12,7 @@ func configure(amount: int, outcome: String = "") -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	z_index = 30
 	matchup = outcome if outcome in ["克制", "抵抗"] else ""
-	brush_font = SystemFont.new()
-	brush_font.font_names = PackedStringArray(["Songti SC", "STSong", "Noto Serif CJK SC", "serif"])
+	brush_font = GameFonts.damage()
 	if matchup != "":
 		_add_text(matchup, Vector2(12, 12), Vector2(80, 72), 31, Color("#bde9ff") if matchup == "抵抗" else Color("#ffcd72"), Color("#371019"))
 		_add_text("-%d" % amount, Vector2(88, 2), Vector2(138, 82), 62, Color("#fff1cf"), Color("#5b1720"))

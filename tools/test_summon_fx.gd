@@ -56,7 +56,7 @@ func run() -> void:
 			check(order == [0, 1, 2], "UI trigger order should be top, middle, bottom")
 			check(ui.get("summon_views")[side + "_0"] == persistent_view, "trigger refresh keeps the original summon node")
 			if timing == "turn_start":
-				check(int(actor.energy["water"]) == 2 and actor.hand.size() == 5 and actor.status_stacks("charge") == 1, "animated start effects settled")
+				check(int(actor.energy["water"]) == 2 and actor.hand.size() == 5 and actor.status_stacks("charge") == 2, "animated start effects settled")
 			else:
 				check(opponent.hp == 96 and actor.hp == 73 and actor.status_stacks("tenacity") == 1, "animated end effects settled")
 	# Exercise the actual end-turn button flow through the enemy's entire turn.

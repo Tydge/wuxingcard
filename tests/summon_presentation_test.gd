@@ -30,7 +30,7 @@ func run() -> void:
 	await manager._start_turn(manager.player)
 	check(timeline == ["player:0:cast", "player:0:resolved", "player:1:cast", "player:1:resolved", "player:2:cast", "player:2:resolved"], "start effects present top to bottom")
 	check(manager.phase == "player_action" and manager.player.hand.size() == before_hand + 2, "start triggers complete before action phase and natural draw")
-	check(int(manager.player.energy["water"]) >= before_water + 1 and manager.player.status_stacks("charge") == 1, "start effects resolve resources and buff")
+	check(int(manager.player.energy["water"]) >= before_water + 1 and manager.player.status_stacks("charge") == 2, "start effects resolve resources and buff")
 
 	timeline.clear()
 	populate(manager.player, ["fire_raven", "wood_deer", "earth_tortoise"])
@@ -40,7 +40,7 @@ func run() -> void:
 	manager.phase = "player_turn_end"
 	await manager._end_turn(manager.player)
 	check(timeline == ["player:0:cast", "player:0:resolved", "player:1:cast", "player:1:resolved", "player:2:cast", "player:2:resolved"], "end effects present top to bottom")
-	check(manager.enemy.hp == 96 and manager.player.hp == 73 and manager.player.status_stacks("tenacity") == 1, "end triggers preserve their new buff")
+	check(manager.enemy.hp == 96 and manager.player.hp == 73 and manager.player.status_stacks("tenacity") == 1, "end triggers preserve their new buff after old charge loses a layer")
 
 	timeline.clear()
 	populate(manager.enemy, ["metal_furnace", "water_conch", "metal_chime"])

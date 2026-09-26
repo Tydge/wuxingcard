@@ -37,7 +37,14 @@ static func damage_breakdown(target: Combatant, amount: int, element: String, so
 		"shield": mini(before_shield, target.status_stacks("shield")),
 		"hp": maxi(0, before_shield - target.status_stacks("shield"))}
 
-static func summon_damage(amount: int, source: Combatant = null) -> int:
+static func summon_matchup(target_element: String, attack_element: String) -> String:
+	if target_element == attack_element: return "抵抗"
+	if COUNTERED.get(attack_element, "") == target_element: return "克制"
+	return ""
+
+static func summon_damage(amount: int, source: Combatant = null, target_element: String = "", attack_element: String = "") -> int:
 	var weak_stacks := source.status_stacks("weak") if source != null else 0
 	var charge := source.status_stacks("charge") if source != null else 0
-	return maxi(0, roundi(amount * maxf(0.0, 1.0 + (charge - weak_stacks) * 0.1)))
+	var matchup := summon_matchup(target_element, attack_element) if target_element != "" else ""
+	var elemental := -0.5 if matchup == "抵抗" else 0.5 if matchup == "克制" else 0.0
+	return maxi(0, roundi(amount * maxf(0.0, 1.0 + elemental + (charge - weak_stacks) * 0.1)))

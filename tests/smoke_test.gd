@@ -30,7 +30,7 @@ func run_tests() -> void:
 	manager.start_battle("ember", "balanced", 12345)
 	check(manager.player.hand.size() == 5, "opening hand plus first-turn draw")
 	check(manager.enemy.hand.size() == 4, "enemy hand hidden but drawn")
-	check(manager.player.draw_pile.size() == 25, "draw pile after opening")
+	check(manager.player.draw_pile.size() == 24, "draw pile after opening")
 	var before_fatigue := manager.player.hp
 	manager.player.draw_pile.clear()
 	manager.draw_card(manager.player)
@@ -40,6 +40,7 @@ func run_tests() -> void:
 	test_status_rules(manager)
 	test_opposite_status_rules()
 	test_summon_rules(manager)
+	test_summon_affinities(manager)
 	test_new_summon_rules(manager)
 
 	var simulations := 0
@@ -226,7 +227,7 @@ func test_summon_rules(manager: BattleManager) -> void:
 	actor.energy["fire"] = 3
 	manager.phase = "player_action"
 	var attack: Dictionary = manager.cards["fire_strike"]
-	check(manager.preview_damage_segments(actor, attack, {"kind": "summon", "slot": 1}) == [10], "summon preview ignores fire resistance")
+	check(manager.preview_damage_segments(actor, attack, {"kind": "summon", "slot": 1}) == [10], "wood summon takes neutral fire damage regardless of owner energy")
 	check(manager.preview_damage_segments(actor, attack, {"kind": "hero"}) == [0], "hero preview still uses fire resistance")
 	opponent.energy["fire"] = 0
 	actor.hand = ["fire_strike"]
@@ -279,7 +280,34 @@ func test_summon_rules(manager: BattleManager) -> void:
 	check(enemy_action["target"].get("kind", "") == "summon", "enemy can choose player summon over resistant hero")
 	var chosen_slot := int(enemy_action["target"].get("slot", -1))
 	manager.enemy_step(int(enemy_action["index"]), enemy_action["target"])
-	check(chosen_slot >= 0 and actor.summons[chosen_slot] != null and actor.summons[chosen_slot].hp == 5, "enemy basic spell damages a player summon")
+	check(chosen_slot >= 0 and actor.summons[chosen_slot] == null, "enemy fire spell exploits metal summon weakness")
+
+func test_summon_affinities(manager: BattleManager) -> void:
+	manager.start_battle("ember", "balanced", 912)
+	var actor := manager.player
+	var opponent := manager.enemy
+	for template in manager.summon_templates.values():
+		var summoned := Summon.new()
+		summoned.setup(template)
+		for attack in BattleRules.ELEMENTS:
+			opponent.summons[0] = summoned
+			summoned.hp = 100
+			var expected := 5 if attack == summoned.element else 15 if BattleRules.countered_by(attack) == summoned.element else 10
+			var card := {"element": attack, "effects": [{"type": "damage", "amount": 10, "element": attack}]}
+			check(manager.preview_damage_segments(actor, card, {"kind": "summon", "slot": 0}) == [expected], "summon affinity preview: %s / %s" % [summoned.element, attack])
+			check(manager.apply_summon_damage(actor, opponent, 0, 10, attack) == expected, "summon affinity actual damage matches preview")
+	actor.add_status("charge", 3, 0)
+	check(BattleRules.summon_damage(20, actor, "metal", "metal") == 16, "summon resistance and source charge add")
+	check(BattleRules.summon_damage(20, actor, "metal", "fire") == 36, "summon weakness and source charge add")
+	actor.statuses.clear()
+	for id in CardKeywords.NAMES:
+		check(not CardKeywords.status_description(id).contains("再减少"), "keyword decay uses then")
+	for card in manager.cards.values():
+		var entries := CardKeywords.entries(card, manager.summon_templates)
+		if manager.card_target_mode(card) == "slot":
+			check(entries.size() >= 2 and entries[0]["text"].contains("−50%") and entries[1]["text"].contains("+50%"), "every summon has affinity explanations")
+	check(CardKeywords.entries(manager.cards["wood_regen"], manager.summon_templates)[0]["title"] == "再生 X", "status cards explain their status")
+	check(not manager.cards.has("metal_lock") and manager.cards["fire_strike"]["name"] == "炎咒" and manager.cards["water_drain"]["name"] == "熄焰", "updated card pool and names")
 
 func test_new_summon_rules(manager: BattleManager) -> void:
 	manager.start_battle("ember", "balanced", 5678)
@@ -303,7 +331,7 @@ func test_new_summon_rules(manager: BattleManager) -> void:
 	actor.summons[0] = Summon.new()
 	actor.summons[0].setup(manager.summon_templates["metal_chime"])
 	manager._trigger_summons(actor, "turn_start")
-	check(actor.status_stacks("charge") == 1, "metal chime adds one charge layer")
+	check(actor.status_stacks("charge") == 2, "metal chime adds two charge layers")
 	actor.summons[0].setup(manager.summon_templates["wood_deer"])
 	actor.hp = 80
 	manager._trigger_summons(actor, "turn_end")
@@ -319,7 +347,7 @@ func test_new_summon_rules(manager: BattleManager) -> void:
 	opponent.statuses.clear()
 	var hp_before := opponent.hp
 	manager._trigger_summons(actor, "turn_end")
-	check(opponent.hp == hp_before - 4, "fire raven deals ordinary fire damage")
+	check(opponent.hp == hp_before - 5, "fire raven includes the strengthened chime charge")
 	actor.summons[0].setup(manager.summon_templates["earth_tortoise"])
 	manager._end_turn(actor)
 	check(actor.status_stacks("tenacity") == 1, "earth tortoise's end-turn tenacity does not decay immediately")

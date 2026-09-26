@@ -97,7 +97,8 @@ func run() -> void:
 	await create_timer(5.8).timeout
 	var manager: BattleManager = ui.get("manager")
 	check(find_menu() == null and manager.phase == "player_action" and manager.player.hand.size() == 5, "test mode directly starts a playable battle")
-	check(manager.selected_enemy_id in ["ember", "tide", "harmony"] and manager.selected_deck_id in ["balanced", "flame", "tide"], "test mode chooses a valid random matchup")
+	check(manager.selected_enemy_id in ["ember", "tide", "harmony"] and manager.selected_deck_id == "random", "test mode chooses an enemy and generates random decks")
+	check(manager.valid_random_deck(manager.player.hand + manager.player.draw_pile) and manager.valid_random_deck(manager.enemy.hand + manager.enemy.draw_pile), "test mode creates two legal 25-card decks")
 	manager.phase = "menu"
 	ui.call("_refresh")
 	await process_frame

@@ -3,15 +3,19 @@ extends Node
 
 signal changed
 signal action_event(message: String, side: String, kind: String, element: String, amount: int)
-signal summon_event(side: String, slot: int, kind: String, element: String, amount: int)
+signal summon_event(side: String, slot: int, kind: String, element: String, amount: int, matchup: String)
 signal summon_triggered(side: String, slot: int, timing: String, effect: Dictionary)
 
 const CARD_PATH := "res://data/cards.json"
 const BATTLE_PATH := "res://data/battles.json"
 const SUMMON_PATH := "res://data/summons.json"
-const STATUS_NAMES := {"burn":"灼伤", "poison":"中毒", "bleed":"出血", "weak":"虚弱", "vulnerable":"脆弱", "charge":"蓄力", "tenacity":"坚韧", "regen":"再生", "shield":"护盾", "lock":"封锁"}
+const STATUS_NAMES := CardKeywords.NAMES
 # Both sides use slots 0 / 1 / 2 for the top / middle / bottom of the battlefield.
 const SUMMON_TRIGGER_ORDER := [0, 1, 2]
+const RANDOM_DECK_SIZE := 25
+const RANDOM_DECK_COPY_LIMIT := 3
+const RANDOM_DECK_MAX_COST := 45
+const RANDOM_DECK_MIN_LOW_COST := 8
 
 var cards: Dictionary = {}
 var summon_templates: Dictionary = {}
@@ -66,22 +70,7 @@ func status_tooltip(status: Dictionary) -> String:
 	var name: String = STATUS_NAMES.get(status_id, status_id)
 	if element != "":
 		name += "·" + BattleRules.element_name(element)
-	var effect := ""
-	match status_id:
-		"burn": effect = "回合结束时受到手牌数 × %d 的火属性伤害，再减少 1 层。火伤受五行抗性、克制和护盾影响。" % stacks
-		"poison": effect = "每获得一次能量，失去 %d 点生命，再减少 1 层；一次获得多点能量只触发一次。" % stacks
-		"bleed": effect = "每打出一张牌，失去 %d 点生命，再减少 1 层。" % stacks
-		"weak": effect = "造成的伤害降低 %d%%，回合结束时减少 1 层。" % (stacks * 10)
-		"vulnerable": effect = "受到的伤害增加 %d%%，回合结束时减少 1 层。" % (stacks * 10)
-		"charge": effect = "造成的伤害增加 %d%%，回合结束时减少 1 层。" % (stacks * 10)
-		"tenacity": effect = "受到的伤害降低 %d%%，回合结束时减少 1 层。" % (stacks * 10)
-		"regen": effect = "回合结束时恢复 %d 点生命，再减少 1 层。" % stacks
-		"shield": effect = "抵消 %d 点元素伤害。每次回合开始时层数向上取整减半。" % stacks
-		"lock": effect = "不能获得该属性能量，也不能打出该属性卡。"
-		_: effect = "当前效果：%d 层。" % stacks
-	if status_id in ["weak", "vulnerable", "charge", "tenacity"]:
-		var opposite: String = STATUS_NAMES[Combatant.OPPOSITE_STATUSES[status_id]]
-		effect += "与其他伤害百分比加算。与%s按层数抵消，最多 10 层。" % opposite
+	var effect := CardKeywords.status_description(status_id, str(stacks), element)
 	var duration := int(status.get("turns", 0))
 	if duration > 0:
 		effect += "\n剩余 %d 回合。" % duration
@@ -98,21 +87,59 @@ func start_battle(enemy_id: String, deck_id: String, seed_value: int = -1) -> vo
 		rng.seed = seed_value
 	var enemy_info := find_entry(enemies, enemy_id)
 	var deck_info := find_entry(decks, deck_id)
-	player.setup("player", "云溪月", deck_info["cards"], rng)
-	enemy.setup(enemy_id, enemy_info["name"], enemy_info["deck"], rng)
+	var player_deck: Array = generate_random_deck() if deck_id == "random" else deck_info["cards"]
+	var enemy_deck: Array = generate_random_deck() if deck_id == "random" else enemy_info["deck"]
+	player.max_hp = 80 if deck_id == "random" else 100
+	enemy.max_hp = 80 if deck_id == "random" else 100
+	player.setup("player", "云溪月", player_deck, rng)
+	enemy.setup(enemy_id, enemy_info["name"], enemy_deck, rng)
 	phase = "battle_start"
 	round_number = 0
 	played_cards = 0
 	energy_destroyed = 0
 	player_damage = 0
 	battle_log.clear()
-	_report("对阵 %s · 使用「%s」牌组" % [enemy.display_name, deck_info["name"]], "system", "start")
+	_report("对阵 %s · 使用「%s」牌组" % [enemy.display_name, "随机牌组" if deck_id == "random" else deck_info["name"]], "system", "start")
 	for i in 4:
 		draw_card(player)
 		draw_card(enemy)
 	await _start_turn(player)
 	if generation == battle_generation:
 		changed.emit()
+
+func valid_random_deck(deck: Array) -> bool:
+	if deck.size() != RANDOM_DECK_SIZE: return false
+	var counts := {}
+	var total := 0
+	var low_cost := 0
+	for id in deck:
+		if not cards.has(id): return false
+		counts[id] = int(counts.get(id, 0)) + 1
+		if counts[id] > RANDOM_DECK_COPY_LIMIT: return false
+		var cost := int(cards[id]["cost"])
+		total += cost
+		if cost <= 1: low_cost += 1
+	return total <= RANDOM_DECK_MAX_COST and low_cost >= RANDOM_DECK_MIN_LOW_COST
+
+func generate_random_deck() -> Array[String]:
+	var pool: Array[String] = []
+	for id in cards:
+		for copy in RANDOM_DECK_COPY_LIMIT: pool.append(id)
+	assert(pool.size() >= RANDOM_DECK_SIZE, "Card pool cannot fill a random deck")
+	for attempt in 256:
+		for i in range(pool.size() - 1, 0, -1):
+			var j := rng.randi_range(0, i)
+			var swap := pool[i]
+			pool[i] = pool[j]
+			pool[j] = swap
+		var candidate: Array[String] = pool.slice(0, RANDOM_DECK_SIZE)
+		if valid_random_deck(candidate): return candidate
+	# A finite fallback avoids endless rerolls if a future pool is mostly expensive.
+	# The last shuffle keeps equal-cost choices random.
+	pool.sort_custom(func(a: String, b: String): return int(cards[a]["cost"]) < int(cards[b]["cost"]))
+	var cheapest: Array[String] = pool.slice(0, RANDOM_DECK_SIZE)
+	assert(valid_random_deck(cheapest), "Card pool cannot satisfy random deck cost constraints")
+	return cheapest
 
 func _report(message: String, side: String = "system", kind: String = "info", element: String = "", amount: int = 0) -> void:
 	battle_log.push_front(message)
@@ -260,7 +287,7 @@ func preview_damage_segments(actor: Combatant, card: Dictionary, selection: Dict
 			continue
 		var raw := 0
 		if selection.get("kind", "") == "summon":
-			raw = BattleRules.summon_damage(int(effect["amount"]), actor)
+			raw = BattleRules.summon_damage(int(effect["amount"]), actor, opponent.summons[int(selection["slot"])].element, str(effect.get("element", card["element"])))
 		else:
 			raw = int(BattleRules.damage_breakdown(opponent, int(effect["amount"]), str(effect.get("element", card["element"])), actor)["raw"])
 			var absorbed := mini(raw, remaining_shield)
@@ -303,7 +330,13 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 	match effect["type"]:
 		"damage":
 			var attack_element := str(effect.get("element", card_element))
-			if selection.get("kind", "hero") == "summon":
+			if effect.get("scope", "single") == "all_opponents":
+				# Resolve all summons before the hero so a lethal hero hit cannot skip them.
+				for slot in opponent.summons.size():
+					if opponent.summons[slot] != null:
+						apply_summon_damage(actor, opponent, slot, amount, attack_element)
+				apply_damage(actor, opponent, amount, attack_element)
+			elif selection.get("kind", "hero") == "summon":
 				apply_summon_damage(actor, opponent, int(selection["slot"]), amount, attack_element)
 			else:
 				apply_damage(actor, opponent, amount, attack_element)
@@ -314,7 +347,7 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 			summoned.setup(template)
 			actor.summons[slot] = summoned
 			_report("%s 在槽位 %d 召唤%s" % [actor.display_name, slot + 1, summoned.display_name], _side(actor), "summon", summoned.element, 1)
-			summon_event.emit(_side(actor), slot, "spawn", summoned.element, 1)
+			summon_event.emit(_side(actor), slot, "spawn", summoned.element, 1, "")
 		"heal":
 			var actual := mini(amount, target.max_hp - target.hp)
 			target.hp += actual
@@ -329,6 +362,16 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 			_report("%s 获得 %d %s能量" % [target.display_name, gained, BattleRules.element_name(effect["element"])], _side(target), "energy", effect["element"], gained)
 			if gained > 0:
 				_trigger_poison(target)
+		"gain_random_energy":
+			var available: Array[String] = []
+			for element in BattleRules.ELEMENTS:
+				if int(target.energy[element]) < 10 and target.status_stacks("lock", element) == 0:
+					available.append(element)
+			if available.is_empty():
+				_report("%s 没有可获得的能量" % target.display_name, _side(target), "energy")
+			else:
+				var element := available[rng.randi_range(0, available.size() - 1)]
+				_resolve_effect(actor, opponent, {"type": "gain_energy", "target": effect.get("target", "self"), "element": element, "amount": amount}, card_element)
 		"lose_energy":
 			var lost := target.lose_energy(effect["element"], amount)
 			if actor == player:
@@ -388,16 +431,18 @@ func apply_summon_damage(source: Combatant, owner: Combatant, slot: int, base_am
 	if slot < 0 or slot >= owner.summons.size() or owner.summons[slot] == null:
 		return 0
 	var summoned: Summon = owner.summons[slot]
-	var dealt := mini(summoned.hp, BattleRules.summon_damage(base_amount, source))
+	var dealt := mini(summoned.hp, BattleRules.summon_damage(base_amount, source, summoned.element, element))
 	summoned.hp -= dealt
 	if source == player:
 		player_damage += dealt
-	_report("%s 受到 %d 点%s伤害" % [summoned.display_name, dealt, BattleRules.element_name(element)], _side(owner), "summon_damage", element, dealt)
-	summon_event.emit(_side(owner), slot, "damage", element, dealt)
+	var matchup := BattleRules.summon_matchup(summoned.element, element)
+	var note := " · " + matchup if matchup != "" else ""
+	_report("%s 受到 %d 点%s伤害%s" % [summoned.display_name, dealt, BattleRules.element_name(element), note], _side(owner), "summon_damage", element, dealt)
+	summon_event.emit(_side(owner), slot, "damage", element, dealt, matchup)
 	if summoned.hp <= 0:
 		owner.summons[slot] = null
 		_report("%s 被摧毁，槽位 %d 空出" % [summoned.display_name, slot + 1], _side(owner), "summon_destroy", element)
-		summon_event.emit(_side(owner), slot, "destroy", element, 0)
+		summon_event.emit(_side(owner), slot, "destroy", element, 0, "")
 	return dealt
 
 func _end_turn(actor: Combatant) -> void:
@@ -522,9 +567,16 @@ func _enemy_action_score(card: Dictionary, selection: Dictionary) -> float:
 	for effect in card["effects"]:
 		match effect["type"]:
 			"damage":
-				if selection.get("kind", "hero") == "summon":
+				if effect.get("scope", "single") == "all_opponents":
+					var preview := BattleRules.damage_breakdown(player, int(effect["amount"]), effect["element"], enemy)
+					score += float(preview["hp"]) + float(preview["shield"]) * 0.65
+					for summoned: Summon in player.summons:
+						if summoned == null: continue
+						var dealt := mini(summoned.hp, BattleRules.summon_damage(int(effect["amount"]), enemy, summoned.element, effect["element"]))
+						score += float(dealt) * 1.2 + (9.0 if dealt >= summoned.hp else 0.0)
+				elif selection.get("kind", "hero") == "summon":
 					var summoned: Summon = player.summons[int(selection["slot"])]
-					var dealt := mini(summoned.hp, BattleRules.summon_damage(int(effect["amount"]), enemy))
+					var dealt := mini(summoned.hp, BattleRules.summon_damage(int(effect["amount"]), enemy, summoned.element, str(effect.get("element", card["element"]))))
 					score += float(dealt) * 1.2 + (9.0 if dealt >= summoned.hp else 0.0)
 				else:
 					var preview := BattleRules.damage_breakdown(player, int(effect["amount"]), effect["element"], enemy)
@@ -543,6 +595,11 @@ func _enemy_action_score(card: Dictionary, selection: Dictionary) -> float:
 						"status": score += 4.0
 			"heal": score += mini(enemy.max_hp - enemy.hp, int(effect["amount"])) * 0.9
 			"gain_energy": score += mini(10 - int(enemy.energy[effect["element"]]), int(effect["amount"])) * 3.5
+			"gain_random_energy":
+				var available := 0
+				for element in BattleRules.ELEMENTS:
+					if int(enemy.energy[element]) < 10 and enemy.status_stacks("lock", element) == 0: available += 1
+				score += int(effect["amount"]) * 3.5 if available > 0 else 0.0
 			"lose_energy": score += mini(int(player.energy[effect["element"]]), int(effect["amount"])) * 6.0
 			"convert_energy": score += 7.0
 			"draw": score += 4.0 if not enemy.draw_pile.is_empty() else -5.0
