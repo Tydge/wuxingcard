@@ -78,6 +78,7 @@ func _default_style(card: Dictionary) -> String:
 			var status := str(first.get("status", ""))
 			if status == "shield": return "water_shield" if card["element"] == "water" else "earth_shield"
 			if status == "regen": return "wood_heal"
+			if first.get("target", "opponent") == "self": return str(card["element"]) + "_buff"
 			return "generic_debuff"
 	return "generic_buff"
 
@@ -92,6 +93,9 @@ func energy(point: Vector2, element: String, gaining: bool) -> void:
 
 func status(point: Vector2, element: String, status_id: String) -> void:
 	_add("status", element, point, point, 1.1, 1.0, 1.0, status_id)
+
+func summon_activation(point: Vector2, element: String) -> void:
+	_add("summon_activation", element, point, point, 0.8)
 
 func _process(delta: float) -> void:
 	for i in range(active.size() - 1, -1, -1):
@@ -110,6 +114,18 @@ func _draw() -> void:
 			"heal": _draw_heal(effect, p, c)
 			"energy_gain", "energy_loss": _draw_energy(effect, p, c)
 			"status": _draw_status(effect, p, c)
+			"summon_activation": _draw_summon_activation(effect, p, c)
+
+func _draw_summon_activation(e: Dictionary, p: float, c: Color) -> void:
+	var point: Vector2 = e["to"]
+	var glow := sin(PI * p)
+	var radius := 34.0 + p * 32.0
+	_draw_ai_ring(point, radius * 1.25, p * 0.8, _tint(c.lightened(0.3), glow * 0.65))
+	_glow(point, radius, c, glow * 0.6)
+	draw_arc(point, radius, 0.0, TAU, 48, _tint(c.lightened(0.3), glow * 0.85), 2.5, true)
+	for i in 6:
+		var mote := point + Vector2.from_angle(TAU * float(i) / 6.0 + p * 0.9) * radius
+		draw_circle(mote, 3.0, _tint(c.lightened(0.5), glow))
 
 func _color(element: String) -> Color:
 	return BattleRules.color(element) if element in BattleRules.ELEMENTS else Color("#dec596")
@@ -254,7 +270,8 @@ func _draw_status(e: Dictionary, p: float, c: Color) -> void:
 			_draw_shard(point + Vector2.from_angle(angle) * r, Vector2.from_angle(angle), 12.0 * fade, _tint(c, fade))
 
 func _draw_shard(point: Vector2, direction: Vector2, size: float, color: Color) -> void:
-	if size <= 0.0:
+	# Subpixel shards collapse at canvas coordinates and cannot be triangulated.
+	if size < 0.5 or color.a < 0.01:
 		return
 	var side := Vector2(-direction.y, direction.x)
 	var polygon := PackedVector2Array([point + direction * size, point + side * size * 0.36, point - direction * size * 0.65, point - side * size * 0.25])

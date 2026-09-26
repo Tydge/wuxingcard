@@ -17,6 +17,7 @@ const TARGET_MARKER_SCRIPT := preload("res://ui/target_marker.gd")
 const STATUS_ICON_SCRIPT := preload("res://ui/status_icon.gd")
 const CARD_REVEAL_SECONDS := 1.45
 const EFFECT_PAUSE_SECONDS := 0.9
+const SUMMON_FEEDBACK_SECONDS := 1.1
 
 # --- horizontal arena layout (1600x900 design viewport) ----------------------
 # The player stands on the left and the enemy on the right, facing each other.
@@ -118,6 +119,7 @@ func _ready() -> void:
 	battle_fx = BattleFX.new()
 	battle_fx.set_anchors(PLAYER_ANCHOR, ENEMY_ANCHOR)
 	fx_layer.add_child(battle_fx)
+	manager.summon_presenter = _present_summon_effect
 	_refresh()
 
 func _box(color: Color, border: Color = Color.TRANSPARENT, radius: int = 12, border_width: int = 1) -> StyleBoxFlat:
@@ -230,6 +232,7 @@ func _build_menu() -> void:
 
 func _start_battle() -> void:
 	_clear_actors()
+	enemy_animating = false
 	selected_index = -1
 	hovered_index = -1
 	player_hidden_index = -1
@@ -241,7 +244,7 @@ func _start_battle() -> void:
 	action_busy = true
 	_clear_drag_hints()
 	battle_fx.clear_effects()
-	manager.start_battle(menu_enemy, menu_deck)
+	await manager.start_battle(menu_enemy, menu_deck)
 
 func _build_battle() -> void:
 	_build_standees()
@@ -769,21 +772,31 @@ func _build_end_turn() -> void:
 func _on_end_turn() -> void:
 	if action_busy or manager.phase != "player_action":
 		return
-	manager.end_player_turn()
+	var generation := manager.battle_generation
+	action_busy = true
 	selected_index = -1
 	hovered_index = -1
 	_clear_hover_preview()
+	_refresh()
+	await manager.end_player_turn()
+	if generation != manager.battle_generation:
+		return
+	action_busy = false
+	_refresh()
 	if manager.phase == "enemy_action" and not enemy_animating:
 		_run_enemy_turn()
 
 func _run_enemy_turn() -> void:
+	var generation := manager.battle_generation
 	enemy_animating = true
 	await get_tree().create_timer(0.75).timeout
+	if generation != manager.battle_generation:
+		return
 	while manager.phase == "enemy_action":
 		var action := manager.peek_enemy_action()
 		var chosen_index := int(action["index"])
 		if chosen_index < 0:
-			manager.enemy_step(-1)
+			await manager.enemy_step(-1)
 			break
 		var selection: Dictionary = action["target"]
 		var card: Dictionary = manager.cards[manager.enemy.hand[chosen_index]]
@@ -792,14 +805,20 @@ func _run_enemy_turn() -> void:
 		enemy_hidden_index = chosen_index
 		_refresh()
 		await _present_card(card, "enemy", source)
+		if generation != manager.battle_generation:
+			return
 		if manager.phase != "enemy_action":
 			break
 		var mode := manager.card_target_mode(card)
 		var destination := _target_point("enemy" if mode == "slot" else "player", selection) if mode != "none" else Vector2(-1, -1)
 		await get_tree().create_timer(battle_fx.cast(card, "enemy", Vector2(-1, -1), destination)).timeout
-		manager.enemy_step(chosen_index, selection)
+		if generation != manager.battle_generation:
+			return
+		await manager.enemy_step(chosen_index, selection)
 		enemy_hidden_index = -1
 		await get_tree().create_timer(EFFECT_PAUSE_SECONDS).timeout
+	if generation != manager.battle_generation:
+		return
 	enemy_animating = false
 	enemy_hidden_index = -1
 	_refresh()
@@ -934,6 +953,33 @@ func _on_summon_event(side: String, slot: int, kind: String, element: String, am
 				fade.tween_property(fallen, "self_modulate:a", 0.0, 0.4)
 				fade.tween_property(fallen, "scale", Vector2(0.84, 0.84), 0.4)
 				fade.chain().tween_callback(fallen.queue_free)
+
+func _present_summon_effect(side: String, slot: int, summoned: Summon, effect: Dictionary, stage: String) -> void:
+	var generation := manager.battle_generation
+	if stage == "cast":
+		_clear_hover_preview()
+		_build_summons()
+		var view: SummonView = summon_views.get("%s_%d" % [side, slot])
+		if is_instance_valid(view):
+			view.play_trigger()
+		var element := str(effect.get("element", effect.get("to", summoned.element)))
+		var target_side := side if effect.get("target", "self") == "self" else ("enemy" if side == "player" else "player")
+		var destination := _anchor(target_side)
+		match str(effect["type"]):
+			"gain_energy", "lose_energy", "convert_energy": destination = _energy_point(target_side, element)
+			"draw", "discard": destination = _draw_pile_point(target_side)
+		var source := _summon_point(side, slot) + Vector2(0, -14)
+		battle_fx.summon_activation(source, summoned.element)
+		var cast_data := {"element": element, "effects": [effect], "fx_scale": 0.8}
+		for key in ["fx_id", "fx_speed", "fx_scale", "fx_intensity"]:
+			if effect.has(key):
+				cast_data[key] = effect[key]
+		await get_tree().create_timer(battle_fx.cast(cast_data, side, source, destination)).timeout
+	else:
+		await get_tree().create_timer(SUMMON_FEEDBACK_SECONDS).timeout
+		# A draw trigger also waits for all its cards to reach the hand.
+		while generation == manager.battle_generation and manager.phase != "menu" and (draw_animation_active or pending_player_draws > 0 or pending_enemy_draws > 0):
+			await get_tree().process_frame
 
 func _on_action_event(message: String, side: String, kind: String, element: String, amount: int) -> void:
 	if fx_layer == null or not is_inside_tree():

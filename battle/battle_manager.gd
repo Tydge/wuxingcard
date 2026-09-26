@@ -4,11 +4,14 @@ extends Node
 signal changed
 signal action_event(message: String, side: String, kind: String, element: String, amount: int)
 signal summon_event(side: String, slot: int, kind: String, element: String, amount: int)
+signal summon_triggered(side: String, slot: int, timing: String, effect: Dictionary)
 
 const CARD_PATH := "res://data/cards.json"
 const BATTLE_PATH := "res://data/battles.json"
 const SUMMON_PATH := "res://data/summons.json"
 const STATUS_NAMES := {"burn":"灼伤", "poison":"中毒", "bleed":"出血", "weak":"虚弱", "vulnerable":"脆弱", "charge":"蓄力", "tenacity":"坚韧", "regen":"再生", "shield":"护盾", "lock":"封锁"}
+# Both sides use slots 0 / 1 / 2 for the top / middle / bottom of the battlefield.
+const SUMMON_TRIGGER_ORDER := [0, 1, 2]
 
 var cards: Dictionary = {}
 var summon_templates: Dictionary = {}
@@ -25,6 +28,10 @@ var battle_log: Array[String] = []
 var played_cards := 0
 var energy_destroyed := 0
 var player_damage := 0
+var battle_generation := 0
+# Optional UI coroutine: cast before resolving, then wait for the feedback.
+# Without a presenter, rule simulations resolve immediately.
+var summon_presenter: Callable
 
 func _ready() -> void:
 	load_content()
@@ -81,6 +88,8 @@ func status_tooltip(status: Dictionary) -> String:
 	return "%s %d 层\n%s" % [name, stacks, effect]
 
 func start_battle(enemy_id: String, deck_id: String, seed_value: int = -1) -> void:
+	battle_generation += 1
+	var generation := battle_generation
 	selected_enemy_id = enemy_id
 	selected_deck_id = deck_id
 	if seed_value < 0:
@@ -101,8 +110,9 @@ func start_battle(enemy_id: String, deck_id: String, seed_value: int = -1) -> vo
 	for i in 4:
 		draw_card(player)
 		draw_card(enemy)
-	_start_turn(player)
-	changed.emit()
+	await _start_turn(player)
+	if generation == battle_generation:
+		changed.emit()
 
 func _report(message: String, side: String = "system", kind: String = "info", element: String = "", amount: int = 0) -> void:
 	battle_log.push_front(message)
@@ -158,6 +168,7 @@ func draw_card(actor: Combatant) -> void:
 		_report("%s 抽了 1 张牌" % actor.display_name, _side(actor), "draw")
 
 func _start_turn(actor: Combatant) -> void:
+	var generation := battle_generation
 	if actor == player:
 		round_number += 1
 		phase = "player_turn_start"
@@ -173,8 +184,8 @@ func _start_turn(actor: Combatant) -> void:
 			_report("%s 护盾从 %d 减为 %d" % [actor.display_name, shield_before, shield_after], _side(actor), "status_shield", "", shield_before - shield_after)
 	if _check_finish():
 		return
-	_trigger_summons(actor, "turn_start")
-	if phase in ["victory", "defeat"]:
+	await _trigger_summons(actor, "turn_start")
+	if generation != battle_generation or phase in ["menu", "victory", "defeat"]:
 		return
 	if _check_finish():
 		return
@@ -188,8 +199,9 @@ func _start_turn(actor: Combatant) -> void:
 	changed.emit()
 
 func _trigger_summons(actor: Combatant, timing: String = "turn_start") -> void:
+	var generation := battle_generation
 	var opponent := enemy if actor == player else player
-	for slot in actor.summons.size():
+	for slot in SUMMON_TRIGGER_ORDER:
 		var summoned: Summon = actor.summons[slot]
 		if summoned == null:
 			continue
@@ -198,8 +210,18 @@ func _trigger_summons(actor: Combatant, timing: String = "turn_start") -> void:
 			var resolved: Dictionary = effect.duplicate(true)
 			if not resolved.has("target"):
 				resolved["target"] = "self"
+			summon_triggered.emit(_side(actor), slot, timing, resolved)
+			if summon_presenter.is_valid():
+				await summon_presenter.call(_side(actor), slot, summoned, resolved, "cast")
+			if generation != battle_generation or phase in ["menu", "victory", "defeat"]:
+				return
+			if actor.summons[slot] != summoned:
+				break
 			_resolve_effect(actor, opponent, resolved, summoned.element)
-			if phase in ["victory", "defeat"]:
+			if summon_presenter.is_valid():
+				changed.emit()
+				await summon_presenter.call(_side(actor), slot, summoned, resolved, "resolved")
+			if generation != battle_generation or phase in ["menu", "victory", "defeat"]:
 				return
 
 func card_target_mode(card: Dictionary) -> String:
@@ -379,6 +401,7 @@ func apply_summon_damage(source: Combatant, owner: Combatant, slot: int, base_am
 	return dealt
 
 func _end_turn(actor: Combatant) -> void:
+	var generation := battle_generation
 	var burn := actor.status_stacks("burn")
 	if burn > 0:
 		var amount := actor.hand.size() * burn
@@ -400,8 +423,8 @@ func _end_turn(actor: Combatant) -> void:
 	actor.decay_status("charge")
 	actor.decay_status("tenacity")
 	actor.tick_status_durations()
-	_trigger_summons(actor, "turn_end")
-	if phase in ["victory", "defeat"]:
+	await _trigger_summons(actor, "turn_end")
+	if generation != battle_generation or phase in ["menu", "victory", "defeat"]:
 		return
 	_check_finish()
 	changed.emit()
@@ -428,9 +451,11 @@ func end_player_turn() -> void:
 	if phase != "player_action":
 		return
 	phase = "player_turn_end"
-	_end_turn(player)
-	if phase != "victory" and phase != "defeat":
-		_start_turn(enemy)
+	var generation := battle_generation
+	changed.emit()
+	await _end_turn(player)
+	if generation == battle_generation and phase not in ["menu", "victory", "defeat"]:
+		await _start_turn(enemy)
 
 func peek_enemy_action() -> Dictionary:
 	if phase != "enemy_action":
@@ -450,9 +475,11 @@ func enemy_step(chosen_index: int = -2, selection: Dictionary = {}) -> bool:
 	var index := chosen_index
 	if index < 0:
 		phase = "enemy_turn_end"
-		_end_turn(enemy)
-		if phase != "victory" and phase != "defeat":
-			_start_turn(player)
+		var generation := battle_generation
+		changed.emit()
+		await _end_turn(enemy)
+		if generation == battle_generation and phase not in ["menu", "victory", "defeat"]:
+			await _start_turn(player)
 		return false
 	if selection.is_empty() and index < enemy.hand.size():
 		var card: Dictionary = cards[enemy.hand[index]]

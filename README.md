@@ -19,7 +19,7 @@ Godot 4.6 的单机 PVE 五行卡牌战斗原型。三份 v0.3 原始设计文�
 - 初始 4 张手牌、上限 8 张，弃牌不洗回，递增无属性疲劳。
 - 敌我共用能量、抽牌、出牌、伤害和状态逻辑；敌方手牌显示牌背，不公开内容。
 - 40 种数据定义卡牌、3 种敌人、3 套玩家牌组。效果通过 `effects` 顺序结算，包括伤害、治疗、抽牌、获得/削减/转换能量、随机弃牌、状态及召唤。
-- 双方各有 3 个召唤槽，围绕人物立绘呈三角形站位，敌方左右镜像。五张基础召唤牌消耗 2 点对应属性灵气，召唤 15 生命的物体；物体在持有者回合开始时产生 1 点相生属性灵气。另有五张 2 费召唤牌：玄金铃加蓄力、春藤鹿治疗、听雨螺抽牌、离火鸦造成火伤、镇山龟加坚韧。召唤物的回合开始与结束效果共用卡牌底层结算规则。召唤物不获得状态，也不受五行抗性与克制影响。伤害牌可自由指定敌方角色或召唤物；可选目标只显示小准星，多段伤害预览按结算顺序逐段显示，并计入护盾和剩余生命。
+- 双方各有 3 个召唤槽，围绕人物立绘呈三角形站位，敌方左右镜像。五张基础召唤牌消耗 2 点对应属性灵气，召唤 15 生命的物体；物体在持有者回合开始时产生 1 点相生属性灵气。另有五张 2 费召唤牌：玄金铃加蓄力、春藤鹿治疗、听雨螺抽牌、离火鸦造成火伤、镇山龟加坚韧。召唤物的回合开始与结束效果共用卡牌底层结算规则；多个召唤物按上、中、下槽位依次施法、结算和显示反馈，再继续回合。召唤物不获得状态，也不受五行抗性与克制影响。伤害牌可自由指定敌方角色或召唤物；可选目标只显示小准星，多段伤害预览按结算顺序逐段显示，并计入护盾和剩余生命。
 - 状态：灼伤、中毒、出血、虚弱、脆弱、蓄力、坚韧、再生、护盾、元素封锁。双方的状态以独立图标显示，每排 8 个，层数在图标右下角。敌人根据伤害、恢复、资源和状态评估手牌并连续出牌。
 - 横版对战界面：左我方 / 右敌方立绘面对面，我方 HUD 在左下、敌方 HUD 在右上，圆形五行能量、扇形手牌、悬停放大、拖拽出牌、从牌堆飞入手牌的抽牌动画、敌方卡牌从牌背飞入场中的展示，以及胜负和重开。战斗日志保存在逻辑层，当前战斗画面不显示。
 - 布局以画面中心点对称：我方手牌（底部偏右）对应敌方卡背（顶部偏左），我方抽牌堆（右下角）对应敌方抽牌堆（左上角）。
@@ -72,10 +72,13 @@ Godot 4.6 的单机 PVE 五行卡牌战斗原型。三份 v0.3 原始设计文�
 
 动态特效集中在 `ui/battle_fx.gd`，伤害数字由 `ui/damage_number.gd` 绘制。战场立绘放在常驻节点层里，普通手牌与 HUD 刷新不会重新创建立绘或重启其待机动画。新增卡牌会按主属性和第一个效果自动选择特效；也可在卡牌 JSON 中填写可选字段 `fx_id`、`fx_scale`、`fx_speed`、`fx_intensity` 调整表现，无须为每张牌单独写脚本。特效的起止点由 `battle_ui.gd` 里的 `PLAYER_ANCHOR` / `ENEMY_ANCHOR` 给出，`cast()` 优先飞向实际选中的角色或召唤物；没有显式目标时按卡牌 `effects` 的 `target` 选择立绘。使用本机 Godot 执行 `--path . --script res://tools/capture_fx.gd` 可自动截取五行轨迹、命中和状态反馈到 `work/fx_previews/`，执行 `--path . --script res://tools/capture_layout.gd` 可把横版布局、双方 HUD、圆形能量和双向特效截到 `work/layout_previews/`，供视觉检查。
 
+召唤物触发时复用法术特效：源头为召唤物立绘，能量效果飞向对应灵气球，抽牌效果飞向牌堆，伤害、治疗和状态效果飞向实际角色。立绘短促发光、放大后回到原来的呼吸动画。`BattleManager.summon_presenter` 由 UI 提供施法与结算后反馈的等待；无画面的规则模拟直接结算。播放期间回合不进入行动阶段；战斗结束或重开会取消剩余触发。
+
 ## 测试
 
 ```sh
 /Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tests/smoke_test.gd
+/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tests/summon_presentation_test.gd
 ```
 
 测试覆盖伤害公式、护盾和多段伤害预览、召唤物行动与受击、状态触发与衰减、递增疲劳，并以固定种子完整运行 90 场战斗。游戏 UI 也通过本机 Godot 实际启动，检查指定槽位召唤、伤害目标选择和无效拖拽：
@@ -83,6 +86,7 @@ Godot 4.6 的单机 PVE 五行卡牌战斗原型。三份 v0.3 原始设计文�
 ```sh
 /Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/test_drag.gd
 /Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/test_summon_drag.gd
+/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/test_summon_fx.gd
 /Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tools/test_summon_art.gd
 /Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/capture_interaction.gd
 /Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/capture_new_summons.gd

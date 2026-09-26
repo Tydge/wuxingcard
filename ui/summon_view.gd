@@ -4,6 +4,7 @@ extends Panel
 const VIEW_SIZE := Vector2(190, 190)
 var summon_ref: Summon
 var hp_label: Label
+var trigger_tween: Tween
 
 func configure(summoned: Summon) -> void:
 	summon_ref = summoned
@@ -43,6 +44,15 @@ func configure(summoned: Summon) -> void:
 func refresh_health() -> void:
 	if is_instance_valid(hp_label):
 		hp_label.text = "%d / %d" % [summon_ref.hp, summon_ref.max_hp]
+
+func play_trigger() -> void:
+	if trigger_tween != null and trigger_tween.is_running():
+		trigger_tween.kill()
+	pivot_offset = Vector2(95, 81)
+	# Pulse the persistent view; the portrait's breathing animation keeps running.
+	trigger_tween = create_tween()
+	trigger_tween.tween_property(self, "scale", Vector2(1.075, 1.075), 0.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	trigger_tween.tween_property(self, "scale", Vector2.ONE, 0.34).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 func _label(parent: Node, value: String, at: Vector2, dimensions: Vector2, font_size: int, color: Color) -> Label:
 	var label := Label.new()
