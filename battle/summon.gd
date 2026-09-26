@@ -8,6 +8,7 @@ var element := ""
 var max_hp := 15
 var hp := 15
 var turn_start_effects: Array = []
+var turn_end_effects: Array = []
 
 func setup(data: Dictionary) -> void:
 	id = str(data["id"])
@@ -17,3 +18,4 @@ func setup(data: Dictionary) -> void:
 	max_hp = int(data.get("hp", 15))
 	hp = max_hp
 	turn_start_effects = data.get("turn_start", []).duplicate(true)
+	turn_end_effects = data.get("turn_end", []).duplicate(true)

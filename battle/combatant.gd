@@ -1,7 +1,7 @@
 class_name Combatant
 extends RefCounted
 
-const NO_DURATION_STATUSES := ["burn", "poison", "bleed", "weak", "vulnerable", "regen", "shield"]
+const NO_DURATION_STATUSES := ["burn", "poison", "bleed", "weak", "vulnerable", "charge", "tenacity", "regen", "shield"]
 
 var id := ""
 var display_name := ""

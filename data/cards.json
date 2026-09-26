@@ -39,5 +39,10 @@
   {"id":"wood_seedling_card","name":"青藤苗","element":"wood","cost":2,"text":"回合开始时获得 1 火能量。","art_prompt":"石台上的青藤幼苗，叶脉燃起温暖火光，暗色东方幻想","effects":[{"type":"summon","target":"self","summon":"wood_seedling"}]},
   {"id":"water_spring_card","name":"玄水泉","element":"water","cost":2,"text":"回合开始时获得 1 木能量。","art_prompt":"悬浮石盆里的清澈灵泉，生出翠绿灵枝，暗色东方幻想","effects":[{"type":"summon","target":"self","summon":"water_spring"}]},
   {"id":"fire_lantern_card","name":"赤焰灯","element":"fire","cost":2,"text":"回合开始时获得 1 土能量。","art_prompt":"赤色悬灯内燃不灭灵火，下方凝成岩石，暗色东方幻想","effects":[{"type":"summon","target":"self","summon":"fire_lantern"}]},
-  {"id":"earth_stele_card","name":"坤土碑","element":"earth","cost":2,"text":"回合开始时获得 1 金能量。","art_prompt":"刻有金色符文的古老土石碑，生出金属晶脉，暗色东方幻想","effects":[{"type":"summon","target":"self","summon":"earth_stele"}]}
+  {"id":"earth_stele_card","name":"坤土碑","element":"earth","cost":2,"text":"回合开始时获得 1 金能量。","art_prompt":"刻有金色符文的古老土石碑，生出金属晶脉，暗色东方幻想","effects":[{"type":"summon","target":"self","summon":"earth_stele"}]},
+  {"id":"metal_chime_card","name":"玄金铃","element":"metal","cost":2,"text":"回合开始：我方角色获得1层蓄力。","art_prompt":"悬浮的玄金铜铃，环绕凝聚力量的金色声波，暗色东方幻想","effects":[{"type":"summon","target":"self","summon":"metal_chime"}]},
+  {"id":"wood_deer_card","name":"春藤鹿","element":"wood","cost":2,"text":"回合结束：我方角色恢复3点生命。","art_prompt":"藤木组成的小鹿，鹿角开出翠绿新叶与白花，暗色东方幻想","effects":[{"type":"summon","target":"self","summon":"wood_deer"}]},
+  {"id":"water_conch_card","name":"听雨螺","element":"water","cost":2,"text":"回合开始：抽1张牌。","art_prompt":"悬浮的青蓝灵螺，壳纹如水流，吐出雨丝与薄雾，暗色东方幻想","effects":[{"type":"summon","target":"self","summon":"water_conch"}]},
+  {"id":"fire_raven_card","name":"离火鸦","element":"fire","cost":2,"text":"回合结束：敌方角色受到4点火伤害。","art_prompt":"赤焰构成的三足灵鸦展翼飞翔，火星流散，暗色东方幻想","effects":[{"type":"summon","target":"self","summon":"fire_raven"}]},
+  {"id":"earth_tortoise_card","name":"镇山龟","element":"earth","cost":2,"text":"回合结束：我方角色获得1层坚韧。","art_prompt":"岩石小龟背负微型山岳，金色符文沿龟甲发光，暗色东方幻想","effects":[{"type":"summon","target":"self","summon":"earth_tortoise"}]}
 ]

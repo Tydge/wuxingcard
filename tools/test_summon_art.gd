@@ -2,9 +2,11 @@ extends SceneTree
 
 func _initialize() -> void:
 	var failures := 0
-	for summon_id in ["metal_furnace", "wood_seedling", "water_spring", "fire_lantern", "earth_stele"]:
+	var templates: Array = JSON.parse_string(FileAccess.get_file_as_string("res://data/summons.json"))
+	for template in templates:
+		var summon_id: String = template["id"]
 		var standee_texture: Texture2D = load("res://assets/summons/standee/%s.webp" % summon_id)
-		var card_texture: Texture2D = load("res://assets/cards/generated/%s_card.webp" % summon_id)
+		var card_texture: Texture2D = load("res://assets/cards/generated/%s.webp" % template["card_id"])
 		if standee_texture == null or card_texture == null:
 			push_error("Missing summon art: " + summon_id)
 			failures += 1
@@ -21,5 +23,5 @@ func _initialize() -> void:
 		if absf(ratio - 4.0 / 3.0) > 0.01:
 			push_error("Card art is not 4:3: " + summon_id)
 			failures += 1
-	print("Summon art checked: 5 pairs, %d failures" % failures)
+	print("Summon art checked: %d pairs, %d failures" % [templates.size(), failures])
 	quit(1 if failures > 0 else 0)

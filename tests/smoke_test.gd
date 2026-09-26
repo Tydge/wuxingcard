@@ -30,7 +30,7 @@ func run_tests() -> void:
 	manager.start_battle("ember", "balanced", 12345)
 	check(manager.player.hand.size() == 5, "opening hand plus first-turn draw")
 	check(manager.enemy.hand.size() == 4, "enemy hand hidden but drawn")
-	check(manager.player.draw_pile.size() == 30, "draw pile after opening")
+	check(manager.player.draw_pile.size() == 35, "draw pile after opening")
 	var before_fatigue := manager.player.hp
 	manager.player.draw_pile.clear()
 	manager.draw_card(manager.player)
@@ -39,6 +39,7 @@ func run_tests() -> void:
 	check(manager.player.fatigue_level == 2, "fatigue level")
 	test_status_rules(manager)
 	test_summon_rules(manager)
+	test_new_summon_rules(manager)
 
 	var simulations := 0
 	var victories := 0
@@ -116,8 +117,29 @@ func test_status_rules(manager: BattleManager) -> void:
 		source.energy[element] = 0
 		target.energy[element] = 0
 	source.add_status("weak", 2, 0)
+	source.add_status("charge", 3, 0)
 	target.add_status("vulnerable", 3, 0)
-	check(BattleRules.damage_breakdown(target, 20, "fire", source)["hp"] == 21, "weak and vulnerable change damage by 10% per stack")
+	target.add_status("tenacity", 1, 0)
+	check(BattleRules.damage_breakdown(target, 20, "fire", source)["hp"] == 26, "damage modifiers add before rounding")
+	target.energy["fire"] = 2
+	target.energy["metal"] = 1
+	check(BattleRules.damage_breakdown(target, 20, "fire", source)["hp"] == 24, "elemental and status percentages add together")
+	check(BattleRules.summon_damage(20, source) == 22, "charge and weak add for summon targets")
+	check(manager.status_tooltip(source.statuses[1]).contains("30%"), "charge tooltip shows current bonus")
+	check(manager.status_tooltip(target.statuses[1]).contains("10%"), "tenacity tooltip shows current reduction")
+	target.add_status("tenacity", 12, 0)
+	check(BattleRules.damage_breakdown(target, 20, "fire", source)["hp"] == 0, "damage multiplier never becomes negative")
+	actor.statuses.clear()
+	opponent.statuses.clear()
+	for element in BattleRules.ELEMENTS:
+		opponent.energy[element] = 0
+	actor.add_status("charge", 2, 0)
+	opponent.add_status("tenacity", 1, 0)
+	var strike: Dictionary = manager.cards["metal_strike"]
+	var preview := manager.preview_damage_segments(actor, strike, {"kind": "hero"})
+	var hp_before := opponent.hp
+	manager.apply_damage(actor, opponent, 10, "metal")
+	check(preview == [11] and hp_before - opponent.hp == 11, "preview and actual damage share additive calculation")
 
 	actor.statuses.clear()
 	actor.hp = 100
@@ -231,3 +253,56 @@ func test_summon_rules(manager: BattleManager) -> void:
 	var chosen_slot := int(enemy_action["target"].get("slot", -1))
 	manager.enemy_step(int(enemy_action["index"]), enemy_action["target"])
 	check(chosen_slot >= 0 and actor.summons[chosen_slot] == null, "enemy damage destroys a player summon")
+
+func test_new_summon_rules(manager: BattleManager) -> void:
+	manager.start_battle("ember", "balanced", 5678)
+	var actor := manager.player
+	var opponent := manager.enemy
+	var expected := {
+		"metal_chime": ["metal", 2, 12],
+		"wood_deer": ["wood", 2, 13],
+		"water_conch": ["water", 2, 10],
+		"fire_raven": ["fire", 2, 11],
+		"earth_tortoise": ["earth", 2, 15],
+	}
+	for summon_id in expected:
+		var template: Dictionary = manager.summon_templates[summon_id]
+		var card: Dictionary = manager.cards[template["card_id"]]
+		check(template["element"] == expected[summon_id][0] and int(card["cost"]) == expected[summon_id][1] and int(template["hp"]) == expected[summon_id][2], "new summon stats: " + summon_id)
+		check(card["effects"][0]["summon"] == summon_id and manager.card_target_mode(card) == "slot", "new summon card target: " + summon_id)
+		check(manager.find_entry(manager.decks, "balanced")["cards"].has(template["card_id"]), "new summon appears in balanced deck: " + summon_id)
+	for slot in actor.summons.size():
+		actor.summons[slot] = null
+	actor.summons[0] = Summon.new()
+	actor.summons[0].setup(manager.summon_templates["metal_chime"])
+	manager._trigger_summons(actor, "turn_start")
+	check(actor.status_stacks("charge") == 1, "metal chime adds one charge layer")
+	actor.summons[0].setup(manager.summon_templates["wood_deer"])
+	actor.hp = 80
+	manager._trigger_summons(actor, "turn_end")
+	check(actor.hp == 83, "wood deer heals at turn end")
+	actor.summons[0].setup(manager.summon_templates["water_conch"])
+	var hand_before := actor.hand.size()
+	var pile_before := actor.draw_pile.size()
+	manager._trigger_summons(actor, "turn_start")
+	check(actor.hand.size() == hand_before + 1 and actor.draw_pile.size() == pile_before - 1, "water conch draws a card at turn start")
+	actor.summons[0].setup(manager.summon_templates["fire_raven"])
+	opponent.energy["fire"] = 0
+	opponent.energy["metal"] = 0
+	opponent.statuses.clear()
+	var hp_before := opponent.hp
+	manager._trigger_summons(actor, "turn_end")
+	check(opponent.hp == hp_before - 4, "fire raven deals ordinary fire damage")
+	actor.summons[0].setup(manager.summon_templates["earth_tortoise"])
+	manager._end_turn(actor)
+	check(actor.status_stacks("tenacity") == 1, "earth tortoise's end-turn tenacity does not decay immediately")
+	check(opponent.status_stacks("weak") == 0, "earth tortoise does not debuff opponent")
+	actor.summons[0] = null
+	manager._end_turn(actor)
+	check(actor.status_stacks("tenacity") == 0, "tenacity decays on following turn end")
+	actor.summons[0] = Summon.new()
+	actor.summons[0].setup(manager.summon_templates["fire_raven"])
+	opponent.hp = 3
+	manager.phase = "player_turn_end"
+	manager._end_turn(actor)
+	check(manager.phase == "victory" and opponent.hp == 0, "lethal summon effect ends battle before next turn")

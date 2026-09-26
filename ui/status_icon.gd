@@ -50,6 +50,8 @@ func _draw() -> void:
 		"bleed": _draw_bleed(tint)
 		"weak": _draw_weak(tint)
 		"vulnerable": _draw_vulnerable(tint)
+		"charge": _draw_charge(tint)
+		"tenacity": _draw_tenacity(tint)
 		"regen": _draw_regen(tint)
 		"shield": _draw_shield(tint)
 		"lock": _draw_lock(tint)
@@ -67,6 +69,8 @@ func _tint() -> Color:
 		"bleed": return Color("#ea6077")
 		"weak": return Color("#a69ce0")
 		"vulnerable": return Color("#e7bd74")
+		"charge": return Color("#f4ad68")
+		"tenacity": return Color("#8bd2c4")
 		"regen": return Color("#80d9a1")
 		"shield": return Color("#83c7ec")
 		"lock": return BattleRules.color(element)
@@ -95,6 +99,18 @@ func _draw_vulnerable(tint: Color) -> void:
 	draw_colored_polygon(PackedVector2Array([Vector2(19, 8), Vector2(28, 18), Vector2(19, 29), Vector2(10, 18)]), tint)
 	draw_line(Vector2(18, 10), Vector2(21, 18), Color("#47332d"), 2.0, true)
 	draw_line(Vector2(21, 18), Vector2(16, 26), Color("#47332d"), 2.0, true)
+
+func _draw_charge(tint: Color) -> void:
+	draw_colored_polygon(PackedVector2Array([Vector2(19, 7), Vector2(25, 17), Vector2(21, 17), Vector2(21, 29), Vector2(17, 29), Vector2(17, 17), Vector2(13, 17)]), tint)
+	draw_line(Vector2(10, 11), Vector2(13, 14), Color("#ffe6b2"), 1.8, true)
+	draw_line(Vector2(28, 11), Vector2(25, 14), Color("#ffe6b2"), 1.8, true)
+	draw_line(Vector2(8, 20), Vector2(12, 20), Color("#ffe6b2"), 1.8, true)
+	draw_line(Vector2(30, 20), Vector2(26, 20), Color("#ffe6b2"), 1.8, true)
+
+func _draw_tenacity(tint: Color) -> void:
+	draw_colored_polygon(PackedVector2Array([Vector2(9, 26), Vector2(15, 16), Vector2(19, 20), Vector2(23, 11), Vector2(30, 26)]), tint)
+	draw_line(Vector2(13, 26), Vector2(25, 26), Color("#e0fff2"), 2.0, true)
+	draw_line(Vector2(23, 15), Vector2(23, 23), Color("#274a4a"), 2.0, true)
 
 func _draw_regen(tint: Color) -> void:
 	draw_line(Vector2(19, 28), Vector2(19, 15), tint, 2.5, true)

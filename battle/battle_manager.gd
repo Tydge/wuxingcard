@@ -8,7 +8,7 @@ signal summon_event(side: String, slot: int, kind: String, element: String, amou
 const CARD_PATH := "res://data/cards.json"
 const BATTLE_PATH := "res://data/battles.json"
 const SUMMON_PATH := "res://data/summons.json"
-const STATUS_NAMES := {"burn":"灼伤", "poison":"中毒", "bleed":"出血", "weak":"虚弱", "vulnerable":"脆弱", "regen":"再生", "shield":"护盾", "lock":"封锁"}
+const STATUS_NAMES := {"burn":"灼伤", "poison":"中毒", "bleed":"出血", "weak":"虚弱", "vulnerable":"脆弱", "charge":"蓄力", "tenacity":"坚韧", "regen":"再生", "shield":"护盾", "lock":"封锁"}
 
 var cards: Dictionary = {}
 var summon_templates: Dictionary = {}
@@ -64,12 +64,16 @@ func status_tooltip(status: Dictionary) -> String:
 		"burn": effect = "回合结束时受到手牌数 × %d 的火属性伤害，再减少 1 层。火伤受五行抗性、克制和护盾影响。" % stacks
 		"poison": effect = "每获得一次能量，失去 %d 点生命，再减少 1 层；一次获得多点能量只触发一次。" % stacks
 		"bleed": effect = "每打出一张牌，失去 %d 点生命，再减少 1 层。" % stacks
-		"weak": effect = "造成的元素伤害降低 %d%%，回合结束时减少 1 层。" % (stacks * 10)
-		"vulnerable": effect = "受到的元素伤害增加 %d%%，回合结束时减少 1 层。" % (stacks * 10)
+		"weak": effect = "造成的伤害降低 %d%%，回合结束时减少 1 层。" % (stacks * 10)
+		"vulnerable": effect = "受到的伤害增加 %d%%，回合结束时减少 1 层。" % (stacks * 10)
+		"charge": effect = "造成的伤害增加 %d%%，回合结束时减少 1 层。" % (stacks * 10)
+		"tenacity": effect = "受到的伤害降低 %d%%，回合结束时减少 1 层。" % (stacks * 10)
 		"regen": effect = "回合结束时恢复 %d 点生命，再减少 1 层。" % stacks
 		"shield": effect = "抵消 %d 点元素伤害。每次回合开始时层数向上取整减半。" % stacks
 		"lock": effect = "不能获得该属性能量，也不能打出该属性卡。"
 		_: effect = "当前效果：%d 层。" % stacks
+	if status_id in ["weak", "vulnerable", "charge", "tenacity"]:
+		effect += "与其他伤害百分比加算。"
 	var duration := int(status.get("turns", 0))
 	if duration > 0:
 		effect += "\n剩余 %d 回合。" % duration
@@ -168,7 +172,9 @@ func _start_turn(actor: Combatant) -> void:
 			_report("%s 护盾从 %d 减为 %d" % [actor.display_name, shield_before, shield_after], _side(actor), "status_shield", "", shield_before - shield_after)
 	if _check_finish():
 		return
-	_trigger_summons(actor)
+	_trigger_summons(actor, "turn_start")
+	if phase in ["victory", "defeat"]:
+		return
 	if _check_finish():
 		return
 	generate_natural_energy(actor)
@@ -180,18 +186,18 @@ func _start_turn(actor: Combatant) -> void:
 	phase = "player_action" if actor == player else "enemy_action"
 	changed.emit()
 
-func _trigger_summons(actor: Combatant) -> void:
+func _trigger_summons(actor: Combatant, timing: String = "turn_start") -> void:
+	var opponent := enemy if actor == player else player
 	for slot in actor.summons.size():
 		var summoned: Summon = actor.summons[slot]
 		if summoned == null:
 			continue
-		for effect in summoned.turn_start_effects:
-			if effect["type"] == "gain_energy":
-				var element: String = effect["element"]
-				var gained := actor.gain_energy(element, int(effect["amount"]))
-				_report("%s 的%s产生 %d 点%s灵气" % [actor.display_name, summoned.display_name, gained, BattleRules.element_name(element)], _side(actor), "energy", element, gained)
-				if gained > 0:
-					_trigger_poison(actor)
+		var effects: Array = summoned.turn_start_effects if timing == "turn_start" else summoned.turn_end_effects
+		for effect in effects:
+			var resolved: Dictionary = effect.duplicate(true)
+			if not resolved.has("target"):
+				resolved["target"] = "self"
+			_resolve_effect(actor, opponent, resolved, summoned.element)
 			if phase in ["victory", "defeat"]:
 				return
 
@@ -390,7 +396,12 @@ func _end_turn(actor: Combatant) -> void:
 		actor.decay_status("regen")
 	actor.decay_status("weak")
 	actor.decay_status("vulnerable")
+	actor.decay_status("charge")
+	actor.decay_status("tenacity")
 	actor.tick_status_durations()
+	_trigger_summons(actor, "turn_end")
+	if phase in ["victory", "defeat"]:
+		return
 	_check_finish()
 	changed.emit()
 
@@ -493,10 +504,15 @@ func _enemy_action_score(card: Dictionary, selection: Dictionary) -> float:
 			"summon":
 				var template: Dictionary = summon_templates[effect["summon"]]
 				score += 6.0
-				for turn_effect in template.get("turn_start", []):
-					if turn_effect["type"] == "gain_energy":
-						var produced := str(turn_effect["element"])
-						score += 5.0 if int(enemy.energy[produced]) < 8 else 0.0
+				for turn_effect in template.get("turn_start", []) + template.get("turn_end", []):
+					match turn_effect["type"]:
+						"gain_energy":
+							var produced := str(turn_effect["element"])
+							score += 5.0 if int(enemy.energy[produced]) < 8 else 0.0
+						"draw": score += 5.0 if enemy.hand.size() < 7 else 1.0
+						"heal": score += 4.0 if enemy.hp < enemy.max_hp - 6 else 2.0
+						"damage": score += 5.0
+						"status": score += 4.0
 			"heal": score += mini(enemy.max_hp - enemy.hp, int(effect["amount"])) * 0.9
 			"gain_energy": score += mini(10 - int(enemy.energy[effect["element"]]), int(effect["amount"])) * 3.5
 			"lose_energy": score += mini(int(player.energy[effect["element"]]), int(effect["amount"])) * 6.0
@@ -507,6 +523,8 @@ func _enemy_action_score(card: Dictionary, selection: Dictionary) -> float:
 				match effect["status"]:
 					"burn": score += 9.0 if player.status_stacks("burn") < 3 else 2.0
 					"vulnerable": score += 10.0 if player.status_stacks("vulnerable") == 0 else 2.0
+					"charge": score += 8.0 if enemy.status_stacks("charge") < 3 else 3.0
+					"tenacity": score += 8.0 if enemy.status_stacks("tenacity") < 3 else 3.0
 					"shield": score += 7.0 if enemy.status_stacks("shield") < 10 else 1.0
 					"regen": score += 7.0 if enemy.hp < 75 else 1.0
 					"lock": score += 9.0 if player.status_stacks("lock", effect["element"]) == 0 else 1.0

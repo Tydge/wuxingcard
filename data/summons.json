@@ -3,5 +3,10 @@
   {"id":"wood_seedling","card_id":"wood_seedling_card","name":"青藤苗","element":"wood","hp":15,"turn_start":[{"type":"gain_energy","element":"fire","amount":1}]},
   {"id":"water_spring","card_id":"water_spring_card","name":"玄水泉","element":"water","hp":15,"turn_start":[{"type":"gain_energy","element":"wood","amount":1}]},
   {"id":"fire_lantern","card_id":"fire_lantern_card","name":"赤焰灯","element":"fire","hp":15,"turn_start":[{"type":"gain_energy","element":"earth","amount":1}]},
-  {"id":"earth_stele","card_id":"earth_stele_card","name":"坤土碑","element":"earth","hp":15,"turn_start":[{"type":"gain_energy","element":"metal","amount":1}]}
+  {"id":"earth_stele","card_id":"earth_stele_card","name":"坤土碑","element":"earth","hp":15,"turn_start":[{"type":"gain_energy","element":"metal","amount":1}]},
+  {"id":"metal_chime","card_id":"metal_chime_card","name":"玄金铃","element":"metal","hp":12,"turn_start":[{"type":"status","target":"self","status":"charge","stacks":1}]},
+  {"id":"wood_deer","card_id":"wood_deer_card","name":"春藤鹿","element":"wood","hp":13,"turn_end":[{"type":"heal","target":"self","amount":3}]},
+  {"id":"water_conch","card_id":"water_conch_card","name":"听雨螺","element":"water","hp":10,"turn_start":[{"type":"draw","target":"self","amount":1}]},
+  {"id":"fire_raven","card_id":"fire_raven_card","name":"离火鸦","element":"fire","hp":11,"turn_end":[{"type":"damage","target":"opponent","element":"fire","amount":4}]},
+  {"id":"earth_tortoise","card_id":"earth_tortoise_card","name":"镇山龟","element":"earth","hp":15,"turn_end":[{"type":"status","target":"self","status":"tenacity","stacks":1}]}
 ]

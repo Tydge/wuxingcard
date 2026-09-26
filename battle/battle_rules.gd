@@ -26,13 +26,18 @@ static func damage_breakdown(target: Combatant, amount: int, element: String, so
 	var weak: int = target.energy[countered_by(element)]
 	var multiplier: float = maxf(0.0, 1.0 - same * 0.1 + weak * 0.1)
 	var vulnerable: int = target.status_stacks("vulnerable")
+	var tenacity: int = target.status_stacks("tenacity")
 	var weak_stacks := source.status_stacks("weak") if source != null else 0
-	var before_shield: int = roundi(amount * multiplier * maxf(0.0, 1.0 - weak_stacks * 0.1) * (1.0 + vulnerable * 0.1))
+	var charge: int = source.status_stacks("charge") if source != null else 0
+	var total_multiplier := maxf(0.0, 1.0 + (weak - same + vulnerable - tenacity + charge - weak_stacks) * 0.1)
+	var before_shield: int = roundi(amount * total_multiplier)
 	return {"base": amount, "same": same, "weak": weak, "multiplier": multiplier,
-		"vulnerable": vulnerable, "weak_stacks": weak_stacks, "raw": before_shield,
+		"vulnerable": vulnerable, "tenacity": tenacity, "charge": charge,
+		"weak_stacks": weak_stacks, "total_multiplier": total_multiplier, "raw": before_shield,
 		"shield": mini(before_shield, target.status_stacks("shield")),
 		"hp": maxi(0, before_shield - target.status_stacks("shield"))}
 
 static func summon_damage(amount: int, source: Combatant = null) -> int:
 	var weak_stacks := source.status_stacks("weak") if source != null else 0
-	return maxi(0, roundi(amount * maxf(0.0, 1.0 - weak_stacks * 0.1)))
+	var charge := source.status_stacks("charge") if source != null else 0
+	return maxi(0, roundi(amount * maxf(0.0, 1.0 + (charge - weak_stacks) * 0.1)))
