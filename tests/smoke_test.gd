@@ -38,6 +38,7 @@ func run_tests() -> void:
 	check(manager.player.hp == before_fatigue - 3, "fatigue increases 1 then 2")
 	check(manager.player.fatigue_level == 2, "fatigue level")
 	test_status_rules(manager)
+	test_opposite_status_rules()
 	test_summon_rules(manager)
 	test_new_summon_rules(manager)
 
@@ -125,8 +126,8 @@ func test_status_rules(manager: BattleManager) -> void:
 	target.energy["metal"] = 1
 	check(BattleRules.damage_breakdown(target, 20, "fire", source)["hp"] == 24, "elemental and status percentages add together")
 	check(BattleRules.summon_damage(20, source) == 22, "charge and weak add for summon targets")
-	check(manager.status_tooltip(source.statuses[1]).contains("30%"), "charge tooltip shows current bonus")
-	check(manager.status_tooltip(target.statuses[1]).contains("10%"), "tenacity tooltip shows current reduction")
+	check(manager.status_tooltip(source.statuses[0]).contains("10%"), "charge tooltip shows remaining bonus after cancellation")
+	check(manager.status_tooltip(target.statuses[0]).contains("20%"), "vulnerable tooltip shows remaining bonus after cancellation")
 	target.add_status("tenacity", 12, 0)
 	check(BattleRules.damage_breakdown(target, 20, "fire", source)["hp"] == 0, "damage multiplier never becomes negative")
 	actor.statuses.clear()
@@ -163,6 +164,27 @@ func test_status_rules(manager: BattleManager) -> void:
 	check(actor.status_stacks("shield") == 4, "shield halves upward at turn start")
 	manager._end_turn(actor)
 	check(actor.status_stacks("shield") == 4, "shield has no turn limit")
+
+func test_opposite_status_rules() -> void:
+	var actor := Combatant.new()
+	for pair in [["charge", "weak"], ["tenacity", "vulnerable"]]:
+		actor.statuses.clear()
+		actor.add_status(pair[0], 3, 0)
+		actor.add_status(pair[1], 2, 0)
+		check(actor.status_stacks(pair[0]) == 1 and actor.status_stacks(pair[1]) == 0, "opposite layers cancel: " + pair[0])
+		actor.add_status(pair[1], 4, 0)
+		check(actor.status_stacks(pair[0]) == 0 and actor.status_stacks(pair[1]) == 3, "excess opposite layers remain: " + pair[1])
+		actor.add_status(pair[0], 3, 0)
+		check(actor.statuses.is_empty(), "equal opposite layers remove both icons")
+		actor.add_status(pair[0], 20, 0)
+		actor.add_status(pair[0], 2, 0)
+		check(actor.status_stacks(pair[0]) == 10, "paired status caps at ten")
+		actor.add_status(pair[1], 15, 0)
+		check(actor.status_stacks(pair[1]) == 5, "cancellation happens before incoming stack cap")
+	actor.statuses.clear()
+	for status_id in ["shield", "burn", "poison", "bleed", "regen"]:
+		actor.add_status(status_id, 15, 0)
+		check(actor.status_stacks(status_id) == 15, "other statuses remain uncapped: " + status_id)
 
 func test_summon_rules(manager: BattleManager) -> void:
 	manager.start_battle("ember", "balanced", 4321)

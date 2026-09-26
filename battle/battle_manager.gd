@@ -73,7 +73,8 @@ func status_tooltip(status: Dictionary) -> String:
 		"lock": effect = "不能获得该属性能量，也不能打出该属性卡。"
 		_: effect = "当前效果：%d 层。" % stacks
 	if status_id in ["weak", "vulnerable", "charge", "tenacity"]:
-		effect += "与其他伤害百分比加算。"
+		var opposite: String = STATUS_NAMES[Combatant.OPPOSITE_STATUSES[status_id]]
+		effect += "与其他伤害百分比加算。与%s按层数抵消，最多 10 层。" % opposite
 	var duration := int(status.get("turns", 0))
 	if duration > 0:
 		effect += "\n剩余 %d 回合。" % duration

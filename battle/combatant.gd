@@ -2,6 +2,8 @@ class_name Combatant
 extends RefCounted
 
 const NO_DURATION_STATUSES := ["burn", "poison", "bleed", "weak", "vulnerable", "charge", "tenacity", "regen", "shield"]
+const OPPOSITE_STATUSES := {"charge":"weak", "weak":"charge", "tenacity":"vulnerable", "vulnerable":"tenacity"}
+const MAX_PAIRED_STACKS := 10
 
 var id := ""
 var display_name := ""
@@ -46,13 +48,27 @@ func status_stacks(status_id: String, element: String = "") -> int:
 func add_status(status_id: String, stacks: int, turns: int, element: String = "") -> void:
 	if stacks <= 0:
 		return
+	var paired := OPPOSITE_STATUSES.has(status_id)
+	if paired:
+		element = ""
+		# Cancel first: an incoming 15 layers against 10 opposite layers leaves 5.
+		for i in range(statuses.size() - 1, -1, -1):
+			if statuses[i]["id"] == OPPOSITE_STATUSES[status_id]:
+				var cancelled := mini(stacks, int(statuses[i]["stacks"]))
+				stacks -= cancelled
+				statuses[i]["stacks"] = int(statuses[i]["stacks"]) - cancelled
+				if int(statuses[i]["stacks"]) == 0:
+					statuses.remove_at(i)
+		if stacks == 0:
+			return
 	var duration := 0 if status_id in NO_DURATION_STATUSES else maxi(1, turns)
 	for status in statuses:
 		if status["id"] == status_id and status.get("element", "") == element:
-			status["stacks"] = int(status["stacks"]) + stacks
+			var total := int(status["stacks"]) + stacks
+			status["stacks"] = mini(total, MAX_PAIRED_STACKS) if paired else total
 			status["turns"] = maxi(int(status["turns"]), duration)
 			return
-	statuses.append({"id": status_id, "stacks": stacks, "turns": duration, "element": element})
+	statuses.append({"id": status_id, "stacks": mini(stacks, MAX_PAIRED_STACKS) if paired else stacks, "turns": duration, "element": element})
 
 func decay_status(status_id: String) -> void:
 	for i in range(statuses.size() - 1, -1, -1):
