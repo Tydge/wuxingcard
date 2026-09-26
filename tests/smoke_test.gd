@@ -30,7 +30,7 @@ func run_tests() -> void:
 	manager.start_battle("ember", "balanced", 12345)
 	check(manager.player.hand.size() == 5, "opening hand plus first-turn draw")
 	check(manager.enemy.hand.size() == 4, "enemy hand hidden but drawn")
-	check(manager.player.draw_pile.size() == 35, "draw pile after opening")
+	check(manager.player.draw_pile.size() == 25, "draw pile after opening")
 	var before_fatigue := manager.player.hp
 	manager.player.draw_pile.clear()
 	manager.draw_card(manager.player)
@@ -222,20 +222,25 @@ func test_summon_rules(manager: BattleManager) -> void:
 	for element in BattleRules.ELEMENTS:
 		opponent.energy[element] = 0
 	opponent.energy["fire"] = 10
-	actor.hand = ["fire_edge"]
+	actor.hand = ["fire_strike"]
 	actor.energy["fire"] = 3
 	manager.phase = "player_action"
-	var attack: Dictionary = manager.cards["fire_edge"]
-	check(manager.preview_damage_segments(actor, attack, {"kind": "summon", "slot": 1}) == [15], "summon preview ignores fire resistance")
+	var attack: Dictionary = manager.cards["fire_strike"]
+	check(manager.preview_damage_segments(actor, attack, {"kind": "summon", "slot": 1}) == [10], "summon preview ignores fire resistance")
 	check(manager.preview_damage_segments(actor, attack, {"kind": "hero"}) == [0], "hero preview still uses fire resistance")
 	opponent.energy["fire"] = 0
-	actor.hand = ["fire_edge"]
+	actor.hand = ["fire_strike"]
 	check(manager.play_player_card(0, {"kind": "hero"}), "hero remains targetable while a summon is present")
-	check(opponent.hp == 80 and opponent.summons[1] != null, "hero attack leaves summon untouched")
-	actor.hand = ["fire_edge"]
+	check(opponent.hp == 90 and opponent.summons[1] != null, "hero attack leaves summon untouched")
+	actor.hand = ["fire_strike"]
 	actor.energy["fire"] = 3
 	var hero_hp := opponent.hp
 	check(manager.play_player_card(0, {"kind": "summon", "slot": 1}), "damage card can target a summon")
+	check(opponent.summons[1] != null and opponent.summons[1].hp == 5 and opponent.hp == hero_hp, "ten damage leaves a fifteen-HP summon alive")
+	actor.hand = ["fire_strike"]
+	actor.energy["fire"] = 1
+	check(manager.preview_damage_segments(actor, attack, {"kind": "summon", "slot": 1}) == [5], "preview caps at the wounded summon's remaining HP")
+	check(manager.play_player_card(0, {"kind": "summon", "slot": 1}), "a second basic spell can finish the summon")
 	check(opponent.summons[1] == null and opponent.hp == hero_hp, "damage destroys summon without hitting hero")
 	var multi := {"element": "fire", "effects": [
 		{"type": "damage", "amount": 3, "element": "fire"},
@@ -267,14 +272,14 @@ func test_summon_rules(manager: BattleManager) -> void:
 	for element in BattleRules.ELEMENTS:
 		actor.energy[element] = 0
 	actor.energy["fire"] = 10
-	opponent.hand = ["fire_edge"]
+	opponent.hand = ["fire_strike"]
 	opponent.energy["fire"] = 3
 	manager.phase = "enemy_action"
 	var enemy_action := manager.peek_enemy_action()
 	check(enemy_action["target"].get("kind", "") == "summon", "enemy can choose player summon over resistant hero")
 	var chosen_slot := int(enemy_action["target"].get("slot", -1))
 	manager.enemy_step(int(enemy_action["index"]), enemy_action["target"])
-	check(chosen_slot >= 0 and actor.summons[chosen_slot] == null, "enemy damage destroys a player summon")
+	check(chosen_slot >= 0 and actor.summons[chosen_slot] != null and actor.summons[chosen_slot].hp == 5, "enemy basic spell damages a player summon")
 
 func test_new_summon_rules(manager: BattleManager) -> void:
 	manager.start_battle("ember", "balanced", 5678)

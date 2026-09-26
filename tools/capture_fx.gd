@@ -19,7 +19,7 @@ func capture() -> void:
 	var manager: BattleManager = ui.get("manager")
 	var output := ProjectSettings.globalize_path("res://work/fx_previews")
 	DirAccess.make_dir_recursive_absolute(output)
-	var examples := {"metal":"metal_edge", "wood":"wood_edge", "water":"water_edge", "fire":"fire_edge", "earth":"earth_edge"}
+	var examples := {"metal":"metal_strike", "wood":"wood_strike", "water":"water_strike", "fire":"fire_strike", "earth":"earth_strike"}
 	for element in BattleRules.ELEMENTS:
 		fx.clear_effects()
 		fx.cast(manager.cards[examples[element]], "player")
@@ -46,7 +46,7 @@ func capture() -> void:
 	# Exercise the real UI sequence as well as standalone effect rendering.
 	fx.clear_effects()
 	manager.player.hand.clear()
-	manager.player.hand.append("fire_edge")
+	manager.player.hand.append("fire_strike")
 	manager.player.energy["fire"] = 3
 	ui.call("_refresh")
 	ui.call("_play_card_from", 0, Vector2(780, 530), {"kind": "hero"})
@@ -63,7 +63,7 @@ func capture() -> void:
 	await create_timer(0.85).timeout
 	ui.call("_on_end_turn")
 	manager.enemy.hand.clear()
-	manager.enemy.hand.append("fire_edge")
+	manager.enemy.hand.append("fire_strike")
 	manager.enemy.energy["fire"] = 3
 	await create_timer(1.5).timeout
 	await RenderingServer.frame_post_draw

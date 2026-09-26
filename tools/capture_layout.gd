@@ -34,7 +34,7 @@ func capture() -> void:
 
 	# A card aimed at the opponent must cross the arena to the enemy standee.
 	fx.clear_effects()
-	fx.cast(manager.cards["fire_edge"], "player")
+	fx.cast(manager.cards["fire_strike"], "player")
 	await create_timer(0.27).timeout
 	await _shot(output.path_join("cast_to_enemy.png"))
 
@@ -46,7 +46,7 @@ func capture() -> void:
 
 	# The enemy's own attack travels the other way.
 	fx.clear_effects()
-	fx.cast(manager.cards["water_edge"], "enemy")
+	fx.cast(manager.cards["water_strike"], "enemy")
 	await create_timer(0.27).timeout
 	await _shot(output.path_join("cast_from_enemy.png"))
 
@@ -68,7 +68,7 @@ func capture() -> void:
 	# Real play-through: attack the enemy, then a self-buff, then the enemy turn.
 	fx.clear_effects()
 	manager.player.hand.clear()
-	manager.player.hand.append("fire_edge")
+	manager.player.hand.append("fire_strike")
 	manager.player.energy["fire"] = 3
 	ui.call("_refresh")
 	ui.call("_play_card_from", 0, Vector2(800, 470), {"kind": "hero"})
@@ -89,7 +89,7 @@ func capture() -> void:
 	await create_timer(0.6).timeout
 
 	manager.enemy.hand.clear()
-	manager.enemy.hand.append("fire_edge")
+	manager.enemy.hand.append("fire_strike")
 	manager.enemy.energy["fire"] = 3
 	ui.call("_on_end_turn")
 	await create_timer(1.6).timeout

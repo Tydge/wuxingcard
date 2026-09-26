@@ -23,11 +23,11 @@ func capture() -> void:
 	ui.call("_on_hand_exit", 2)
 	var manager: BattleManager = ui.get("manager")
 	while manager.player.hand.size() < 8:
-		manager.player.hand.append("earth_edge")
+		manager.player.hand.append("earth_strike")
 	ui.call("_refresh")
 	await _shot(output.path_join("hand_full.png"))
 	var before := manager.player.hand.size()
-	manager.player.hand[2] = "fire_edge"
+	manager.player.hand[2] = "fire_strike"
 	var card: Dictionary = manager.cards[manager.player.hand[2]]
 	manager.player.energy[card["element"]] = 10
 	ui.call("_refresh")
@@ -41,7 +41,7 @@ func capture() -> void:
 		quit(1)
 		return
 	manager.enemy.hand.clear()
-	manager.enemy.hand.append("fire_edge")
+	manager.enemy.hand.append("fire_strike")
 	manager.enemy.energy["fire"] = 3
 	ui.call("_on_end_turn")
 	await create_timer(1.5).timeout

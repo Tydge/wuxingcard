@@ -12,7 +12,7 @@ func run() -> void:
 	await create_timer(5.4).timeout
 	var manager: BattleManager = ui.get("manager")
 	var index := 2
-	manager.player.hand[index] = "fire_edge"
+	manager.player.hand[index] = "fire_strike"
 	manager.player.energy["fire"] = 10
 	ui.call("_refresh")
 	var before := manager.player.hand.size()

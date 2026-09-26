@@ -3,7 +3,7 @@
 
 Usage:
   python3 tools/art_pipeline.py manifest
-  python3 tools/art_pipeline.py ingest card fire_edge /path/to/image.png
+  python3 tools/art_pipeline.py ingest card fire_strike /path/to/image.png
   python3 tools/art_pipeline.py ingest character ember /path/to/image.png
   python3 tools/art_pipeline.py ingest background arena /path/to/image.png
   python3 tools/art_pipeline.py ingest fx arcane_ring /path/to/image.png

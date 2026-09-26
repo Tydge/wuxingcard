@@ -38,16 +38,18 @@ func run() -> void:
 	check(not menu.mode_buttons["test"].disabled and not menu.mode_buttons["collection"].disabled, "test and collection are available")
 	menu.mode_buttons["collection"].pressed.emit()
 	await process_frame
-	check(menu.filtered_cards.size() == 40 and menu.card_nodes.size() == 14, "collection contains every card with pagination")
+	var total := menu.cards.size()
+	check(menu.filtered_cards.size() == total and menu.card_nodes.size() == mini(total, 14), "collection contains every card with pagination")
 	await shot("collection")
 	var seen: Array[String] = []
-	for page in 3:
-		for card in menu.filtered_cards.slice(page * 14, mini((page + 1) * 14, 40)):
+	var pages := ceili(float(total) / 14.0)
+	for page in pages:
+		for card in menu.filtered_cards.slice(page * 14, mini((page + 1) * 14, total)):
 			seen.append(card["id"])
 		for card in menu.card_nodes:
 			check(card.position.x >= 244 and card.position.x + card.size.x <= 1534 and card.position.y + card.size.y < 770, "card layout stays within the collection frame")
-		if page < 2: menu.call("_change_page", 1)
-	check(seen.size() == 40 and menu.card_nodes.size() == 12, "last page includes the remaining cards")
+		if page < pages - 1: menu.call("_change_page", 1)
+	check(seen.size() == total and menu.card_nodes.size() == total - (pages - 1) * 14, "last page includes the remaining cards")
 	for element in BattleRules.ELEMENTS:
 		var expected := 0
 		for card in menu.cards.values():
@@ -57,6 +59,7 @@ func run() -> void:
 		check(menu.filtered_cards.size() == expected and menu.card_nodes.size() == expected and menu.page == 0, "each element filter displays every matching card")
 		for card in menu.filtered_cards:
 			check(card["element"] == element, "filter excludes other elements")
+		await shot(element + "_collection")
 	menu.filter_buttons["metal"].pressed.emit()
 	await process_frame
 	await shot("metal_collection")
@@ -99,5 +102,5 @@ func run() -> void:
 	ui.call("_refresh")
 	await process_frame
 	check(find_menu() != null and find_menu().view_mode == "home", "returning from battle opens the new main screen")
-	print("Main menu UI test: modes, all 40 cards, element filters, animated inspection and random battle; %d failures" % failures)
+	print("Main menu UI test: modes, all %d cards, element filters, animated inspection and random battle; %d failures" % [total, failures])
 	quit(1 if failures > 0 else 0)

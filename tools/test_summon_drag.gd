@@ -125,7 +125,7 @@ func run() -> void:
 	ui.call("_on_summon_exit", "player", 0)
 	manager.enemy.summons[1] = Summon.new()
 	manager.enemy.summons[1].setup(manager.summon_templates["wood_seedling"])
-	manager.player.hand[0] = "fire_edge"
+	manager.player.hand[0] = "fire_strike"
 	manager.player.energy["fire"] = 3
 	ui.call("_refresh")
 	await _shot(output.path_join("both_summons.png"))
@@ -139,13 +139,26 @@ func run() -> void:
 	var enemy_rect: Rect2 = ui.call("_summon_slot_rect", "enemy", 1)
 	var hero_hp := manager.enemy.hp
 	var preview := await _drag(ui, 0, enemy_rect.get_center(), true)
-	if preview != "预计伤害 15":
-		push_error("Expected summon damage preview 15, got: " + preview)
+	if preview != "预计伤害 10":
+		push_error("Expected summon damage preview 10, got: " + preview)
+		quit(1)
+		return
+	await create_timer(3.9).timeout
+	if manager.enemy.summons[1] == null or manager.enemy.summons[1].hp != 5 or manager.enemy.hp != hero_hp:
+		push_error("Selected summon did not take damage independently from its owner")
+		quit(1)
+		return
+	manager.player.hand[0] = "fire_strike"
+	manager.player.energy["fire"] = 1
+	ui.call("_refresh")
+	var finishing_preview := await _drag(ui, 0, enemy_rect.get_center(), true)
+	if finishing_preview != "预计伤害 5":
+		push_error("Finishing preview must show the summon's remaining five HP")
 		quit(1)
 		return
 	await create_timer(3.9).timeout
 	if manager.enemy.summons[1] != null or manager.enemy.hp != hero_hp:
-		push_error("Selected summon did not take damage independently from its owner")
+		push_error("Second basic spell did not destroy only the selected summon")
 		quit(1)
 		return
 	await _shot(output.path_join("after_attack.png"))
