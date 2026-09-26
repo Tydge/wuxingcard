@@ -18,6 +18,7 @@ const STATUS_ICON_SCRIPT := preload("res://ui/status_icon.gd")
 const CARD_REVEAL_SECONDS := 1.45
 const EFFECT_PAUSE_SECONDS := 0.9
 const SUMMON_FEEDBACK_SECONDS := 1.1
+const MAIN_MENU_SCRIPT := preload("res://ui/main_menu.gd")
 
 # --- horizontal arena layout (1600x900 design viewport) ----------------------
 # The player stands on the left and the enemy on the right, facing each other.
@@ -177,6 +178,11 @@ func _refresh() -> void:
 		if child != manager and child != actor_layer and child != fx_layer:
 			remove_child(child)
 			child.queue_free()
+	if manager.phase == "menu":
+		_clear_actors()
+		_build_menu()
+		move_child(fx_layer, get_child_count() - 1)
+		return
 	var background := ColorRect.new()
 	background.color = BG
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -192,43 +198,21 @@ func _refresh() -> void:
 		add_child(art)
 		move_child(art, 1)
 	move_child(actor_layer, 2 if texture != null else 1)
-	if manager.phase == "menu":
-		_clear_actors()
-		_build_menu()
-	else:
-		_build_battle()
+	_build_battle()
 	move_child(fx_layer, get_child_count() - 1)
 
 func _build_menu() -> void:
-	var center := _panel(self, Rect2(350, 140, 900, 650), PANEL_DARK, GOLD.darkened(0.35), 18)
-	_label(center, "五 行 · 命 盘", Vector2(55, 45), Vector2(790, 80), 48, GOLD, HORIZONTAL_ALIGNMENT_CENTER)
-	_label(center, "储存灵气，改变防御；支付灵气，露出破绽。", Vector2(80, 130), Vector2(740, 45), 23, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
-	_label(center, "选择对手", Vector2(85, 215), Vector2(250, 34), 23, GOLD)
-	var enemy_choice := OptionButton.new()
-	enemy_choice.position = Vector2(85, 255)
-	enemy_choice.size = Vector2(730, 50)
-	for info in manager.enemies:
-		enemy_choice.add_item("%s  ·  %s" % [info["name"], info["subtitle"]])
-		if info["id"] == menu_enemy:
-			enemy_choice.select(enemy_choice.item_count - 1)
-	enemy_choice.item_selected.connect(func(index: int): menu_enemy = manager.enemies[index]["id"]; _refresh())
-	center.add_child(enemy_choice)
-	var enemy_info := manager.find_entry(manager.enemies, menu_enemy)
-	_label(center, enemy_info["description"], Vector2(90, 312), Vector2(720, 50), 18, MUTED)
-	_label(center, "选择牌组", Vector2(85, 380), Vector2(250, 34), 23, GOLD)
-	var deck_choice := OptionButton.new()
-	deck_choice.position = Vector2(85, 420)
-	deck_choice.size = Vector2(730, 50)
-	for info in manager.decks:
-		deck_choice.add_item(info["name"])
-		if info["id"] == menu_deck:
-			deck_choice.select(deck_choice.item_count - 1)
-	deck_choice.item_selected.connect(func(index: int): menu_deck = manager.decks[index]["id"]; _refresh())
-	center.add_child(deck_choice)
-	var deck_info := manager.find_entry(manager.decks, menu_deck)
-	_label(center, deck_info["description"], Vector2(90, 475), Vector2(720, 45), 18, MUTED)
-	_button(center, "进入战斗", Rect2(270, 545, 360, 64), func(): _start_battle(), Color("#704e35"), GOLD)
-	_label(self, "操作：伤害牌拖向角色或召唤物；召唤牌拖向空槽；其他牌拖到战场上方。", Vector2(290, 820), Vector2(1020, 38), 18, MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	var screen := MAIN_MENU_SCRIPT.new()
+	screen.configure(manager.cards, _card_front)
+	screen.test_requested.connect(_start_test_battle)
+	add_child(screen)
+
+func _start_test_battle() -> void:
+	var random := RandomNumberGenerator.new()
+	random.randomize()
+	menu_enemy = manager.enemies[random.randi_range(0, manager.enemies.size() - 1)]["id"]
+	menu_deck = manager.decks[random.randi_range(0, manager.decks.size() - 1)]["id"]
+	_start_battle()
 
 func _start_battle() -> void:
 	_clear_actors()
@@ -904,7 +888,7 @@ func _build_result() -> void:
 	_label(box, "对阵 %s · %d 回合" % [manager.enemy.display_name, manager.round_number], Vector2(60, 122), Vector2(520, 40), 24, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	_label(box, "打出 %d 张牌     造成 %d 伤害     削减 %d 能量" % [manager.played_cards, manager.player_damage, manager.energy_destroyed], Vector2(40, 190), Vector2(560, 65), 19, MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 	_button(box, "再次挑战", Rect2(70, 296, 225, 62), func(): _start_battle(), Color("#604a31"), GOLD)
-	_button(box, "更换对手 / 牌组", Rect2(345, 296, 225, 62), func(): manager.phase = "menu"; _refresh(), Color("#293e51"), GOLD)
+	_button(box, "返回山门", Rect2(345, 296, 225, 62), func(): manager.phase = "menu"; _refresh(), Color("#293e51"), GOLD)
 
 func _anchor(side: String) -> Vector2:
 	return ENEMY_ANCHOR if side == "enemy" else PLAYER_ANCHOR
