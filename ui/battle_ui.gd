@@ -77,6 +77,7 @@ var selected_index := -1
 var hovered_index := -1
 var menu_enemy := "ember"
 var menu_deck := "balanced"
+var menu_custom_deck: Dictionary = {}
 var enemy_animating := false
 var action_busy := false
 var hand_cards: Array[Control] = []
@@ -213,11 +214,13 @@ func _build_menu() -> void:
 	screen.test_requested.connect(_start_test_battle)
 	add_child(screen)
 
-func _start_test_battle() -> void:
+func _start_test_battle(deck: Dictionary = {}) -> void:
+	if not deck.is_empty() and not DeckStore.new(manager.cards).problem(deck.get("cards", [])).is_empty(): return
 	var random := RandomNumberGenerator.new()
 	random.randomize()
 	menu_enemy = manager.enemies[random.randi_range(0, manager.enemies.size() - 1)]["id"]
 	menu_deck = "random"
+	menu_custom_deck = deck.duplicate(true)
 	_start_battle()
 
 func _start_battle() -> void:
@@ -235,7 +238,7 @@ func _start_battle() -> void:
 	action_busy = true
 	_clear_drag_hints()
 	battle_fx.clear_effects()
-	await manager.start_battle(menu_enemy, menu_deck)
+	await manager.start_battle(menu_enemy, menu_deck, -1, menu_custom_deck)
 
 func _build_battle() -> void:
 	_build_standees()
@@ -281,7 +284,9 @@ func _build_combatant_hud(side: String) -> void:
 
 	var name_rect := _hud_local(side, HUD_NAME)
 	_label(panel, actor.display_name, name_rect.position, name_rect.size, 24, WHITE, align)
-	_label(panel, _side_subtitle(side), name_rect.position, name_rect.size, 16, GOLD.darkened(0.1), tag_align)
+	var subtitle := _label(panel, _side_subtitle(side), name_rect.position + Vector2(0 if enemy_side else 150, 0), Vector2(206, name_rect.size.y), 16, GOLD.darkened(0.1), tag_align)
+	subtitle.autowrap_mode = TextServer.AUTOWRAP_OFF
+	subtitle.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 
 	var counts := _hud_local(side, HUD_COUNTS)
 	_label(panel, "手牌 %d    牌库 %d    弃牌 %d" % [actor.hand.size(), actor.draw_pile.size(), actor.discard_pile.size()],
@@ -296,6 +301,8 @@ func _build_combatant_hud(side: String) -> void:
 	_build_status_icons(actor, side)
 
 func _side_subtitle(side: String) -> String:
+	if manager.selected_deck_id.begins_with("custom:"):
+		return "随机牌组" if side == "enemy" else manager.selected_deck_name
 	if manager.selected_deck_id == "random": return "随机牌组"
 	if side == "enemy":
 		return str(manager.find_entry(manager.enemies, manager.enemy.id).get("subtitle", ""))

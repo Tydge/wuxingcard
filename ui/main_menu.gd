@@ -1,7 +1,7 @@
 class_name MainMenu
 extends Control
 
-signal test_requested
+signal test_requested(deck: Dictionary)
 
 const ENTRY_SCRIPT := preload("res://ui/menu_entry.gd")
 const ATMOSPHERE_SCRIPT := preload("res://ui/menu_atmosphere.gd")
@@ -33,6 +33,12 @@ var inspect_origin := Vector2.ZERO
 var inspect_tween: Tween
 var closing_inspector := false
 var page_label: Label
+var deck_store_path := DeckStore.DEFAULT_PATH
+var workshop: DeckWorkshop
+var inspect_origin_scale := 1.0
+var page_turn_busy := false
+var page_turn_tween: Tween
+var content_generation := 0
 
 func configure(card_data: Dictionary, factory: Callable, summon_data: Dictionary = {}) -> void:
 	cards = card_data
@@ -68,6 +74,10 @@ func _ready() -> void:
 	_show_home()
 
 func _reset_content() -> void:
+	content_generation += 1
+	page_turn_busy = false
+	if page_turn_tween != null and page_turn_tween.is_running(): page_turn_tween.kill()
+	page_turn_tween = null
 	if is_instance_valid(content):
 		remove_child(content)
 		content.queue_free()
@@ -103,7 +113,7 @@ func _show_home() -> void:
 		["rogue", "肉鸽模式", "踏入秘境，探寻未知", false],
 		["arena", "竞技模式", "以五行之术，论道争锋", false],
 		["endless", "无尽模式", "长路无尽，万法归一", false],
-		["test", "测试模式", "随机对手与牌组 · 即刻对战", true],
+		["test", "测试模式", "编修卡组 · 入阵试法", true],
 		["collection", "卡牌一览", "五行法术 · 灵物图鉴", true]]
 	for i in entries.size():
 		var entry: Array = entries[i]
@@ -113,7 +123,7 @@ func _show_home() -> void:
 		content.add_child(button)
 		mode_buttons[entry[0]] = button
 		if entry[0] == "test":
-			button.pressed.connect(func(): test_requested.emit())
+			button.pressed.connect(_show_decks)
 		elif entry[0] == "collection":
 			button.pressed.connect(_show_collection)
 		button.modulate.a = 0.0
@@ -121,6 +131,17 @@ func _show_home() -> void:
 		entrance.tween_interval(0.08 * i)
 		entrance.tween_property(button, "modulate:a", 1.0, 0.45)
 	_text(content, "五行 · 命盘", Rect2(114, 836, 350, 28), 16, Color("#a0b5a5"))
+
+func _show_decks() -> void:
+	view_mode = "decks"
+	atmosphere.set("collection", true)
+	_reset_content()
+	workshop = DeckWorkshop.new()
+	workshop.configure(cards, card_factory, summons, deck_store_path)
+	workshop.back_requested.connect(_show_home)
+	workshop.battle_requested.connect(func(deck: Dictionary): test_requested.emit(deck))
+	workshop.inspect_requested.connect(_open_inspector)
+	content.add_child(workshop)
 
 func _show_collection() -> void:
 	view_mode = "collection"
@@ -199,11 +220,25 @@ func _filter(element: String) -> void:
 	_build_collection()
 
 func _change_page(direction: int) -> void:
+	if page_turn_busy or is_instance_valid(inspector): return
 	var pages := maxi(1, ceili(float(filtered_cards.size()) / PAGE_SIZE))
-	page = clampi(page + direction, 0, pages - 1)
-	_build_collection()
+	var next := clampi(page + direction, 0, pages - 1)
+	if next == page: return
+	page_turn_busy = true
+	var generation := content_generation
+	page_turn_tween = CardPageMotion.leave(self, card_nodes, direction, func():
+		if generation != content_generation or view_mode != "collection": return
+		page_turn_tween = null
+		page = next
+		_build_collection()
+		CardPageMotion.enter(card_nodes, direction, 7)
+		page_turn_busy = true
+		page_turn_tween = create_tween()
+		page_turn_tween.tween_interval(CardPageMotion.SETTLE_SECONDS)
+		page_turn_tween.tween_callback(func(): page_turn_busy = false))
 
 func _card_input(event: InputEvent, card: Dictionary, source: Control) -> void:
+	if page_turn_busy: return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		_open_inspector(card, source)
 
@@ -211,6 +246,7 @@ func _open_inspector(card: Dictionary, source: Control) -> void:
 	if is_instance_valid(inspector): return
 	inspect_source = source
 	inspect_origin = source.global_position - global_position
+	inspect_origin_scale = source.size.x * source.get_global_transform().get_scale().x / (INSPECT_WIDTH * get_global_transform().get_scale().x)
 	closing_inspector = false
 	inspector = Control.new()
 	inspector.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -228,7 +264,7 @@ func _open_inspector(card: Dictionary, source: Control) -> void:
 	inspector.add_child(inspect_card)
 	inspect_card.mouse_filter = Control.MOUSE_FILTER_STOP
 	inspect_card.position = inspect_origin
-	inspect_card.scale = Vector2.ONE * (CARD_WIDTH / INSPECT_WIDTH)
+	inspect_card.scale = Vector2.ONE * inspect_origin_scale
 	source.visible = false
 	var hint := _text(inspector, "点击空白处收起 · Esc 返回", Rect2(500, 775, 600, 40), 18, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
 	hint.modulate.a = 0.0
@@ -253,7 +289,7 @@ func _close_inspector() -> void:
 	if inspect_tween != null and inspect_tween.is_running(): inspect_tween.kill()
 	inspect_tween = inspector.create_tween().set_parallel(true)
 	inspect_tween.tween_property(inspect_card, "position", inspect_origin, 0.32).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	inspect_tween.tween_property(inspect_card, "scale", Vector2.ONE * (CARD_WIDTH / INSPECT_WIDTH), 0.32).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	inspect_tween.tween_property(inspect_card, "scale", Vector2.ONE * inspect_origin_scale, 0.32).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 	inspect_tween.tween_property(inspector.get_child(0), "modulate:a", 0.0, 0.32)
 	inspect_tween.tween_property(inspector.get_child(2), "modulate:a", 0.0, 0.2)
 	inspect_tween.chain().tween_callback(func():
@@ -266,10 +302,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		if is_instance_valid(inspector): _close_inspector()
 		elif view_mode == "collection": _show_home()
+		elif view_mode == "decks" and is_instance_valid(workshop): workshop.go_back()
 		get_viewport().set_input_as_handled()
 	elif view_mode == "collection" and not is_instance_valid(inspector):
 		if event.is_action_pressed("ui_right"): _change_page(1)
 		elif event.is_action_pressed("ui_left"): _change_page(-1)
+	elif view_mode == "decks" and is_instance_valid(workshop) and not is_instance_valid(inspector) and not is_instance_valid(workshop.modal):
+		if event.is_action_pressed("ui_right"): workshop.call("_change_page", 1)
+		elif event.is_action_pressed("ui_left"): workshop.call("_change_page", -1)
 
 func _style(fill: Color, edge: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()

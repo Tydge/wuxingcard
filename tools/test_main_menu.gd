@@ -41,6 +41,30 @@ func run() -> void:
 	var total := menu.cards.size()
 	check(menu.filtered_cards.size() == total and menu.card_nodes.size() == mini(total, 14), "collection contains every card with pagination")
 	await shot("collection")
+	var outgoing: Control = menu.card_nodes[0]
+	var old_x := outgoing.position.x
+	menu.call("_change_page", 1)
+	menu.call("_change_page", 1)
+	# Sample the exit at a fixed tween time. PNG encoding may take longer than
+	# the whole short animation on the first rendered page.
+	var leaving := menu.page_turn_tween
+	leaving.pause()
+	leaving.custom_step(CardPageMotion.LEAVE_SECONDS * 0.5)
+	check(menu.page == 0 and outgoing.position.x < old_x and outgoing.modulate.a > 0 and outgoing.modulate.a < 1, "old page slides out progressively and repeated clicks do not skip pages")
+	await shot("collection_page_departing")
+	leaving.custom_step(CardPageMotion.LEAVE_SECONDS)
+	check(menu.page == 1 and menu.card_nodes[0].modulate.a == 0 and menu.card_nodes[0].position.x > old_x, "new page begins offset and transparent instead of appearing instantly")
+	await create_timer(0.12).timeout
+	await shot("collection_page_arriving")
+	await create_timer(0.4).timeout
+	menu.call("_change_page", -1)
+	await create_timer(0.6).timeout
+	check(menu.page == 0 and not menu.page_turn_busy, "reverse page turn returns to the first page")
+	menu.call("_change_page", 1)
+	menu.filter_buttons["metal"].pressed.emit()
+	await create_timer(0.6).timeout
+	check(menu.page == 0 and menu.selected_element == "metal" and menu.filtered_cards.size() == 9, "changing filter cancels an unfinished page turn")
+	menu.filter_buttons["all"].pressed.emit()
 	var seen: Array[String] = []
 	var pages := ceili(float(total) / 14.0)
 	for page in pages:
@@ -48,7 +72,9 @@ func run() -> void:
 			seen.append(card["id"])
 		for card in menu.card_nodes:
 			check(card.position.x >= 244 and card.position.x + card.size.x <= 1534 and card.position.y + card.size.y < 770, "card layout stays within the collection frame")
-		if page < pages - 1: menu.call("_change_page", 1)
+		if page < pages - 1:
+			menu.call("_change_page", 1)
+			await create_timer(0.6).timeout
 	check(seen.size() == total and menu.card_nodes.size() == total - (pages - 1) * 14, "last page includes the remaining cards")
 	for element in BattleRules.ELEMENTS:
 		var expected := 0
@@ -94,9 +120,12 @@ func run() -> void:
 	check(menu.inspector == null and source.visible, "rapid open and close is safe")
 	menu.call("_show_home")
 	menu.mode_buttons["test"].pressed.emit()
+	check(menu.view_mode == "decks" and menu.workshop.view_mode == "library", "test mode opens deck selection first")
+	menu.workshop.random_button.pressed.emit()
+	menu.workshop.play_button.pressed.emit()
 	await create_timer(5.8).timeout
 	var manager: BattleManager = ui.get("manager")
-	check(find_menu() == null and manager.phase == "player_action" and manager.player.hand.size() == 5, "test mode directly starts a playable battle")
+	check(find_menu() == null and manager.phase == "player_action" and manager.player.hand.size() == 5, "random deck selection starts a playable battle")
 	check(manager.selected_enemy_id in ["ember", "tide", "harmony"] and manager.selected_deck_id == "random", "test mode chooses an enemy and generates random decks")
 	check(manager.valid_random_deck(manager.player.hand + manager.player.draw_pile) and manager.valid_random_deck(manager.enemy.hand + manager.enemy.draw_pile), "test mode creates two legal 25-card decks")
 	manager.phase = "menu"

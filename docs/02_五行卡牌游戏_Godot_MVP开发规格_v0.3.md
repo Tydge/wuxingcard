@@ -284,7 +284,7 @@ extends Resource
 
 ## 10. 自然能量算法
 
-只统计当前 draw_pile 中剩余卡牌的主属性。
+统计开局完整卡组快照 `initial_deck` 中每张卡牌的主属性，重复副本各计一次权重。抽牌堆的变化不影响基础比例。（2026-09-27 更新；下方为设计伪代码，实际实现见 `BattleManager.natural_weights`。）
 
 ```gdscript
 func generate_natural_energy(combatant: Combatant) -> void:
@@ -296,10 +296,10 @@ func generate_natural_energy(combatant: Combatant) -> void:
         Element.EARTH: 0
     }
 
-    for card in combatant.draw_pile:
+    for card in combatant.initial_deck:
         var element = card.data.element
 
-        if combatant.energy[element] < 10:
+        if combatant.energy[element] < 10 and not combatant.is_locked(element):
             weights[element] += 1
 
     var chosen = weighted_random(weights)
@@ -308,7 +308,7 @@ func generate_natural_energy(combatant: Combatant) -> void:
         combatant.energy[chosen] += 1
 ```
 
-必须读取实时 draw_pile。
+开局抽牌前保存完整卡组快照；不得读取实时 `draw_pile` 作为自然能量权重。已满或封锁的属性从本次随机池中排除，其余按固定权重重新归一。
 
 ---
 
@@ -760,6 +760,6 @@ AI 不需要向玩家公开下一行动。
 1. 储存能量获得抗性是否有趣？
 2. 花费能量改变防御结构是否产生真实决策？
 3. 攻击敌人能量是否值得，而不是永远打 HP？
-4. 抽牌堆属性分布决定自然能量概率，是否真的让构筑和战斗产生差异？
+4. 开局卡组属性分布决定自然能量概率，是否真的让构筑和战斗产生差异？
 
 如果四点成立，再扩大游戏。

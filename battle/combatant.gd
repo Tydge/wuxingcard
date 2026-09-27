@@ -12,6 +12,7 @@ var max_hp := 100
 var hp := 100
 var energy: Dictionary = {}
 var draw_pile: Array[String] = []
+var initial_deck: Array[String] = []
 var hand: Array[String] = []
 var discard_pile: Array[String] = []
 var statuses: Array[Dictionary] = []
@@ -27,12 +28,14 @@ func setup(new_id: String, new_name: String, deck: Array, random: RandomNumberGe
 	for element in BattleRules.ELEMENTS:
 		energy[element] = 1
 	draw_pile.clear()
+	initial_deck.clear()
 	hand.clear()
 	discard_pile.clear()
 	statuses.clear()
 	summons = [null, null, null]
 	for card_id in deck:
 		draw_pile.append(str(card_id))
+		initial_deck.append(str(card_id))
 	for i in range(draw_pile.size() - 1, 0, -1):
 		var j := random.randi_range(0, i)
 		var temp := draw_pile[i]

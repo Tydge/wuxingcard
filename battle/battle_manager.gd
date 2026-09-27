@@ -17,7 +17,7 @@ const FINISHED_PHASES := ["victory", "defeat", "draw"]
 # Both sides use slots 0 / 1 / 2 for the top / middle / bottom of the battlefield.
 const SUMMON_TRIGGER_ORDER := [0, 1, 2]
 const RANDOM_DECK_SIZE := 25
-const RANDOM_DECK_COPY_LIMIT := 3
+const RANDOM_DECK_COPY_LIMIT := DeckStore.MAX_COPIES
 const RANDOM_DECK_MAX_COST := 45
 const RANDOM_DECK_MIN_LOW_COST := 8
 
@@ -32,6 +32,7 @@ var phase := "menu"
 var round_number := 0
 var selected_enemy_id := "ember"
 var selected_deck_id := "balanced"
+var selected_deck_name := ""
 var battle_log: Array[String] = []
 var played_cards := 0
 var energy_destroyed := 0
@@ -80,21 +81,24 @@ func status_tooltip(status: Dictionary) -> String:
 		effect += "\n剩余 %d 回合。" % duration
 	return "%s %d 层\n%s" % [name, stacks, effect]
 
-func start_battle(enemy_id: String, deck_id: String, seed_value: int = -1) -> void:
+func start_battle(enemy_id: String, deck_id: String, seed_value: int = -1, custom_deck: Dictionary = {}) -> void:
+	if not custom_deck.is_empty() and not DeckStore.new(cards).problem(custom_deck.get("cards", [])).is_empty(): return
 	battle_generation += 1
 	var generation := battle_generation
 	selected_enemy_id = enemy_id
-	selected_deck_id = deck_id
+	selected_deck_id = "custom:" + str(custom_deck.get("id", "")) if not custom_deck.is_empty() else deck_id
 	if seed_value < 0:
 		rng.randomize()
 	else:
 		rng.seed = seed_value
 	var enemy_info := find_entry(enemies, enemy_id)
 	var deck_info := find_entry(decks, deck_id)
-	var player_deck: Array = generate_random_deck() if deck_id == "random" else deck_info["cards"]
-	var enemy_deck: Array = generate_random_deck() if deck_id == "random" else enemy_info["deck"]
-	player.max_hp = 80 if deck_id == "random" else 100
-	enemy.max_hp = 80 if deck_id == "random" else 100
+	var testing := deck_id == "random" or not custom_deck.is_empty()
+	var player_deck: Array = custom_deck["cards"].duplicate() if not custom_deck.is_empty() else generate_random_deck() if testing else deck_info["cards"]
+	var enemy_deck: Array = generate_random_deck() if testing else enemy_info["deck"]
+	selected_deck_name = str(custom_deck["name"]) if not custom_deck.is_empty() else "随机牌组" if testing else str(deck_info["name"])
+	player.max_hp = 80 if testing else 100
+	enemy.max_hp = 80 if testing else 100
 	player.setup("player", "云溪月", player_deck, rng)
 	enemy.setup(enemy_id, enemy_info["name"], enemy_deck, rng)
 	phase = "battle_start"
@@ -103,7 +107,7 @@ func start_battle(enemy_id: String, deck_id: String, seed_value: int = -1) -> vo
 	energy_destroyed = 0
 	player_damage = 0
 	battle_log.clear()
-	_report("对阵 %s · 使用「%s」牌组" % [enemy.display_name, "随机牌组" if deck_id == "random" else deck_info["name"]], "system", "start")
+	_report("对阵 %s · 使用「%s」牌组" % [enemy.display_name, selected_deck_name], "system", "start")
 	for i in 4:
 		draw_card(player)
 		draw_card(enemy)
@@ -158,7 +162,7 @@ func natural_weights(actor: Combatant) -> Dictionary:
 	var weights := {}
 	for element in BattleRules.ELEMENTS:
 		weights[element] = 0
-	for card_id in actor.draw_pile:
+	for card_id in actor.initial_deck:
 		var element: String = cards[card_id]["element"]
 		if int(actor.energy[element]) < 10 and actor.status_stacks("lock", element) == 0:
 			weights[element] += 1
