@@ -45,7 +45,11 @@ var message_tween: Tween
 var modal: Control
 var page_turn_busy := false
 var page_turn_tween: Tween
-var content_generation := 0
+var page_motion: CardPageMotion
+var cached_pages := {}
+var page_label: Label
+var previous_page_button: Button
+var next_page_button: Button
 
 func configure(data: Dictionary, card_factory: Callable, summon_data: Dictionary, path: String = DeckStore.DEFAULT_PATH) -> void:
 	cards = data
@@ -53,6 +57,9 @@ func configure(data: Dictionary, card_factory: Callable, summon_data: Dictionary
 	factory = card_factory
 	store = DeckStore.new(cards, path)
 	store.load_decks()
+
+func _exit_tree() -> void:
+	for motion: CardPageMotion in cached_pages.values(): motion.finish_loading()
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -62,12 +69,16 @@ func _ready() -> void:
 	effects.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(effects)
 	_show_library()
+	_library_motion("all", _library_cards("all"))
 
 func _reset(animate: bool = true) -> void:
-	content_generation += 1
 	page_turn_busy = false
 	if page_turn_tween != null and page_turn_tween.is_running(): page_turn_tween.kill()
 	page_turn_tween = null
+	for motion: CardPageMotion in cached_pages.values():
+		if motion.get_parent() == content: motion.reparent(self)
+		motion.hide()
+		motion.reset_page()
 	if is_instance_valid(content):
 		remove_child(content)
 		content.queue_free()
@@ -130,7 +141,7 @@ func _build_showcase() -> void:
 	_panel(content, Rect2(547, 166, 975, 628), Color("#0c262369"), Color("#b895592a"))
 	_text(content, "随缘成阵" if random else str(deck["name"]), Rect2(593, 199, 880, 72), 43, GOLD, true, HORIZONTAL_ALIGNMENT_CENTER)
 	_text(content, "五行流转 · 25 张" if random else "%d 张%s" % [deck["cards"].size(), " · 草稿" if not store.problem(deck["cards"]).is_empty() else ""], Rect2(637, 277, 796, 35), 20, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
-	var featured: Array[String] = ["metal_chime_card", "wood_deer_card", "water_conch_card"]
+	var featured: Array[String] = ["metal_chime_card", "water_conch_card", "wood_deer_card"]
 	if not random:
 		featured.clear()
 		for id in _sorted_unique(deck["cards"]):
@@ -190,26 +201,17 @@ func _build_editor(animate: bool = true) -> void:
 		button.add_theme_font_size_override("font_size", 25)
 		if element == selected_element: button.add_theme_stylebox_override("normal", _style(Color("#385246"), tint))
 		filter_buttons[element] = button
-	filtered_cards.clear()
-	for card in cards.values():
-		if selected_element == "all" or selected_element == card["element"]: filtered_cards.append(card)
-	filtered_cards.sort_custom(_card_less)
+	filtered_cards = _library_cards(selected_element)
 	var pages := maxi(1, ceili(float(filtered_cards.size()) / PAGE_SIZE))
 	page = clampi(page, 0, pages - 1)
-	for index in range(page * PAGE_SIZE, mini((page + 1) * PAGE_SIZE, filtered_cards.size())):
-		var local := index - page * PAGE_SIZE
-		var view := DeckLibraryCard.new()
-		view.configure(filtered_cards[index], factory, CARD_WIDTH)
-		view.position = Vector2(247 + (local % 6) * 148, 211 + (local / 6) * 277)
-		view.inspect_requested.connect(func(card: Dictionary, source: Control):
-			if not page_turn_busy: inspect_requested.emit(card, source))
-		view.add_requested.connect(_add_card)
-		view.drag_denied.connect(func(): _toast("同名卡牌最多%d张" % DeckStore.MAX_COPIES))
-		content.add_child(view)
-		card_nodes.append(view)
-	_button(content, "‹", Rect2(546, 805, 72, 48), _change_page.bind(-1)).disabled = page == 0
-	_text(content, "%d / %d" % [page + 1, pages], Rect2(644, 805, 140, 48), 21, GOLD, false, HORIZONTAL_ALIGNMENT_CENTER)
-	_button(content, "›", Rect2(810, 805, 72, 48), _change_page.bind(1)).disabled = page == pages - 1
+	page_motion = _library_motion(selected_element, filtered_cards)
+	page_motion.reparent(content)
+	page_motion.show()
+	card_nodes.assign(page_motion.page_views[0])
+	previous_page_button = _button(content, "‹", Rect2(546, 805, 72, 48), _change_page.bind(-1))
+	page_label = _text(content, "", Rect2(644, 805, 140, 48), 21, GOLD, false, HORIZONTAL_ALIGNMENT_CENTER)
+	next_page_button = _button(content, "›", Rect2(810, 805, 72, 48), _change_page.bind(1))
+	_update_page_navigation()
 	_text(content, "拖入卡组 · 点击查看", Rect2(228, 772, 926, 28), 15, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
 	name_edit = LineEdit.new()
 	name_edit.position = Vector2(1205, 124)
@@ -278,7 +280,8 @@ func _remove_card(id: String) -> void:
 	_update_editor(id)
 
 func _update_editor(highlight: String = "") -> void:
-	for view in card_nodes: view.set_copies(draft.count(view.card["id"]))
+	for views: Array in page_motion.page_views:
+		for view: DeckLibraryCard in views: view.set_copies(draft.count(view.card["id"]))
 	total_label.text = "%d / 30" % draft.size()
 	play_button.disabled = not store.problem(draft).is_empty()
 	var scroll := row_scroll.scroll_vertical
@@ -322,24 +325,53 @@ func _filter(element: String) -> void:
 	page = 0
 	_build_editor(false)
 
+func _library_cards(element: String) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for card in cards.values():
+		if element == "all" or card["element"] == element: result.append(card)
+	result.sort_custom(_card_less)
+	return result
+
+func _library_motion(element: String, data: Array[Dictionary]) -> CardPageMotion:
+	if cached_pages.has(element): return cached_pages[element]
+	var motion := CardPageMotion.new()
+	add_child(motion)
+	motion.hide()
+	motion.turn_started.connect(func(next: int, tween: Tween):
+		page = next
+		card_nodes.assign(motion.page_views[next])
+		page_turn_tween = tween
+		_update_page_navigation())
+	motion.turn_finished.connect(func(): page_turn_busy = false; page_turn_tween = null)
+	motion.configure(data, PAGE_SIZE, _create_library_card)
+	cached_pages[element] = motion
+	return motion
+
+func _create_library_card(card: Dictionary, index: int, sheet: Control) -> Control:
+	var view := DeckLibraryCard.new()
+	view.configure(card, factory, CARD_WIDTH)
+	view.set_copies(draft.count(card["id"]))
+	view.position = Vector2(247 + (index % 6) * 148, 211 + (index / 6) * 277)
+	view.inspect_requested.connect(func(data: Dictionary, source: Control):
+		if not page_turn_busy: inspect_requested.emit(data, source))
+	view.add_requested.connect(func(id: String):
+		if not page_turn_busy: _add_card(id))
+	view.drag_denied.connect(func(): _toast("同名卡牌最多%d张" % DeckStore.MAX_COPIES))
+	sheet.add_child(view)
+	return view
+
+func _update_page_navigation() -> void:
+	var count := page_motion.page_roots.size()
+	page_label.text = "%d / %d" % [page + 1, count]
+	previous_page_button.disabled = page == 0
+	next_page_button.disabled = page == count - 1
+
 func _change_page(amount: int) -> void:
 	if page_turn_busy or view_mode != "editor" or get_viewport().gui_is_dragging(): return
-	var next := clampi(page + amount, 0, maxi(0, ceili(float(filtered_cards.size()) / PAGE_SIZE) - 1))
+	var next := clampi(page + amount, 0, page_motion.page_roots.size() - 1)
 	if next == page: return
 	page_turn_busy = true
-	var generation := content_generation
-	var scroll := row_scroll.scroll_vertical
-	page_turn_tween = CardPageMotion.leave(self, card_nodes, amount, func():
-		if generation != content_generation or view_mode != "editor": return
-		page_turn_tween = null
-		page = next
-		_build_editor(false)
-		row_scroll.set_deferred("scroll_vertical", scroll)
-		CardPageMotion.enter(card_nodes, amount, 6)
-		page_turn_busy = true
-		page_turn_tween = create_tween()
-		page_turn_tween.tween_interval(CardPageMotion.SETTLE_SECONDS)
-		page_turn_tween.tween_callback(func(): page_turn_busy = false))
+	page_motion.turn_to(next, amount)
 
 func _save() -> void:
 	var saved := store.save_deck(edit_id, edit_name, draft)

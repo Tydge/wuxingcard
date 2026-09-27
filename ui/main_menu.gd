@@ -38,12 +38,18 @@ var workshop: DeckWorkshop
 var inspect_origin_scale := 1.0
 var page_turn_busy := false
 var page_turn_tween: Tween
-var content_generation := 0
+var page_motion: CardPageMotion
+var cached_pages := {}
+var previous_page_button: Button
+var next_page_button: Button
 
 func configure(card_data: Dictionary, factory: Callable, summon_data: Dictionary = {}) -> void:
 	cards = card_data
 	summons = summon_data
 	card_factory = factory
+
+func _exit_tree() -> void:
+	for motion: CardPageMotion in cached_pages.values(): motion.finish_loading()
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -72,12 +78,16 @@ func _ready() -> void:
 	atmosphere = ATMOSPHERE_SCRIPT.new()
 	add_child(atmosphere)
 	_show_home()
+	_collection_motion("all", _collection_cards("all"))
 
 func _reset_content() -> void:
-	content_generation += 1
 	page_turn_busy = false
 	if page_turn_tween != null and page_turn_tween.is_running(): page_turn_tween.kill()
 	page_turn_tween = null
+	for motion: CardPageMotion in cached_pages.values():
+		if motion.get_parent() == content: motion.reparent(self)
+		motion.hide()
+		motion.reset_page()
 	if is_instance_valid(content):
 		remove_child(content)
 		content.queue_free()
@@ -98,7 +108,7 @@ func _show_home() -> void:
 	title.add_theme_constant_override("shadow_offset_x", 3)
 	title.add_theme_constant_override("shadow_offset_y", 5)
 	_text(content, "执掌五行，演化万法。", Rect2(117, 451, 400, 40), 26, Color("#e0dec8"), true)
-	_text(content, "金 · 木 · 水 · 火 · 土", Rect2(118, 508, 420, 32), 17, JADE)
+	_text(content, " · ".join(BattleRules.ELEMENTS.map(BattleRules.element_name)), Rect2(118, 508, 420, 32), 17, JADE)
 	var featured := ["metal_chime_card", "water_conch_card", "fire_raven_card"]
 	for i in featured.size():
 		if not cards.has(featured[i]): continue
@@ -162,16 +172,7 @@ func _build_collection() -> void:
 	_text(content, "卡牌一览", Rect2(310, 71, 220, 40), 20, JADE)
 	_button(content, "返回山门", Rect2(1340, 65, 180, 48), _show_home)
 	_panel(content, Rect2(244, 171, 1290, 599), Color("#152e2af2"), Color("#88744d"))
-	filtered_cards.clear()
-	for card in cards.values():
-		if selected_element == "all" or card["element"] == selected_element:
-			filtered_cards.append(card)
-	filtered_cards.sort_custom(func(a: Dictionary, b: Dictionary):
-		var ai := BattleRules.ELEMENTS.find(a["element"])
-		var bi := BattleRules.ELEMENTS.find(b["element"])
-		if ai != bi: return ai < bi
-		if int(a["cost"]) != int(b["cost"]): return int(a["cost"]) < int(b["cost"])
-		return str(a["id"]) < str(b["id"]))
+	filtered_cards = _collection_cards(selected_element)
 	var page_count := maxi(1, ceili(float(filtered_cards.size()) / PAGE_SIZE))
 	page = clampi(page, 0, page_count - 1)
 	var heading := "五行全卷" if selected_element == "all" else BattleRules.element_name(selected_element) + "系卷宗"
@@ -187,25 +188,14 @@ func _build_collection() -> void:
 		button.add_theme_font_size_override("font_size", 25)
 		button.add_theme_stylebox_override("normal", _style(Color("#385246") if element == selected_element else INK, tint if element == selected_element else Color(tint, 0.25)))
 		filter_buttons[element] = button
-	var first := page * PAGE_SIZE
-	var last := mini(first + PAGE_SIZE, filtered_cards.size())
-	for index in range(first, last):
-		var local_index := index - first
-		var pos := Vector2(283 + (local_index % 7) * 177, 209 + (local_index / 7) * 276)
-		var card: Dictionary = filtered_cards[index]
-		var slot := _panel(content, Rect2(pos - Vector2(10, 10), Vector2(176, 263)), Color("#091a193d"), Color("#b79a5b22"))
-		var view: Control = card_factory.call(card, Vector2(CARD_WIDTH, CARD_WIDTH * 1.4))
-		content.add_child(view)
-		view.position = pos
-		view.mouse_filter = Control.MOUSE_FILTER_STOP
-		view.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		view.gui_input.connect(_card_input.bind(card, view))
-		card_nodes.append(view)
-		var kind := "召唤" if view is SummonCardView else "法术"
-		_text(slot, "%s · %d费" % [kind, int(card["cost"])], Rect2(0, 239, 176, 22), 14, Color("#a6b7a2"), false, HORIZONTAL_ALIGNMENT_CENTER)
-	_button(content, "上一页", Rect2(650, 806, 120, 48), _change_page.bind(-1)).disabled = page == 0
-	page_label = _text(content, "%d / %d" % [page + 1, page_count], Rect2(795, 806, 140, 48), 21, GOLD, false, HORIZONTAL_ALIGNMENT_CENTER)
-	_button(content, "下一页", Rect2(960, 806, 120, 48), _change_page.bind(1)).disabled = page == page_count - 1
+	page_motion = _collection_motion(selected_element, filtered_cards)
+	page_motion.reparent(content)
+	page_motion.show()
+	card_nodes.assign(page_motion.page_views[0])
+	previous_page_button = _button(content, "上一页", Rect2(650, 806, 120, 48), _change_page.bind(-1))
+	page_label = _text(content, "", Rect2(795, 806, 140, 48), 21, GOLD, false, HORIZONTAL_ALIGNMENT_CENTER)
+	next_page_button = _button(content, "下一页", Rect2(960, 806, 120, 48), _change_page.bind(1))
+	_update_page_navigation()
 	_text(content, "点击卡牌，展开卷宗", Rect2(1170, 810, 355, 40), 16, JADE, false, HORIZONTAL_ALIGNMENT_RIGHT)
 
 func _element_count(element: String) -> int:
@@ -219,23 +209,58 @@ func _filter(element: String) -> void:
 	page = 0
 	_build_collection()
 
+func _collection_cards(element: String) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for card in cards.values():
+		if element == "all" or card["element"] == element: result.append(card)
+	result.sort_custom(func(a: Dictionary, b: Dictionary):
+		var ai := BattleRules.ELEMENTS.find(a["element"])
+		var bi := BattleRules.ELEMENTS.find(b["element"])
+		if ai != bi: return ai < bi
+		if int(a["cost"]) != int(b["cost"]): return int(a["cost"]) < int(b["cost"])
+		return str(a["id"]) < str(b["id"]))
+	return result
+
+func _collection_motion(element: String, data: Array[Dictionary]) -> CardPageMotion:
+	if cached_pages.has(element): return cached_pages[element]
+	var motion := CardPageMotion.new()
+	add_child(motion)
+	motion.hide()
+	motion.turn_started.connect(func(next: int, tween: Tween):
+		page = next
+		card_nodes.assign(motion.page_views[next])
+		page_turn_tween = tween
+		_update_page_navigation())
+	motion.turn_finished.connect(func(): page_turn_busy = false; page_turn_tween = null)
+	motion.configure(data, PAGE_SIZE, _create_collection_card)
+	cached_pages[element] = motion
+	return motion
+
+func _create_collection_card(card: Dictionary, index: int, sheet: Control) -> Control:
+	var pos := Vector2(283 + (index % 7) * 177, 209 + (index / 7) * 276)
+	var slot := _panel(sheet, Rect2(pos - Vector2(10, 10), Vector2(176, 263)), Color("#091a193d"), Color("#b79a5b22"))
+	var view: Control = card_factory.call(card, Vector2(CARD_WIDTH, CARD_WIDTH * 1.4))
+	sheet.add_child(view)
+	view.position = pos
+	view.mouse_filter = Control.MOUSE_FILTER_STOP
+	view.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	view.gui_input.connect(_card_input.bind(card, view))
+	var kind := "召唤" if view is SummonCardView else "法术"
+	_text(slot, "%s · %d费" % [kind, int(card["cost"])], Rect2(0, 239, 176, 22), 14, Color("#a6b7a2"), false, HORIZONTAL_ALIGNMENT_CENTER)
+	return view
+
+func _update_page_navigation() -> void:
+	var count := page_motion.page_roots.size()
+	page_label.text = "%d / %d" % [page + 1, count]
+	previous_page_button.disabled = page == 0
+	next_page_button.disabled = page == count - 1
+
 func _change_page(direction: int) -> void:
 	if page_turn_busy or is_instance_valid(inspector): return
-	var pages := maxi(1, ceili(float(filtered_cards.size()) / PAGE_SIZE))
-	var next := clampi(page + direction, 0, pages - 1)
+	var next := clampi(page + direction, 0, page_motion.page_roots.size() - 1)
 	if next == page: return
 	page_turn_busy = true
-	var generation := content_generation
-	page_turn_tween = CardPageMotion.leave(self, card_nodes, direction, func():
-		if generation != content_generation or view_mode != "collection": return
-		page_turn_tween = null
-		page = next
-		_build_collection()
-		CardPageMotion.enter(card_nodes, direction, 7)
-		page_turn_busy = true
-		page_turn_tween = create_tween()
-		page_turn_tween.tween_interval(CardPageMotion.SETTLE_SECONDS)
-		page_turn_tween.tween_callback(func(): page_turn_busy = false))
+	page_motion.turn_to(next, direction)
 
 func _card_input(event: InputEvent, card: Dictionary, source: Control) -> void:
 	if page_turn_busy: return

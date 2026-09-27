@@ -40,23 +40,28 @@ func run() -> void:
 	await process_frame
 	var total := menu.cards.size()
 	check(menu.filtered_cards.size() == total and menu.card_nodes.size() == mini(total, 14), "collection contains every card with pagination")
+	var ordered := ["metal", "water", "wood", "fire", "earth"]
+	check(BattleRules.ELEMENTS == ordered and menu.filtered_cards[9]["element"] == "water", "collection card order follows the generating cycle")
+	for index in range(1, ordered.size()):
+		check(menu.filter_buttons[ordered[index]].position.y > menu.filter_buttons[ordered[index - 1]].position.y, "collection filter buttons follow metal, water, wood, fire, earth")
 	await shot("collection")
-	var outgoing: Control = menu.card_nodes[0]
-	var old_x := outgoing.position.x
+	while not menu.page_motion.is_prepared(1): await process_frame
+	var original_content := menu.content
+	var original_filter: Button = menu.filter_buttons["all"]
+	var outgoing: Control = menu.page_motion.page_roots[0]
+	var incoming: Control = menu.page_motion.page_roots[1]
+	var cached_card: Control = menu.page_motion.page_views[1][0]
 	menu.call("_change_page", 1)
 	menu.call("_change_page", 1)
-	# Sample the exit at a fixed tween time. PNG encoding may take longer than
-	# the whole short animation on the first rendered page.
-	var leaving := menu.page_turn_tween
-	leaving.pause()
-	leaving.custom_step(CardPageMotion.LEAVE_SECONDS * 0.5)
-	check(menu.page == 0 and outgoing.position.x < old_x and outgoing.modulate.a > 0 and outgoing.modulate.a < 1, "old page slides out progressively and repeated clicks do not skip pages")
-	await shot("collection_page_departing")
-	leaving.custom_step(CardPageMotion.LEAVE_SECONDS)
-	check(menu.page == 1 and menu.card_nodes[0].modulate.a == 0 and menu.card_nodes[0].position.x > old_x, "new page begins offset and transparent instead of appearing instantly")
-	await create_timer(0.12).timeout
-	await shot("collection_page_arriving")
-	await create_timer(0.4).timeout
+	var transition := menu.page_turn_tween
+	transition.pause()
+	transition.custom_step(CardPageMotion.TURN_SECONDS * 0.5)
+	check(menu.page == 1 and outgoing.position.x < 0 and incoming.position.x > 0 and outgoing.modulate.a > 0 and incoming.modulate.a > 0, "old and new pages overlap smoothly without a blank gap; repeated clicks do not skip")
+	check(menu.content == original_content and menu.filter_buttons["all"] == original_filter and menu.card_nodes[0] == cached_card, "turn reuses prepared cards and preserves surrounding controls")
+	await shot("collection_page_overlap")
+	transition.custom_step(CardPageMotion.TURN_SECONDS)
+	check(not outgoing.visible and incoming.visible and incoming.position.is_zero_approx() and incoming.modulate.a == 1 and not menu.page_turn_busy, "page settles directly without an extra input lock interval")
+	await process_frame
 	menu.call("_change_page", -1)
 	await create_timer(0.6).timeout
 	check(menu.page == 0 and not menu.page_turn_busy, "reverse page turn returns to the first page")
@@ -65,6 +70,7 @@ func run() -> void:
 	await create_timer(0.6).timeout
 	check(menu.page == 0 and menu.selected_element == "metal" and menu.filtered_cards.size() == 9, "changing filter cancels an unfinished page turn")
 	menu.filter_buttons["all"].pressed.emit()
+	check(menu.page_motion.page_views[1][0] == cached_card, "returning to all after filtering reuses cached card nodes")
 	var seen: Array[String] = []
 	var pages := ceili(float(total) / 14.0)
 	for page in pages:
@@ -75,7 +81,7 @@ func run() -> void:
 		if page < pages - 1:
 			menu.call("_change_page", 1)
 			await create_timer(0.6).timeout
-	check(seen.size() == total and menu.card_nodes.size() == total - (pages - 1) * 14, "last page includes the remaining cards")
+	check(seen.size() == total and menu.card_nodes.size() == total - (pages - 1) * 14, "last page includes the remaining cards: page=%d, count=%d, expected=%d, busy=%s" % [menu.page, menu.card_nodes.size(), total - (pages - 1) * 14, menu.page_turn_busy])
 	for element in BattleRules.ELEMENTS:
 		var expected := 0
 		for card in menu.cards.values():
@@ -128,6 +134,19 @@ func run() -> void:
 	check(find_menu() == null and manager.phase == "player_action" and manager.player.hand.size() == 5, "random deck selection starts a playable battle")
 	check(manager.selected_enemy_id in ["ember", "tide", "harmony"] and manager.selected_deck_id == "random", "test mode chooses an enemy and generates random decks")
 	check(manager.valid_random_deck(manager.player.hand + manager.player.draw_pile) and manager.valid_random_deck(manager.enemy.hand + manager.enemy.draw_pile), "test mode creates two legal 25-card decks")
+	# Inspect the actual rendered orb labels in both HUDs, rather than only the
+	# shared element constant. Each orb's local x increases in the same order.
+	for side in ["player", "enemy"]:
+		var position := float(-INF)
+		for element in ordered:
+			var found: Label
+			for node: Node in ui.find_children("*", "Label", true, false):
+				if node is Label and node.text == BattleRules.element_name(element) and node.get_parent().size.x == ui.get_script().get_script_constant_map()["ORB_DIAMETER"]:
+					var upper: bool = node.global_position.y < 450
+					if upper == (side == "enemy"): found = node; break
+			check(found != null and found.global_position.x > position, "%s energy orbs follow the generating cycle" % side)
+			if found != null: position = found.global_position.x
+	await shot("ordered_energy_battle")
 	manager.phase = "menu"
 	ui.call("_refresh")
 	await process_frame

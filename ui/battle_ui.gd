@@ -294,7 +294,7 @@ func _build_combatant_hud(side: String) -> void:
 
 	_hp_bar(panel, _hud_local(side, HUD_HP), actor)
 
-	# The orb row is laid out identically on both sides so 金木水火土 always read
+	# The orb row is laid out identically on both sides so 金水木火土 always read
 	# left to right; only the surrounding text mirrors.
 	for i in BattleRules.ELEMENTS.size():
 		_energy_orb(panel, actor, side, i)
@@ -323,7 +323,7 @@ func _energy_orb(parent: Node, actor: Combatant, side: String, index: int) -> vo
 	var element: String = BattleRules.ELEMENTS[index]
 	var tint := BattleRules.color(element)
 	# The orb row is centred in the panel and deliberately not mirrored, so both
-	# sides read 金木水火土 left to right; only the surrounding text mirrors.
+	# sides read 金水木火土 left to right; only the surrounding text mirrors.
 	var local := Rect2(Vector2(ORB_ROW_X + float(index) * ORB_STEP, ORB_ROW_Y), Vector2(ORB_DIAMETER, ORB_DIAMETER))
 	var orb := _panel(parent, local, Color("#0c1826").lerp(tint, 0.14), tint.darkened(0.1), int(ORB_DIAMETER / 2.0), 2)
 	_label(orb, BattleRules.element_name(element), Vector2(0, 2), Vector2(ORB_DIAMETER, 18), 14, tint, HORIZONTAL_ALIGNMENT_CENTER)
@@ -1125,7 +1125,7 @@ func _energy_point(side: String, element: String) -> Vector2:
 	var index := BattleRules.ELEMENTS.find(element)
 	if index < 0:
 		return _hud_origin(side) + HUD_SIZE / 2.0
-	# Both HUDs keep 金木水火土 left to right, so the row is not mirrored.
+	# Both HUDs keep 金水木火土 left to right, so the row is not mirrored.
 	var local := Vector2(ORB_ROW_X + ORB_DIAMETER / 2.0 + float(index) * ORB_STEP, ORB_ROW_Y + ORB_DIAMETER / 2.0)
 	return _hud_origin(side) + local
 

@@ -1,9 +1,9 @@
 class_name BattleRules
 extends RefCounted
 
-const ELEMENTS := ["metal", "wood", "water", "fire", "earth"]
-const NAMES := {"metal":"金", "wood":"木", "water":"水", "fire":"火", "earth":"土"}
-const COLORS := {"metal":"#ffe16a", "wood":"#8dd89b", "water":"#82cafa", "fire":"#fb8b68", "earth":"#bb9068"}
+const ELEMENTS := ["metal", "water", "wood", "fire", "earth"]
+const NAMES := {"metal":"金", "water":"水", "wood":"木", "fire":"火", "earth":"土"}
+const COLORS := {"metal":"#ffe16a", "water":"#82cafa", "wood":"#8dd89b", "fire":"#fb8b68", "earth":"#bb9068"}
 const COUNTERED := {"metal":"wood", "wood":"earth", "earth":"water", "water":"fire", "fire":"metal"}
 
 static func element_name(element: String) -> String:

@@ -83,6 +83,9 @@ func run() -> void:
 	workshop.new_button.pressed.emit()
 	await create_timer(0.35).timeout
 	check(workshop.view_mode == "editor" and workshop.card_nodes.size() == 12 and workshop.play_button.disabled, "new deck opens filtered collection and cannot play empty")
+	var ordered := ["metal", "water", "wood", "fire", "earth"]
+	for index in range(1, ordered.size()):
+		check(workshop.filter_buttons[ordered[index]].position.y > workshop.filter_buttons[ordered[index - 1]].position.y, "deck editor filters follow the generating cycle")
 	await shot("deck_editor_empty")
 	var card := workshop.card_nodes[0]
 	var id: String = card.card["id"]
@@ -151,20 +154,24 @@ func run() -> void:
 	check(not workshop.play_button.disabled and workshop.draft.size() == 20, "twenty-card draft becomes playable")
 	await create_timer(0.35).timeout
 	await shot("deck_editor_complete")
-	var old_card: Control = workshop.card_nodes[0]
-	var old_x := old_card.position.x
+	while not workshop.page_motion.is_prepared(1): await process_frame
+	var original_content := workshop.content
+	var original_scroll := workshop.row_scroll
+	var original_row: DeckRow = workshop.row_nodes["earth_stele_card"]
+	var outgoing: Control = workshop.page_motion.page_roots[0]
+	var incoming: Control = workshop.page_motion.page_roots[1]
+	var cached_card: Control = workshop.page_motion.page_views[1][0]
 	workshop.call("_change_page", 1)
 	workshop.call("_change_page", 1)
-	var leaving := workshop.page_turn_tween
-	leaving.pause()
-	leaving.custom_step(CardPageMotion.LEAVE_SECONDS * 0.5)
-	check(workshop.page == 0 and old_card.position.x < old_x and old_card.modulate.a > 0 and old_card.modulate.a < 1, "editor old page slides out and repeated paging is guarded")
-	await shot("deck_page_departing")
-	leaving.custom_step(CardPageMotion.LEAVE_SECONDS)
-	check(workshop.page == 1 and workshop.card_nodes[0].modulate.a == 0 and workshop.card_nodes[0].position.x > old_x and workshop.draft.size() == 20, "editor new page begins offset and transparent without changing the deck")
-	await create_timer(0.12).timeout
-	await shot("deck_page_arriving")
-	await create_timer(0.4).timeout
+	var transition := workshop.page_turn_tween
+	transition.pause()
+	transition.custom_step(CardPageMotion.TURN_SECONDS * 0.5)
+	check(workshop.page == 1 and outgoing.position.x < 0 and incoming.position.x > 0 and outgoing.modulate.a > 0 and incoming.modulate.a > 0, "editor pages cross together without blank frames or skipped pages")
+	check(workshop.content == original_content and workshop.row_scroll == original_scroll and workshop.row_nodes["earth_stele_card"] == original_row and workshop.card_nodes[0] == cached_card, "editor turn retains prepared cards and the actual deck list nodes")
+	await shot("deck_page_overlap")
+	transition.custom_step(CardPageMotion.TURN_SECONDS)
+	check(not outgoing.visible and incoming.visible and incoming.position.is_zero_approx() and incoming.modulate.a == 1 and not workshop.page_turn_busy and workshop.draft.size() == 20, "editor turn settles without an extra waiting phase")
+	await process_frame
 	workshop.call("_change_page", -1)
 	await create_timer(0.6).timeout
 	check(workshop.page == 0 and not workshop.page_turn_busy, "editor reverse page turn restores the first page")
