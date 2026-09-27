@@ -17,6 +17,8 @@ const TARGET_MARKER_SCRIPT := preload("res://ui/target_marker.gd")
 const STATUS_ICON_SCRIPT := preload("res://ui/status_icon.gd")
 const CARD_REVEAL_SECONDS := 1.45
 const EFFECT_PAUSE_SECONDS := 0.9
+const DISCARD_SECONDS := 0.62
+const DISCARD_LIFT := 110.0
 const SUMMON_FEEDBACK_SECONDS := 1.1
 const MAIN_MENU_SCRIPT := preload("res://ui/main_menu.gd")
 
@@ -79,6 +81,7 @@ var enemy_animating := false
 var action_busy := false
 var hand_cards: Array[Control] = []
 var enemy_backs: Array[Control] = []
+var discard_cards: Array[Control] = []
 var hover_preview: Control
 var hover_keywords: CardKeywordPopup
 var hovered_summon_side := ""
@@ -107,6 +110,7 @@ func _ready() -> void:
 	add_child(manager)
 	manager.changed.connect(_refresh)
 	manager.action_event.connect(_on_action_event)
+	manager.hand_card_removed.connect(_on_hand_card_removed)
 	manager.summon_event.connect(_on_summon_event)
 	actor_layer = Control.new()
 	actor_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -178,6 +182,9 @@ func _refresh() -> void:
 			remove_child(child)
 			child.queue_free()
 	if manager.phase == "menu":
+		_clear_discard_animations()
+		hand_cards.clear()
+		enemy_backs.clear()
 		_clear_actors()
 		_build_menu()
 		move_child(fx_layer, get_child_count() - 1)
@@ -214,6 +221,7 @@ func _start_test_battle() -> void:
 	_start_battle()
 
 func _start_battle() -> void:
+	_clear_discard_animations()
 	_clear_actors()
 	enemy_animating = false
 	selected_index = -1
@@ -923,6 +931,44 @@ func _animate_pending_draws(player_count: int, enemy_count: int, generation: int
 func _draw_pile_point(side: String) -> Vector2:
 	var origin := PLAYER_DECK_POS if side == "player" else ENEMY_DECK_POS
 	return origin + DECK_SIZE / 2.0
+
+func _on_hand_card_removed(side: String, card_id: String, index: int, reason: String) -> void:
+	var views: Array[Control] = hand_cards if side == "player" else enemy_backs
+	if index < 0 or index >= views.size() or not is_instance_valid(views[index]):
+		return
+	var card := views[index]
+	# Keep the remaining view indices aligned with the model's hand before any
+	# subsequent discard chooses a slot. Matching by card ID would mix up copies.
+	views.remove_at(index)
+	if reason != "discard":
+		card.hide()
+		return
+	_clear_hover_preview()
+	hovered_index = -1
+	# Keep the existing prefab and its exact fan transform across HUD rebuilds.
+	card.reparent(fx_layer)
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.show()
+	card.modulate = Color.WHITE
+	card.set_meta("discard_side", side)
+	card.set_meta("discard_card_id", card_id)
+	var delay := discard_cards.size() * 0.07
+	discard_cards.append(card)
+	var direction := -1.0 if side == "player" else 1.0
+	var tween := card.create_tween().set_parallel(true)
+	tween.tween_property(card, "position:y", card.position.y + direction * DISCARD_LIFT, DISCARD_SECONDS).set_delay(delay).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(card, "rotation", 0.0, 0.22).set_delay(delay).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.tween_property(card, "modulate:a", 0.0, DISCARD_SECONDS - 0.18).set_delay(delay + 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tween.chain().tween_callback(func():
+		discard_cards.erase(card)
+		card.queue_free())
+
+func _clear_discard_animations() -> void:
+	for card in discard_cards:
+		if is_instance_valid(card):
+			card.hide()
+			card.queue_free()
+	discard_cards.clear()
 
 func _build_result() -> void:
 	var dim := ColorRect.new()

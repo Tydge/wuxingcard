@@ -3,6 +3,9 @@ extends Node
 
 signal changed
 signal action_event(message: String, side: String, kind: String, element: String, amount: int)
+# Emitted before removal so the presenter can retain the exact hand card,
+# including duplicate copies and discards after the played card leaves the hand.
+signal hand_card_removed(side: String, card_id: String, index: int, reason: String)
 signal summon_event(side: String, slot: int, kind: String, element: String, amount: int, matchup: String)
 signal summon_triggered(side: String, slot: int, timing: String, effect: Dictionary)
 
@@ -389,6 +392,7 @@ func _play_card(actor: Combatant, target: Combatant, index: int, selection: Dict
 	var card: Dictionary = cards[card_id]
 	if not actor.can_pay(card) or not valid_card_target(actor, card, selection):
 		return false
+	hand_card_removed.emit(_side(actor), card_id, index, "play")
 	actor.hand.remove_at(index)
 	actor.lose_energy(card["element"], int(card["cost"]))
 	_report("%s 使用「%s」" % [actor.display_name, card["name"]], _side(actor), "play", card["element"], int(card["cost"]))
@@ -478,6 +482,7 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 				if target.hand.is_empty():
 					break
 				var random_index := rng.randi_range(0, target.hand.size() - 1)
+				hand_card_removed.emit(_side(target), target.hand[random_index], random_index, "discard")
 				var lost_card: String = target.hand.pop_at(random_index)
 				target.discard_pile.append(lost_card)
 				_report("%s 被弃掉 1 张手牌" % target.display_name, _side(target), "discard")
