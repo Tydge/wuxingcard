@@ -1,7 +1,7 @@
 class_name CardKeywords
 extends RefCounted
 
-const NAMES := {"burn":"灼伤", "poison":"中毒", "bleed":"出血", "weak":"虚弱", "vulnerable":"脆弱", "charge":"蓄力", "tenacity":"坚韧", "regen":"再生", "shield":"护盾", "lock":"封锁"}
+const NAMES := {"burn":"灼伤", "poison":"中毒", "bleed":"出血", "weak":"虚弱", "vulnerable":"脆弱", "charge":"蓄力", "tenacity":"坚韧", "regen":"再生", "shield":"护盾", "lock":"封锁", "strong_attack":"强攻", "weak_attack":"弱攻", "strong_defense":"强防", "weak_defense":"弱防"}
 
 # Card explanations use X; status icon explanations use the current stack count.
 static func status_description(id: String, stacks: String = "X", element: String = "") -> String:
@@ -13,6 +13,11 @@ static func status_description(id: String, stacks: String = "X", element: String
 		"regen": return "回合结束恢复 %s 点生命，然后减少一层。" % stacks
 		"shield": return "抵消 %s 点元素伤害；回合开始层数减半，向上取整。" % stacks
 		"lock": return "不能获得%s能量或打出%s系牌。" % [BattleRules.element_name(element), BattleRules.element_name(element)]
+		"strong_attack", "weak_attack", "strong_defense", "weak_defense":
+			var direction := "造成" if id in ["strong_attack", "weak_attack"] else "受到"
+			var sign_text := "+" if id in ["strong_attack", "weak_defense"] else "−"
+			var opposite: String = NAMES[Combatant.OPPOSITE_STATUSES[id]]
+			return "下一次%s伤害 %s%s，然后减少一层。与%s抵消。" % [direction, sign_text, stacks, opposite]
 		"charge", "weak", "tenacity", "vulnerable":
 			var direction := "造成" if id in ["charge", "weak"] else "受到"
 			var sign_text := "+" if id in ["charge", "vulnerable"] else "−"
@@ -33,7 +38,7 @@ static func entries(card: Dictionary, summons: Dictionary) -> Array[Dictionary]:
 		effects.append_array(summon.get("turn_start", []))
 		effects.append_array(summon.get("turn_end", []))
 	for effect in effects:
-		if effect.get("type") != "status": continue
+		if effect.get("type") not in ["status", "remove_status"]: continue
 		var id: String = effect["status"]
 		var element: String = effect.get("element", "")
 		var key := id + element

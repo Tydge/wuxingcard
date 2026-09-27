@@ -33,6 +33,18 @@ func run() -> void:
 	prepare()
 	check(cast("water_mist") and manager.enemy.status_stacks("vulnerable") == 2, "mist grants two vulnerable layers")
 	prepare()
+	manager.player.hp = 50
+	check(cast("wood_regen") and manager.player.status_stacks("regen") == 5, "regeneration spell grants five layers")
+	await manager._end_turn(manager.player)
+	check(manager.player.hp == 55 and manager.player.status_stacks("regen") == 4, "five-layer regeneration heals five then decays once")
+	prepare()
+	manager.player.hp = 50
+	manager.player.summons[0] = Summon.new()
+	manager.player.summons[0].setup(manager.summon_templates["wood_seedling"])
+	manager.player.summons[0].hp = 7
+	check(cast("wood_heal") and manager.player.hp == 68, "life spell restores eighteen to its caster")
+	check(manager.player.summons[0].hp == 7 and manager.enemy.hp == 80, "life spell does not heal summons or the opponent")
+	prepare()
 	check(cast("metal_rainbow_blade", {"kind":"hero"}) and manager.enemy.hp == 60, "metal spell deals twenty")
 	prepare()
 	manager.player.add_status("poison", 2, 0)
@@ -105,7 +117,7 @@ func run() -> void:
 	for seed_value in 30:
 		manager.start_battle("ember", "random", seed_value + 700)
 		var steps := 0
-		while manager.phase not in ["victory", "defeat"] and steps < 1000:
+		while manager.phase not in BattleManager.FINISHED_PHASES and steps < 1000:
 			steps += 1
 			if manager.phase == "player_action":
 				var played := false

@@ -1,8 +1,9 @@
 class_name Combatant
 extends RefCounted
 
-const NO_DURATION_STATUSES := ["burn", "poison", "bleed", "weak", "vulnerable", "charge", "tenacity", "regen", "shield"]
-const OPPOSITE_STATUSES := {"charge":"weak", "weak":"charge", "tenacity":"vulnerable", "vulnerable":"tenacity"}
+const NO_DURATION_STATUSES := ["burn", "poison", "bleed", "weak", "vulnerable", "charge", "tenacity", "regen", "shield", "strong_attack", "weak_attack", "strong_defense", "weak_defense"]
+const OPPOSITE_STATUSES := {"charge":"weak", "weak":"charge", "tenacity":"vulnerable", "vulnerable":"tenacity", "strong_attack":"weak_attack", "weak_attack":"strong_attack", "strong_defense":"weak_defense", "weak_defense":"strong_defense"}
+const CAPPED_STATUSES := ["charge", "weak", "tenacity", "vulnerable"]
 const MAX_PAIRED_STACKS := 10
 
 var id := ""
@@ -49,6 +50,7 @@ func add_status(status_id: String, stacks: int, turns: int, element: String = ""
 	if stacks <= 0:
 		return
 	var paired := OPPOSITE_STATUSES.has(status_id)
+	var capped := status_id in CAPPED_STATUSES
 	if paired:
 		element = ""
 		# Cancel first: an incoming 15 layers against 10 opposite layers leaves 5.
@@ -65,10 +67,10 @@ func add_status(status_id: String, stacks: int, turns: int, element: String = ""
 	for status in statuses:
 		if status["id"] == status_id and status.get("element", "") == element:
 			var total := int(status["stacks"]) + stacks
-			status["stacks"] = mini(total, MAX_PAIRED_STACKS) if paired else total
+			status["stacks"] = mini(total, MAX_PAIRED_STACKS) if capped else total
 			status["turns"] = maxi(int(status["turns"]), duration)
 			return
-	statuses.append({"id": status_id, "stacks": mini(stacks, MAX_PAIRED_STACKS) if paired else stacks, "turns": duration, "element": element})
+	statuses.append({"id": status_id, "stacks": mini(stacks, MAX_PAIRED_STACKS) if capped else stacks, "turns": duration, "element": element})
 
 func decay_status(status_id: String) -> void:
 	for i in range(statuses.size() - 1, -1, -1):

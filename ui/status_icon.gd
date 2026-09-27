@@ -52,6 +52,8 @@ func _draw() -> void:
 		"vulnerable": _draw_vulnerable(tint)
 		"charge": _draw_charge(tint)
 		"tenacity": _draw_tenacity(tint)
+		"strong_attack", "weak_attack": _draw_attack(tint, status_id == "strong_attack")
+		"strong_defense", "weak_defense": _draw_defense(tint, status_id == "strong_defense")
 		"regen": _draw_regen(tint)
 		"shield": _draw_shield(tint)
 		"lock": _draw_lock(tint)
@@ -71,6 +73,10 @@ func _tint() -> Color:
 		"vulnerable": return Color("#e7bd74")
 		"charge": return Color("#f4ad68")
 		"tenacity": return Color("#8bd2c4")
+		"strong_attack": return Color("#ffd471")
+		"weak_attack": return Color("#b095df")
+		"strong_defense": return Color("#b7d89a")
+		"weak_defense": return Color("#e89989")
 		"regen": return Color("#80d9a1")
 		"shield": return Color("#83c7ec")
 		"lock": return BattleRules.color(element)
@@ -116,6 +122,27 @@ func _draw_regen(tint: Color) -> void:
 	draw_line(Vector2(19, 28), Vector2(19, 15), tint, 2.5, true)
 	draw_colored_polygon(PackedVector2Array([Vector2(19, 19), Vector2(11, 17), Vector2(9, 11), Vector2(16, 12)]), tint)
 	draw_colored_polygon(PackedVector2Array([Vector2(19, 17), Vector2(25, 10), Vector2(29, 11), Vector2(26, 18)]), tint)
+
+func _draw_attack(tint: Color, strong: bool) -> void:
+	# A sword with either a keen edge or a broken blade.
+	draw_colored_polygon(PackedVector2Array([Vector2(25, 7), Vector2(27, 14), Vector2(17, 25), Vector2(13, 21)]), tint)
+	draw_line(Vector2(10, 20), Vector2(19, 29), tint.lightened(0.3), 2.5, true)
+	draw_line(Vector2(15, 25), Vector2(10, 30), tint, 3.0, true)
+	if strong:
+		draw_line(Vector2(10, 9), Vector2(10, 15), tint, 2.0, true)
+		draw_line(Vector2(7, 12), Vector2(13, 12), tint, 2.0, true)
+	else:
+		draw_line(Vector2(17, 13), Vector2(22, 16), Color("#08111c"), 3.0, true)
+		draw_line(Vector2(9, 12), Vector2(14, 12), tint, 2.0, true)
+
+func _draw_defense(tint: Color, strong: bool) -> void:
+	# Solid or cracked armor; distinct from the hollow shield icon.
+	draw_colored_polygon(PackedVector2Array([Vector2(12, 9), Vector2(16, 9), Vector2(19, 13), Vector2(22, 9), Vector2(26, 9), Vector2(29, 16), Vector2(25, 19), Vector2(25, 29), Vector2(13, 29), Vector2(13, 19), Vector2(9, 16)]), tint)
+	if strong:
+		draw_line(Vector2(19, 17), Vector2(19, 25), Color("#264732"), 2.0, true)
+		draw_line(Vector2(15, 21), Vector2(23, 21), Color("#264732"), 2.0, true)
+	else:
+		draw_polyline(PackedVector2Array([Vector2(21, 14), Vector2(17, 20), Vector2(21, 23), Vector2(17, 29)]), Color("#4c2832"), 2.5, true)
 
 func _draw_shield(tint: Color) -> void:
 	draw_colored_polygon(PackedVector2Array([Vector2(19, 8), Vector2(28, 12), Vector2(27, 21), Vector2(19, 30), Vector2(11, 21), Vector2(10, 12)]), tint)

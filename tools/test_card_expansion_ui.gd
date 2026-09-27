@@ -29,6 +29,21 @@ func run() -> void:
 	for actor in [manager.player, manager.enemy]:
 		actor.statuses.clear()
 		for element in BattleRules.ELEMENTS: actor.energy[element] = 0
+		actor.summons[0] = Summon.new()
+		actor.summons[0].setup(manager.summon_templates["fire_raven"])
+	ui.call("_refresh")
+	var player_raven: SummonView = ui.get("summon_views")["player_0"]
+	var enemy_raven: SummonView = ui.get("summon_views")["enemy_0"]
+	check(not player_raven.portrait.flip_h and enemy_raven.portrait.flip_h, "raven artwork faces the opponent on both sides")
+	enemy_raven.summon_ref.hp = 7
+	enemy_raven.play_trigger()
+	ui.call("_show_hover_preview", 0)
+	ui.call("_refresh")
+	await create_timer(0.7).timeout
+	check(ui.get("summon_views")["enemy_0"] == enemy_raven and enemy_raven.portrait.flip_h, "hover, health refresh and pulse preserve the enemy raven and its facing")
+	check(enemy_raven.hp_label.text == "7 / 11" and enemy_raven.scale.x > 0 and enemy_raven.hp_label.scale.x > 0, "enemy health remains readable during mirrored portrait animation")
+	ui.call("_clear_hover_preview")
+	await shot("raven_facing")
 	for slot in 3:
 		manager.enemy.summons[slot] = Summon.new()
 		manager.enemy.summons[slot].setup(manager.summon_templates[["metal_furnace", "fire_lantern", "water_spring"][slot]])
@@ -76,5 +91,5 @@ func run() -> void:
 	check(manager.enemy.hp == 60 and manager.enemy.summons[0] == null and manager.enemy.summons[1].hp == 5 and manager.enemy.summons[2] == null, "dragging area spell resolves all four targets")
 	check(manager.player.hand.size() == 2 and manager.player.energy["fire"] == 0, "area spell consumes one card and three energy")
 	await shot("area_result")
-	print("Card expansion UI: 80 HP, composite keywords, all-target reticles, resistance preview and four-target FX; %d failures" % failures)
+	print("Card expansion UI: raven facing, 80 HP, composite keywords, all-target reticles, resistance preview and four-target FX; %d failures" % failures)
 	quit(1 if failures > 0 else 0)

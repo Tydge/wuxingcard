@@ -50,7 +50,7 @@ func run_tests() -> void:
 			for seed_value in range(10):
 				manager.start_battle(enemy_id, deck_id, seed_value + 100)
 				var steps := 0
-				while manager.phase not in ["victory", "defeat"] and steps < 1000:
+				while manager.phase not in BattleManager.FINISHED_PHASES and steps < 1000:
 					steps += 1
 					if manager.phase == "player_action":
 						var chosen := -1

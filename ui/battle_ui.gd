@@ -243,7 +243,7 @@ func _build_battle() -> void:
 		var enemy_count := pending_enemy_draws
 		draw_animation_active = true
 		call_deferred("_animate_pending_draws", player_count, enemy_count, draw_generation)
-	if manager.phase == "victory" or manager.phase == "defeat":
+	if manager.phase in BattleManager.FINISHED_PHASES:
 		_build_result()
 
 # --- HUD --------------------------------------------------------------------
@@ -389,7 +389,7 @@ func _build_summons() -> void:
 			if is_instance_valid(existing):
 				existing.queue_free()
 			var view: SummonView = SUMMON_VIEW_SCENE.instantiate()
-			view.call("configure", summoned)
+			view.configure(summoned, side == "enemy")
 			view.position = _summon_slot_rect(side, slot).position
 			view.set_meta("rest_x", view.position.x)
 			view.mouse_entered.connect(_on_summon_hover.bind(side, slot))
@@ -634,11 +634,14 @@ func _drop_selection(card: Dictionary, point: Vector2) -> Dictionary:
 				if manager.player.summons[slot] == null and point.distance_to(_summon_point("player", slot)) <= SUMMON_TARGET_RADIUS:
 					return {"kind": "slot", "slot": slot}
 		"damage":
-			for slot in manager.enemy.summons.size():
-				if manager.enemy.summons[slot] != null and point.distance_to(_summon_point("enemy", slot)) <= SUMMON_TARGET_RADIUS:
-					return {"kind": "summon", "slot": slot}
-			if ENEMY_HERO_TARGET.has_point(point):
-				return {"kind": "hero"}
+			for side in manager.damage_target_sides(manager.player, card):
+				var owner := manager.player if side == "player" else manager.enemy
+				for slot in owner.summons.size():
+					if owner.summons[slot] != null and point.distance_to(_summon_point(side, slot)) <= SUMMON_TARGET_RADIUS:
+						return {"kind": "summon", "slot": slot, "side": side}
+				var hero_rect := ENEMY_HERO_TARGET
+				if side == "player": hero_rect.position.x = VIEW_SIZE.x - hero_rect.end.x
+				if hero_rect.has_point(point): return {"kind": "hero", "side": side}
 		"none":
 			if point.y < DROP_ZONE_Y:
 				return {}
@@ -653,11 +656,12 @@ func _show_drag_hints(card: Dictionary) -> void:
 			if manager.player.summons[slot] == null:
 				choices.append({"selection": {"kind": "slot", "slot": slot}, "point": _summon_point("player", slot)})
 	elif mode == "damage":
-		choices.append({"selection": {"kind": "hero"}, "point": _anchor("enemy")})
-		for slot in manager.enemy.summons.size():
-			var summoned: Summon = manager.enemy.summons[slot]
-			if summoned != null:
-				choices.append({"selection": {"kind": "summon", "slot": slot}, "point": _summon_point("enemy", slot)})
+		for side in manager.damage_target_sides(manager.player, card):
+			var owner := manager.player if side == "player" else manager.enemy
+			choices.append({"selection": {"kind": "hero", "side": side}, "point": _anchor(side)})
+			for slot in owner.summons.size():
+				if owner.summons[slot] != null:
+					choices.append({"selection": {"kind": "summon", "slot": slot, "side": side}, "point": _summon_point(side, slot)})
 	for choice in choices:
 		var marker := TARGET_MARKER_SCRIPT.new()
 		marker.configure(mode == "slot")
@@ -688,7 +692,7 @@ func _update_drag_hints(card: Dictionary, pointer: Vector2) -> void:
 		var selected: Dictionary = hint.get_meta("selection")
 		var all_targets := false
 		for effect in card["effects"]:
-			if effect.get("scope", "single") == "all_opponents": all_targets = true
+			if effect.get("scope", "single") in ["all_opponents", "all"]: all_targets = true
 		hint.call("set_highlighted", selected == selection or (all_targets and manager.valid_card_target(manager.player, card, selection)))
 	if not is_instance_valid(damage_preview):
 		return
@@ -739,6 +743,7 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _target_point(side: String, selection: Dictionary) -> Vector2:
+	side = str(selection.get("side", side))
 	if selection.get("kind", "") in ["slot", "summon"]:
 		return _summon_point(side, int(selection["slot"]))
 	return _anchor(side)
@@ -826,15 +831,28 @@ func _run_enemy_turn() -> void:
 
 func _cast_card(card: Dictionary, side: String, destination: Vector2) -> float:
 	for effect in card["effects"]:
-		if effect.get("scope", "single") != "all_opponents": continue
-		var target_side := "enemy" if side == "player" else "player"
-		var owner := manager.enemy if side == "player" else manager.player
-		var duration := battle_fx.cast(card, side, Vector2(-1, -1), _anchor(target_side))
-		for slot in owner.summons.size():
-			if owner.summons[slot] != null:
-				battle_fx.cast(card, side, Vector2(-1, -1), _summon_point(target_side, slot))
+		if effect.get("scope", "single") not in ["all_opponents", "all"]: continue
+		var actor := manager.player if side == "player" else manager.enemy
+		var duration := 0.0
+		for target_side in manager.damage_target_sides(actor, card):
+			var owner := manager.player if target_side == "player" else manager.enemy
+			duration = battle_fx.cast(card, side, Vector2(-1, -1), _anchor(target_side))
+			for slot in owner.summons.size():
+				if owner.summons[slot] != null:
+					battle_fx.cast(card, side, Vector2(-1, -1), _summon_point(target_side, slot))
 		return duration
-	return battle_fx.cast(card, side, Vector2(-1, -1), destination)
+	var duration := battle_fx.cast(card, side, Vector2(-1, -1), destination)
+	var hits := 0
+	for effect in card["effects"]:
+		if effect["type"] == "damage": hits += 1
+	var generation := manager.battle_generation
+	for hit in range(1, hits):
+		var next_cast := battle_fx.create_tween()
+		next_cast.tween_interval(hit * 0.16)
+		next_cast.tween_callback(func():
+			if generation == manager.battle_generation:
+				battle_fx.cast(card, side, Vector2(-1, -1), destination))
+	return duration + maxi(0, hits - 1) * 0.16
 
 func _present_card(card: Dictionary, side: String, source: Vector2) -> void:
 	var dim := ColorRect.new()
@@ -913,7 +931,8 @@ func _build_result() -> void:
 	add_child(dim)
 	var box := _panel(self, Rect2(480, 225, 640, 425), PANEL_DARK, GOLD, 18)
 	var won := manager.phase == "victory"
-	_label(box, "胜 利" if won else "败 北", Vector2(70, 36), Vector2(500, 73), 54, GOLD if won else RED, HORIZONTAL_ALIGNMENT_CENTER)
+	var result_title := "平 局" if manager.phase == "draw" else ("胜 利" if won else "败 北")
+	_label(box, result_title, Vector2(70, 36), Vector2(500, 73), 54, GOLD if won or manager.phase == "draw" else RED, HORIZONTAL_ALIGNMENT_CENTER)
 	_label(box, "对阵 %s · %d 回合" % [manager.enemy.display_name, manager.round_number], Vector2(60, 122), Vector2(520, 40), 24, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	_label(box, "打出 %d 张牌     造成 %d 伤害     削减 %d 能量" % [manager.played_cards, manager.player_damage, manager.energy_destroyed], Vector2(40, 190), Vector2(560, 65), 19, MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 	_button(box, "再次挑战", Rect2(70, 296, 225, 62), func(): _start_battle(), Color("#604a31"), GOLD)
@@ -937,11 +956,26 @@ func _play_hit_feedback(target: Control, side: String) -> void:
 	target.set_meta("hit_tween", tween)
 
 func _show_damage_number(amount: int, point: Vector2, matchup: String = "") -> void:
+	# Successive hits resolve in one model action. Stagger their callouts so the
+	# second number does not completely cover the first.
+	var now := Time.get_ticks_msec()
+	var ordinal := 0
+	for child in fx_layer.get_children():
+		if child is DamageNumber and child.get_meta("damage_point", Vector2(-1, -1)) == point and now - int(child.get_meta("born_tick", -1000)) < 100:
+			ordinal += 1
 	var number: DamageNumber = DAMAGE_NUMBER_SCRIPT.new()
 	number.configure(amount, matchup)
-	number.position = point - Vector2(119, 94)
+	number.position = point - Vector2(119, 94) + Vector2(ordinal * 30, ordinal * 80)
+	number.set_meta("damage_point", point)
+	number.set_meta("born_tick", now)
 	fx_layer.add_child(number)
-	number.play()
+	if ordinal == 0:
+		number.play()
+	else:
+		number.modulate.a = 0.0
+		var delay := number.create_tween()
+		delay.tween_interval(ordinal * 0.16)
+		delay.tween_callback(func(): number.modulate.a = 1.0; number.play())
 
 func _on_summon_event(side: String, slot: int, kind: String, element: String, amount: int, matchup: String = "") -> void:
 	if fx_layer == null or not is_inside_tree():

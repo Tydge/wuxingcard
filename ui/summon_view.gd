@@ -3,19 +3,22 @@ extends Panel
 
 const VIEW_SIZE := Vector2(190, 190)
 var summon_ref: Summon
+var portrait: TextureRect
 var hp_label: Label
 var trigger_tween: Tween
 
-func configure(summoned: Summon) -> void:
+func configure(summoned: Summon, mirrored: bool = false) -> void:
 	summon_ref = summoned
 	size = VIEW_SIZE
 	custom_minimum_size = VIEW_SIZE
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	var portrait := TextureRect.new()
+	portrait = TextureRect.new()
 	portrait.position = Vector2(2, 0)
 	portrait.size = Vector2(186, 162)
 	portrait.texture = load("res://assets/summons/standee/%s.webp" % summoned.id)
+	# Only mirror the artwork, preserving readable health and stable animation scale.
+	portrait.flip_h = mirrored
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
