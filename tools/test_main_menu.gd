@@ -41,7 +41,7 @@ func run() -> void:
 	var total := menu.cards.size()
 	check(menu.filtered_cards.size() == total and menu.card_nodes.size() == mini(total, 14), "collection contains every card with pagination")
 	var ordered := ["metal", "water", "wood", "fire", "earth"]
-	check(BattleRules.ELEMENTS == ordered and menu.filtered_cards[9]["element"] == "water", "collection card order follows the generating cycle")
+	check(BattleRules.ELEMENTS == ordered and menu.filtered_cards[10]["element"] == "water", "collection card order follows the generating cycle")
 	for index in range(1, ordered.size()):
 		check(menu.filter_buttons[ordered[index]].position.y > menu.filter_buttons[ordered[index - 1]].position.y, "collection filter buttons follow metal, water, wood, fire, earth")
 	await shot("collection")
@@ -68,7 +68,7 @@ func run() -> void:
 	menu.call("_change_page", 1)
 	menu.filter_buttons["metal"].pressed.emit()
 	await create_timer(0.6).timeout
-	check(menu.page == 0 and menu.selected_element == "metal" and menu.filtered_cards.size() == 9, "changing filter cancels an unfinished page turn")
+	check(menu.page == 0 and menu.selected_element == "metal" and menu.filtered_cards.size() == 10, "changing filter cancels an unfinished page turn")
 	menu.filter_buttons["all"].pressed.emit()
 	check(menu.page_motion.page_views[1][0] == cached_card, "returning to all after filtering reuses cached card nodes")
 	var seen: Array[String] = []

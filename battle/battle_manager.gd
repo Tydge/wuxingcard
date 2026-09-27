@@ -245,6 +245,8 @@ func _trigger_summons(actor: Combatant, timing: String = "turn_start") -> void:
 			var resolved: Dictionary = effect.duplicate(true)
 			if not resolved.has("target"):
 				resolved["target"] = "self"
+			if resolved["target"] == "lowest_opponent":
+				resolved["selection"] = lowest_life_target(opponent)
 			summon_triggered.emit(_side(actor), slot, timing, resolved)
 			if summon_presenter.is_valid():
 				await summon_presenter.call(_side(actor), slot, summoned, resolved, "cast")
@@ -252,12 +254,29 @@ func _trigger_summons(actor: Combatant, timing: String = "turn_start") -> void:
 				return
 			if actor.summons[slot] != summoned:
 				break
-			_resolve_effect(actor, opponent, resolved, summoned.element)
+			_resolve_effect(actor, opponent, resolved, summoned.element, resolved.get("selection", {}))
 			if summon_presenter.is_valid():
 				changed.emit()
 				await summon_presenter.call(_side(actor), slot, summoned, resolved, "resolved")
 			if generation != battle_generation or phase in ["menu", "victory", "defeat", "draw"]:
 				return
+
+func lowest_life_target(owner: Combatant) -> Dictionary:
+	var candidates: Array[Dictionary] = []
+	var lowest := 2147483647
+	if owner.hp > 0:
+		lowest = owner.hp
+		candidates.append({"kind": "hero", "side": _side(owner)})
+	for slot in owner.summons.size():
+		var summoned: Summon = owner.summons[slot]
+		if summoned == null or summoned.hp <= 0: continue
+		if summoned.hp < lowest:
+			lowest = summoned.hp
+			candidates.clear()
+		if summoned.hp == lowest:
+			candidates.append({"kind": "summon", "side": _side(owner), "slot": slot})
+	if candidates.is_empty(): return {}
+	return candidates[rng.randi_range(0, candidates.size() - 1)]
 
 func card_target_mode(card: Dictionary) -> String:
 	for effect in card["effects"]:

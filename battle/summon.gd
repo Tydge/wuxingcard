@@ -7,6 +7,7 @@ var display_name := ""
 var element := ""
 var max_hp := 15
 var hp := 15
+var art_scale := 1.0
 var turn_start_effects: Array = []
 var turn_end_effects: Array = []
 
@@ -17,5 +18,7 @@ func setup(data: Dictionary) -> void:
 	element = str(data["element"])
 	max_hp = int(data.get("hp", 15))
 	hp = max_hp
+	# Battlefield art only; card framing, HP badge and target area remain stable.
+	art_scale = clampf(float(data.get("art_scale", 1.0)), 0.5, 1.5)
 	turn_start_effects = data.get("turn_start", []).duplicate(true)
 	turn_end_effects = data.get("turn_end", []).duplicate(true)

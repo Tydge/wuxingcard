@@ -33,3 +33,7 @@
 所有场上立绘要求完整主体、真实透明 alpha、清晰轮廓；卡面要求主体位于中央约 70%，保留周围环境；两类图片都不得包含卡框、UI、文字、数字或水印。
 
 立绘路径：`assets/summons/standee/{summon_id}.webp`。手牌插画路径：`assets/cards/generated/{summon_id}_card.webp`。可运行 `Godot --headless --path . --script res://tools/test_summon_art.gd` 检查透明角落和 4:3 比例。
+
+## 第三组：活物灵兽
+
+金翎隼、灵汐鲤、碧瘴蛙、赤尾狐、岩甲獾；每种各有透明场上立绘与基于它生成的独立卡面插画。完整提示词和资源路径见 [第三组美术记录](summon_wave3_art_2026-09-27.md)。未来召唤物以活物为主，法宝留给后续装备机制。

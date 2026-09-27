@@ -58,7 +58,7 @@ func run() -> void:
 			if timing == "turn_start":
 				check(int(actor.energy["water"]) == 2 and actor.hand.size() == 5 and actor.status_stacks("charge") == 2, "animated start effects settled")
 			else:
-				check(opponent.hp == 96 and actor.hp == 73 and actor.status_stacks("tenacity") == 1, "animated end effects settled")
+				check(opponent.hp == 96 and actor.hp == 74 and actor.status_stacks("tenacity") == 1, "animated end effects settled")
 	# Exercise the actual end-turn button flow through the enemy's entire turn.
 	manager.summon_triggered.disconnect(on_trigger)
 	var turn_order: Array[String] = []

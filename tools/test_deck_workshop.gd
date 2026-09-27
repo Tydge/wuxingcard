@@ -128,7 +128,7 @@ func run() -> void:
 	workshop.deck_buttons[saved_id].pressed.emit()
 	check(workshop.view_mode == "editor" and workshop.draft.size() == 1, "saved deck click reopens its editor")
 	workshop.filter_buttons["wood"].pressed.emit()
-	check(workshop.filtered_cards.size() == 9 and workshop.draft.size() == 1, "element filtering preserves the current deck")
+	check(workshop.filtered_cards.size() == 10 and workshop.draft.size() == 1, "element filtering preserves the current deck")
 	for candidate in workshop.card_nodes:
 		if candidate.card["id"] == "wood_regen": card = candidate
 	var point := screen_point(card, Vector2(70, 70))

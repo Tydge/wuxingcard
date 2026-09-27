@@ -2,6 +2,8 @@
 
 使用内置 imagegen，为六张新卡分别生成独立插画。原图保留在生成目录；游戏使用 4:3 WebP，未替换已有资源。
 
+后续更新：燎原已更名为三昧火；三昧火与连锋诀均已重绘并替换游戏资源。当前版本的提示词和原图见 [第三组召唤物与法术改图](summon_wave3_art_2026-09-27.md)，下文保留初版生成记录。
+
 ## 连锋诀（`metal_twin_blades`）
 
 - 游戏资源：`assets/cards/generated/metal_twin_blades.webp`

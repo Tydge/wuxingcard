@@ -40,7 +40,7 @@ func run() -> void:
 	manager.phase = "player_turn_end"
 	await manager._end_turn(manager.player)
 	check(timeline == ["player:0:cast", "player:0:resolved", "player:1:cast", "player:1:resolved", "player:2:cast", "player:2:resolved"], "end effects present top to bottom")
-	check(manager.enemy.hp == 96 and manager.player.hp == 73 and manager.player.status_stacks("tenacity") == 1, "end triggers preserve their new buff after old charge loses a layer")
+	check(manager.enemy.hp == 96 and manager.player.hp == 74 and manager.player.status_stacks("tenacity") == 1, "end triggers preserve their new buff after old charge loses a layer")
 
 	timeline.clear()
 	populate(manager.enemy, ["metal_furnace", "water_conch", "metal_chime"])

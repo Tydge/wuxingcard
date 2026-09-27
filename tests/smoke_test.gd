@@ -318,7 +318,7 @@ func test_new_summon_rules(manager: BattleManager) -> void:
 		"wood_deer": ["wood", 2, 13],
 		"water_conch": ["water", 2, 10],
 		"fire_raven": ["fire", 2, 11],
-		"earth_tortoise": ["earth", 2, 15],
+		"earth_tortoise": ["earth", 2, 16],
 	}
 	for summon_id in expected:
 		var template: Dictionary = manager.summon_templates[summon_id]
@@ -335,7 +335,7 @@ func test_new_summon_rules(manager: BattleManager) -> void:
 	actor.summons[0].setup(manager.summon_templates["wood_deer"])
 	actor.hp = 80
 	manager._trigger_summons(actor, "turn_end")
-	check(actor.hp == 83, "wood deer heals at turn end")
+	check(actor.hp == 84, "wood deer heals at turn end")
 	actor.summons[0].setup(manager.summon_templates["water_conch"])
 	var hand_before := actor.hand.size()
 	var pile_before := actor.draw_pile.size()

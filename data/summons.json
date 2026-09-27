@@ -5,8 +5,13 @@
   {"id":"fire_lantern","card_id":"fire_lantern_card","name":"赤焰灯","element":"fire","hp":15,"turn_start":[{"type":"gain_energy","element":"earth","amount":1}]},
   {"id":"earth_stele","card_id":"earth_stele_card","name":"坤土碑","element":"earth","hp":15,"turn_start":[{"type":"gain_energy","element":"metal","amount":1}]},
   {"id":"metal_chime","card_id":"metal_chime_card","name":"玄金铃","element":"metal","hp":12,"turn_start":[{"type":"status","target":"self","status":"charge","stacks":2}]},
-  {"id":"wood_deer","card_id":"wood_deer_card","name":"春藤鹿","element":"wood","hp":13,"turn_end":[{"type":"heal","target":"self","amount":3}]},
+  {"id":"wood_deer","card_id":"wood_deer_card","name":"春藤鹿","element":"wood","hp":13,"turn_end":[{"type":"heal","target":"self","amount":4}]},
   {"id":"water_conch","card_id":"water_conch_card","name":"听雨螺","element":"water","hp":10,"turn_start":[{"type":"draw","target":"self","amount":1}]},
   {"id":"fire_raven","card_id":"fire_raven_card","name":"离火鸦","element":"fire","hp":11,"turn_end":[{"type":"damage","target":"opponent","element":"fire","amount":4}]},
-  {"id":"earth_tortoise","card_id":"earth_tortoise_card","name":"镇山龟","element":"earth","hp":15,"turn_end":[{"type":"status","target":"self","status":"tenacity","stacks":1}]}
+  {"id":"earth_tortoise","card_id":"earth_tortoise_card","name":"镇山龟","element":"earth","hp":16,"turn_end":[{"type":"status","target":"self","status":"tenacity","stacks":1}]},
+  {"id":"metal_falcon","card_id":"metal_falcon_card","name":"金翎隼","element":"metal","hp":12,"art_scale":1.0,"turn_start":[{"type":"damage","target":"lowest_opponent","element":"metal","amount":4}]},
+  {"id":"water_koi","card_id":"water_koi_card","name":"灵汐鲤","element":"water","hp":20,"art_scale":1.08,"turn_start":[{"type":"heal","target":"self","amount":3},{"type":"damage","target":"opponent","element":"water","amount":3}]},
+  {"id":"wood_frog","card_id":"wood_frog_card","name":"碧瘴蛙","element":"wood","hp":6,"art_scale":0.82,"turn_end":[{"type":"status","target":"opponent","status":"poison","stacks":2}]},
+  {"id":"fire_fox","card_id":"fire_fox_card","name":"赤尾狐","element":"fire","hp":10,"art_scale":0.96,"turn_end":[{"type":"status","target":"opponent","status":"burn","stacks":1}]},
+  {"id":"earth_badger","card_id":"earth_badger_card","name":"岩甲獾","element":"earth","hp":16,"art_scale":1.08,"turn_end":[{"type":"status","target":"self","status":"shield","stacks":5}]}
 ]

@@ -1065,6 +1065,9 @@ func _present_summon_effect(side: String, slot: int, summoned: Summon, effect: D
 		var element := str(effect.get("element", effect.get("to", summoned.element)))
 		var target_side := side if effect.get("target", "self") == "self" else ("enemy" if side == "player" else "player")
 		var destination := _anchor(target_side)
+		var selection: Dictionary = effect.get("selection", {})
+		if selection.get("kind", "") == "summon":
+			destination = _summon_point(selection.get("side", target_side), int(selection["slot"]))
 		match str(effect["type"]):
 			"gain_energy", "lose_energy", "convert_energy": destination = _energy_point(target_side, element)
 			"draw", "discard": destination = _draw_pile_point(target_side)
