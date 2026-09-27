@@ -21,7 +21,7 @@ func run() -> void:
 	check(ui.theme.default_font != null, "game uses a complete portable font theme")
 	var manager := BattleManager.new()
 	root.add_child(manager)
-	check(manager.cards.size() == 45 and manager.summon_templates.size() == 10, "current card and summon pool is included")
+	check(manager.cards.size() == 50 and manager.summon_templates.size() == 15, "current card and summon pool is included")
 	var supported := GameFonts.BODY.get_supported_chars()
 	for card: Dictionary in manager.cards.values():
 		var art: Texture2D = load("res://assets/cards/generated/%s.webp" % card["id"])
@@ -29,7 +29,15 @@ func run() -> void:
 		for glyph in str(card["name"]) + str(card["text"]):
 			if glyph.strip_edges() != "": check(supported.contains(glyph), "bundled font covers card glyph: " + glyph)
 	for summoned: Dictionary in manager.summon_templates.values():
-		check(ResourceLoader.exists("res://assets/summons/standee/%s.webp" % summoned["id"]), "summon art included: " + summoned["id"])
+		var standee: Texture2D = load("res://assets/summons/standee/%s.webp" % summoned["id"])
+		check(standee != null and standee.get_image().detect_alpha() != Image.ALPHA_NONE, "transparent summon art included: " + summoned["id"])
+	for actor_id in ["player", "ember", "tide", "harmony"]:
+		check(ResourceLoader.exists("res://assets/characters/%s.webp" % actor_id) and ResourceLoader.exists("res://assets/characters/%s_standee.webp" % actor_id), "runtime portrait and full-body standee included: " + actor_id)
+		check(not ResourceLoader.exists("res://assets/characters/fullbody/%s.webp" % actor_id), "unused full-body source excluded: " + actor_id)
+	for element in BattleRules.ELEMENTS:
+		check(not ResourceLoader.exists("res://assets/cards/elements/%s.webp" % element), "unused shared card placeholder excluded: " + element)
+	for background in ["arena", "mountain_gate"]:
+		check(ResourceLoader.exists("res://assets/backgrounds/%s.webp" % background), "battle and home background included: " + background)
 	check(GameFonts.SERIF.get_supported_chars().contains("克") and GameFonts.SERIF.get_supported_chars().contains("抵"), "damage font covers matchup labels")
 	if OS.has_feature("windows"): check(GameFonts.body() is FontFile, "Windows body text uses the bundled CJK font")
 	for seed_value in 15:
@@ -54,5 +62,5 @@ func run() -> void:
 				check(false, "exported battle stalled: " + manager.phase)
 				break
 		check(steps < 1000, "exported random battle finishes")
-	print("Export pack verified on %s: 45 cards and art, 10 summons, bundled Chinese fonts, 15 complete battles; %d failures" % [OS.get_name(),failures])
+	print("Export pack verified on %s: 50 cards and art, 15 summons, bundled Chinese fonts, 15 complete battles; %d failures" % [OS.get_name(),failures])
 	quit(1 if failures > 0 else 0)

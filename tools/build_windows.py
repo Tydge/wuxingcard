@@ -1,30 +1,81 @@
 #!/usr/bin/env python3
 """Export and zip a self-contained Windows playtest using the saved Godot preset."""
 import argparse
-from datetime import date
+from datetime import datetime
 import hashlib
 import json
 from pathlib import Path
 import shutil
 import subprocess
+import re
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+
+def prepare_project(stage):
+    """Make an export-only copy, retaining dynamic ID-based runtime artwork."""
+    stage.mkdir(parents=True, exist_ok=False)
+    cards = json.loads((ROOT / 'data/cards.json').read_text())
+    summons = json.loads((ROOT / 'data/summons.json').read_text())
+    characters = json.loads((ROOT / 'data/characters.json').read_text())
+    runtime = {f"assets/cards/generated/{c['id']}.webp" for c in cards}
+    runtime.update(f"assets/summons/standee/{s['id']}.webp" for s in summons)
+    for actor in characters:
+        runtime.update([f"assets/characters/{actor['id']}.webp", f"assets/characters/{actor['id']}_standee.webp"])
+    runtime.update(['assets/backgrounds/arena.webp', 'assets/backgrounds/mountain_gate.webp'])
+    # Keep literal references as well as the artwork loaded dynamically by ID.
+    for directory in ['ui', 'battle', 'data']:
+        for source in (ROOT / directory).rglob('*'):
+            if source.suffix in ['.gd', '.tscn']:
+                runtime.update(p for p in re.findall(r'res://(assets/[^"\s]+)', source.read_text()) if '%' not in p)
+        shutil.copytree(ROOT / directory, stage / directory)
+    for filename in ['project.godot', 'export_presets.cfg']:
+        shutil.copy2(ROOT / filename, stage / filename)
+    for filename in sorted(runtime):
+        source = ROOT / filename
+        if not source.is_file():
+            raise FileNotFoundError(f'Required runtime resource is missing: {filename}')
+        target = stage / filename
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+        sidecar = source.with_name(source.name + '.import')
+        if sidecar.is_file():
+            shutil.copy2(sidecar, target.with_name(target.name + '.import'))
+    all_images = {p.relative_to(ROOT).as_posix() for p in (ROOT / 'assets').rglob('*.webp')}
+    omitted = sorted(all_images - runtime)
+    plan = {
+        'quality': 0.95,
+        'images': sorted(all_images & runtime),
+        'excluded_images': omitted,
+        'excluded_source_bytes': sum((ROOT / p).stat().st_size for p in omitted),
+    }
+    (stage / 'work').mkdir()
+    report = stage / 'work/export_art_report.json'
+    report.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + '\n')
+    return report
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--godot', default='/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot')
     args = parser.parse_args()
-    stamp = date.today().isoformat()
+    built = datetime.now().astimezone()
+    stamp = built.strftime('%Y-%m-%d_%H%M%S')
+    stage = ROOT / 'work' / f'windows-export-{stamp}'
+    report = prepare_project(stage)
+    subprocess.run([args.godot, '--headless', '--path', str(stage), '--script', str(ROOT / 'tools/prepare_export_art.gd'), '--', str(report)], check=True)
+    subprocess.run([args.godot, '--headless', '--path', str(stage), '--editor', '--import', '--quit'], check=True)
+    subprocess.run([args.godot, '--headless', '--path', str(stage), '--script', str(ROOT / 'tools/verify_export_art.gd'), '--', str(report)], check=True)
+    art_report = json.loads(report.read_text())
     folder = ROOT / 'dist' / f'WuxingMingpan-Windows-{stamp}'
-    folder.mkdir(parents=True, exist_ok=True)
+    folder.mkdir(parents=True, exist_ok=False)
     executable = folder / 'WuxingMingpan.exe'
-    subprocess.run([args.godot, '--headless', '--path', str(ROOT), '--editor', '--import', '--quit'], check=True)
-    subprocess.run([args.godot, '--headless', '--path', str(ROOT), '--export-release', 'Windows Desktop', str(executable)], check=True)
+    subprocess.run([args.godot, '--headless', '--path', str(stage), '--export-release', 'Windows Desktop', str(executable)], check=True)
     pack = executable.with_suffix('.pck')
     if not executable.is_file() or not pack.is_file():
         raise RuntimeError('Windows export did not produce both the executable and resource pack')
-    instructions = '''五行 · 命盘 — Windows 试玩版
+    subprocess.run([args.godot, '--headless', '--main-pack', str(pack), '--script', str(ROOT / 'tools/verify_export_pack.gd')], check=True, cwd=stage)
+    card_count = len(json.loads((ROOT / 'data' / 'cards.json').read_text()))
+    instructions = f'''五行 · 命盘 — Windows 试玩版
 
 启动：解压整个文件夹，双击 WuxingMingpan.exe。
 无需安装 Godot。请让 WuxingMingpan.exe 与 WuxingMingpan.pck 保持在同一文件夹。
@@ -35,7 +86,7 @@ def main():
 2. 鼠标悬停手牌查看详情；停留半秒后显示状态关键词说明。
 3. 将伤害牌拖到对手或其召唤物；召唤牌拖到我方空槽位。
 4. 其他牌拖到手牌区域上方释放；点“结束回合”让敌人行动。
-5. “卡牌一览”收录当前 50 张卡牌，可以按属性筛选、点击放大，点击旁边收回。
+5. “卡牌一览”收录当前 {card_count} 张卡牌，可以按属性筛选、点击放大，点击旁边收回。
 6. 肉鸽、竞技、无尽模式暂未开放。当前版本为单机测试模式。
 
 反馈问题时，附上截图、刚刚使用的卡牌和发生问题前的操作。
@@ -50,8 +101,8 @@ def main():
         shutil.copy2(ROOT / 'assets' / 'fonts' / name, licenses / name)
     for name in ['Godot-LICENSE.txt', 'Godot-COPYRIGHT.txt']:
         shutil.copy2(ROOT / 'licenses' / name, licenses / name)
-    card_count = len(json.loads((ROOT / 'data' / 'cards.json').read_text()))
-    manifest = {'built':stamp, 'engine':subprocess.check_output([args.godot, '--version'],text=True).strip(), 'platform':'Windows x86_64', 'cards':card_count, 'files':[]}
+    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
+    manifest = {'built':built.isoformat(), 'revision':revision, 'engine':subprocess.check_output([args.godot, '--version'],text=True).strip(), 'platform':'Windows x86_64', 'cards':card_count, 'summons':len(json.loads((ROOT / 'data/summons.json').read_text())), 'art':art_report, 'files':[]}
     for path in sorted(folder.rglob('*')):
         if not path.is_file() or path.name == 'build_info.json': continue
         manifest['files'].append({'path':path.relative_to(folder).as_posix(), 'bytes':path.stat().st_size, 'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})

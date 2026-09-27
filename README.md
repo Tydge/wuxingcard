@@ -105,16 +105,16 @@ Godot 4.6 的单机 PVE 五行卡牌战斗原型。三份 v0.3 原始设计文�
 python3 tools/build_windows.py
 ```
 
-其他环境可用 `--godot /路径/Godot` 指定引擎。脚本导入资源、导出 Release 版本，生成 `dist/五行命盘_Windows_x64_试玩版_日期.zip`；压缩包包含游戏 EXE、同名 PCK、中文试玩说明、构建信息及字体/引擎授权文件。解压后双击 `WuxingMingpan.exe`，EXE 和 PCK 必须放在同一个目录。适用于 64 位 Windows 10/11，需要支持 OpenGL 3.3 的显卡驱动。
+其他环境可用 `--godot /路径/Godot` 指定引擎。脚本导入资源、导出 Release 版本，生成 `dist/五行命盘_Windows_x64_试玩版_日期_时分秒.zip`；压缩包包含游戏 EXE、同名 PCK、中文试玩说明、构建信息及字体/引擎授权文件。解压后双击 `WuxingMingpan.exe`，EXE 和 PCK 必须放在同一个目录。适用于 64 位 Windows 10/11，需要支持 OpenGL 3.3 的显卡驱动。
 
-导出包含运行所需的 `data/*.json` 和所有美术资源，排除 `work/`、`dist/`、`tests/`、`tools/`、`docs/`。中文正文内置 Noto Sans CJK SC；标题和伤害数字以内置 Noto Serif CJK SC 作为后备，字体授权保存在 `assets/fonts/`。Mac 保留原有已安装字体。引擎授权保存在 `licenses/`。`dist/` 为本地构建产物，不进入 Git。
+导出包含运行所需的 `data/*.json` 和当前卡池、角色、背景及特效的美术资源，排除 `work/`、`dist/`、`tests/`、`tools/`、`docs/`。中文正文内置 Noto Sans CJK SC；标题和伤害数字以内置 Noto Serif CJK SC 作为后备，字体授权保存在 `assets/fonts/`。Mac 保留原有已安装字体。引擎授权保存在 `licenses/`。`dist/` 为本地构建产物，不进入 Git。
 
-**下次导出约定**：优先排除未使用的旧卡图、肖像等资源，并逐类比较高质量图片压缩（优先评估 Godot 导入压缩，不覆盖原始美术）；以放大卡牌和透明边缘的实际画质决定参数，尽量缩小试玩包且保持视觉质量。本轮不重新打包。
+**体积优化**：构建脚本在 `work/windows-export-日期_时分秒/` 创建独立项目副本，只保留当前卡池、召唤物、角色肖像与战场立绘等运行资源；不打包未使用的五行占位卡图和全身立绘源图。仅在这个副本中将不透明卡图、卡背和背景设置为 0.95 品质的 Godot 有损导入压缩，尺寸不变；透明立绘、特效保持无损，原项目美术与导入设置不变。导出前逐图校验尺寸与压缩质量，再从导出的 PCK 检查完整卡池、中文字体并模拟对战；试玩包附有构建提交号、时间、资源报告和文件校验信息。同日多次构建使用不同时间戳，不覆盖旧包。放大卡牌与透明边缘仍需视觉检查，质量参数可在后续按实际画质调整。
 
 验证包中的实际资源和规则，可将项目外的验证脚本传给引擎：
 
 ```sh
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --headless --main-pack dist/WuxingMingpan-Windows-日期/WuxingMingpan.pck --script tools/verify_export_pack.gd
+/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --headless --main-pack dist/WuxingMingpan-Windows-日期_时分秒/WuxingMingpan.pck --script tools/verify_export_pack.gd
 ```
 
 Windows 上可使用同样的 `--headless --script 验证脚本绝对路径` 参数启动导出的 EXE；验证脚本作为外部开发文件传入，不包含在试玩包内。
