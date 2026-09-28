@@ -17,7 +17,7 @@ func _drop_data(_at_position: Vector2, data: Variant) -> void:
 func _process(_delta: float) -> void:
 	var dragging := get_viewport().gui_is_dragging()
 	var valid := dragging and _can_drop_data(Vector2.ZERO, get_viewport().gui_get_drag_data())
-	var over := valid and Rect2(global_position, size).has_point(get_global_mouse_position())
+	var over := valid and Rect2(Vector2.ZERO, size).has_point(get_local_mouse_position())
 	if hovered != over:
 		hovered = over
 		queue_redraw()

@@ -31,6 +31,7 @@ def prepare_project(stage):
         shutil.copytree(ROOT / directory, stage / directory)
     for filename in ['project.godot', 'export_presets.cfg']:
         shutil.copy2(ROOT / filename, stage / filename)
+        runtime.update(p for p in re.findall(r'res://(assets/[^"\s]+)', (ROOT / filename).read_text()) if '%' not in p)
     for filename in sorted(runtime):
         source = ROOT / filename
         if not source.is_file():

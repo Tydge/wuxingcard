@@ -15,6 +15,8 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="五行 · 命盘"
+config/icon="res://assets/ui/app_icon.svg"
+config/quit_on_go_back=false
 run/main_scene="res://battle/battle_scene.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 
@@ -25,8 +27,16 @@ window/size/viewport_height=900
 window/size/window_width_override=1440
 window/size/window_height_override=810
 window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+window/handheld/orientation=4
+
+[input_devices]
+
+pointing/emulate_mouse_from_touch=true
 
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+
+textures/vram_compression/import_etc2_astc=true

@@ -42,6 +42,7 @@ var page_motion: CardPageMotion
 var cached_pages := {}
 var previous_page_button: Button
 var next_page_button: Button
+var quit_dialog: Control
 
 func configure(card_data: Dictionary, factory: Callable, summon_data: Dictionary = {}) -> void:
 	cards = card_data
@@ -89,7 +90,7 @@ func _reset_content() -> void:
 		motion.hide()
 		motion.reset_page()
 	if is_instance_valid(content):
-		remove_child(content)
+		content.hide()
 		content.queue_free()
 	content = Control.new()
 	content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -232,21 +233,23 @@ func _collection_motion(element: String, data: Array[Dictionary]) -> CardPageMot
 		page_turn_tween = tween
 		_update_page_navigation())
 	motion.turn_finished.connect(func(): page_turn_busy = false; page_turn_tween = null)
-	motion.configure(data, PAGE_SIZE, _create_collection_card)
+	motion.configure(data, 8 if PlatformUI.is_touch() else PAGE_SIZE, _create_collection_card)
 	cached_pages[element] = motion
 	return motion
 
 func _create_collection_card(card: Dictionary, index: int, sheet: Control) -> Control:
-	var pos := Vector2(283 + (index % 7) * 177, 209 + (index / 7) * 276)
-	var slot := _panel(sheet, Rect2(pos - Vector2(10, 10), Vector2(176, 263)), Color("#091a193d"), Color("#b79a5b22"))
-	var view: Control = card_factory.call(card, Vector2(CARD_WIDTH, CARD_WIDTH * 1.4))
+	var columns := 4 if PlatformUI.is_touch() else 7
+	var width := 184.0 if PlatformUI.is_touch() else CARD_WIDTH
+	var pos := Vector2(322 + (index % columns) * 292, 195 + (index / columns) * 295) if PlatformUI.is_touch() else Vector2(283 + (index % columns) * 177, 209 + (index / columns) * 276)
+	var slot := _panel(sheet, Rect2(pos - Vector2(10, 10), (Vector2(width + 20, width * 1.4 + 40) if PlatformUI.is_touch() else Vector2(176, 263))), Color("#091a193d"), Color("#b79a5b22"))
+	var view: Control = card_factory.call(card, Vector2(width, width * 1.4))
 	sheet.add_child(view)
 	view.position = pos
 	view.mouse_filter = Control.MOUSE_FILTER_STOP
 	view.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	view.gui_input.connect(_card_input.bind(card, view))
 	var kind := "召唤" if view is SummonCardView else "法术"
-	_text(slot, "%s · %d费" % [kind, int(card["cost"])], Rect2(0, 239, 176, 22), 14, Color("#a6b7a2"), false, HORIZONTAL_ALIGNMENT_CENTER)
+	_text(slot, "%s · %d费" % [kind, int(card["cost"])], (Rect2(0, width * 1.4 + 16, width + 20, 22) if PlatformUI.is_touch() else Rect2(0, 239, 176, 22)), 14, Color("#a6b7a2"), false, HORIZONTAL_ALIGNMENT_CENTER)
 	return view
 
 func _update_page_navigation() -> void:
@@ -270,8 +273,10 @@ func _card_input(event: InputEvent, card: Dictionary, source: Control) -> void:
 func _open_inspector(card: Dictionary, source: Control) -> void:
 	if is_instance_valid(inspector): return
 	inspect_source = source
-	inspect_origin = source.global_position - global_position
-	inspect_origin_scale = source.size.x * source.get_global_transform().get_scale().x / (INSPECT_WIDTH * get_global_transform().get_scale().x)
+	inspect_origin = get_global_transform().affine_inverse() * source.global_position
+	var inspect_width := 480.0 if PlatformUI.is_touch() else INSPECT_WIDTH
+	var inspect_position := Vector2((1600.0 - inspect_width) / 2.0, 114.0 if PlatformUI.is_touch() else 133.0)
+	inspect_origin_scale = source.size.x * source.get_global_transform().get_scale().x / (inspect_width * get_global_transform().get_scale().x)
 	closing_inspector = false
 	inspector = Control.new()
 	inspector.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -285,24 +290,31 @@ func _open_inspector(card: Dictionary, source: Control) -> void:
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	inspector.add_child(shade)
 	shade.modulate.a = 0.0
-	inspect_card = card_factory.call(card, Vector2(INSPECT_WIDTH, INSPECT_WIDTH * 1.4))
+	inspect_card = card_factory.call(card, Vector2(inspect_width, inspect_width * 1.4))
 	inspector.add_child(inspect_card)
 	inspect_card.mouse_filter = Control.MOUSE_FILTER_STOP
 	inspect_card.position = inspect_origin
 	inspect_card.scale = Vector2.ONE * inspect_origin_scale
 	source.visible = false
-	var hint := _text(inspector, "点击空白处收起 · Esc 返回", Rect2(500, 775, 600, 40), 18, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
+	var hint := _text(inspector, "轻点空白处收起" if PlatformUI.is_touch() else "点击空白处收起 · Esc 返回", Rect2(500, 775, 600, 40), 18, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
 	hint.modulate.a = 0.0
 	var entries := CardKeywords.entries(card, summons)
 	if not entries.is_empty():
 		inspect_keywords = CardKeywordPopup.new()
 		inspector.add_child(inspect_keywords)
-		inspect_keywords.configure(entries, Rect2(600, 133, INSPECT_WIDTH, INSPECT_WIDTH * 1.4), size)
+		inspect_keywords.configure(entries, Rect2(inspect_position, Vector2(inspect_width, inspect_width * 1.4)), size)
 	inspect_tween = inspector.create_tween().set_parallel(true)
-	inspect_tween.tween_property(inspect_card, "position", Vector2(600, 133), 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	inspect_tween.tween_property(inspect_card, "position", inspect_position, 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	inspect_tween.tween_property(inspect_card, "scale", Vector2.ONE, 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	inspect_tween.tween_property(shade, "modulate:a", 1.0, 0.3)
 	inspect_tween.tween_property(hint, "modulate:a", 1.0, 0.4)
+	if PlatformUI.is_touch() and view_mode == "decks" and is_instance_valid(workshop) and workshop.view_mode == "editor":
+		hint.text = ""
+		var add_button := _button(inspector, "＋ 入组", Rect2(650, 810, 300, 72), func(): workshop.call("_add_card", card["id"]))
+		add_button.pressed.connect(func():
+			add_button.disabled = not workshop.call("_can_add", card["id"])
+			add_button.text = "已入组 %d / 2" % workshop.draft.count(card["id"]))
+		add_button.disabled = not workshop.call("_can_add", card["id"])
 
 func _close_inspector() -> void:
 	if not is_instance_valid(inspector) or closing_inspector: return
@@ -323,11 +335,32 @@ func _close_inspector() -> void:
 		inspector = null
 		inspect_card = null)
 
+func go_back() -> void:
+	if is_instance_valid(inspector):
+		_close_inspector()
+	elif is_instance_valid(quit_dialog):
+		quit_dialog.queue_free()
+		quit_dialog = null
+	elif view_mode == "collection": _show_home()
+	elif view_mode == "decks" and is_instance_valid(workshop): workshop.go_back()
+	else:
+		quit_dialog = Control.new()
+		quit_dialog.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		quit_dialog.mouse_filter = Control.MOUSE_FILTER_STOP
+		add_child(quit_dialog)
+		var shade := ColorRect.new()
+		shade.color = Color("#03101be8")
+		shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		quit_dialog.add_child(shade)
+		var panel := _panel(quit_dialog, Rect2(520, 315, 560, 260), INK, GOLD)
+		_text(panel, "离开命盘？", Rect2(30, 28, 500, 65), 36, GOLD, true, HORIZONTAL_ALIGNMENT_CENTER)
+		_button(panel, "留在山门", Rect2(38, 155, 216, 70), func(): quit_dialog.queue_free(); quit_dialog = null)
+		_button(panel, "离开", Rect2(306, 155, 216, 70), func(): get_tree().quit())
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
-		if is_instance_valid(inspector): _close_inspector()
-		elif view_mode == "collection": _show_home()
-		elif view_mode == "decks" and is_instance_valid(workshop): workshop.go_back()
+		go_back()
 		get_viewport().set_input_as_handled()
 	elif view_mode == "collection" and not is_instance_valid(inspector):
 		if event.is_action_pressed("ui_right"): _change_page(1)
@@ -371,7 +404,7 @@ func _button(parent: Node, caption: String, rect: Rect2, action: Callable, tint:
 	var button := Button.new()
 	button.text = caption
 	button.position = rect.position
-	button.size = rect.size
+	button.size = Vector2(rect.size.x, maxf(rect.size.y, 64.0)) if PlatformUI.is_touch() else rect.size
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	button.add_theme_stylebox_override("normal", _style(INK, Color(tint, 0.45)))
 	button.add_theme_stylebox_override("hover", _style(Color("#2d4d42"), tint))
@@ -379,7 +412,7 @@ func _button(parent: Node, caption: String, rect: Rect2, action: Callable, tint:
 	button.add_theme_stylebox_override("disabled", _style(Color("#142726"), Color("#47554b")))
 	button.add_theme_color_override("font_color", tint)
 	button.add_theme_color_override("font_disabled_color", Color("#69786f"))
-	button.add_theme_font_size_override("font_size", 18)
+	button.add_theme_font_size_override("font_size", 24 if PlatformUI.is_touch() else 18)
 	button.pressed.connect(action)
 	parent.add_child(button)
 	return button

@@ -16,7 +16,7 @@ func configure(entries: Array[Dictionary], rect: Rect2, bounds: Vector2) -> void
 	var left_space := rect.position.x
 	var right_space := bounds.x - rect.end.x
 	placement_side = "right" if right_space >= left_space else "left"
-	var width := minf(280.0, maxf(left_space, right_space) - 28.0)
+	var width := minf(340.0 if PlatformUI.is_touch() else 280.0, maxf(left_space, right_space) - 28.0)
 	custom_minimum_size.x = width
 	for entry in entries:
 		var panel := PanelContainer.new()
@@ -42,7 +42,7 @@ func configure(entries: Array[Dictionary], rect: Rect2, bounds: Vector2) -> void
 			label.text = entry[key]
 			label.custom_minimum_size.x = width - 28
 			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			label.add_theme_font_size_override("font_size", 20 if key == "title" else 18)
+			label.add_theme_font_size_override("font_size", (26 if key == "title" else 24) if PlatformUI.is_touch() else (20 if key == "title" else 18))
 			label.add_theme_color_override("font_color", Color("#e4c795") if key == "title" else Color("#f2eee5"))
 			column.add_child(label)
 	call_deferred("_place")

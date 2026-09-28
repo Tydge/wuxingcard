@@ -80,7 +80,7 @@ func _reset(animate: bool = true) -> void:
 		motion.hide()
 		motion.reset_page()
 	if is_instance_valid(content):
-		remove_child(content)
+		content.hide()
 		content.queue_free()
 	content = Control.new()
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -212,7 +212,7 @@ func _build_editor(animate: bool = true) -> void:
 	page_label = _text(content, "", Rect2(644, 805, 140, 48), 21, GOLD, false, HORIZONTAL_ALIGNMENT_CENTER)
 	next_page_button = _button(content, "›", Rect2(810, 805, 72, 48), _change_page.bind(1))
 	_update_page_navigation()
-	_text(content, "拖入卡组 · 点击查看", Rect2(228, 772, 926, 28), 15, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
+	_text(content, "" if PlatformUI.is_touch() else "拖入卡组 · 点击查看", Rect2(228, 772, 926, 28), 15, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
 	name_edit = LineEdit.new()
 	name_edit.position = Vector2(1205, 124)
 	name_edit.size = Vector2(314, 41)
@@ -286,13 +286,16 @@ func _update_editor(highlight: String = "") -> void:
 	play_button.disabled = not store.problem(draft).is_empty()
 	var scroll := row_scroll.scroll_vertical
 	for child in row_column.get_children():
-		row_column.remove_child(child)
+		if child is CanvasItem: child.hide()
 		child.queue_free()
 	row_nodes.clear()
 	for id in _sorted_unique(draft):
 		var row := DeckRow.new()
 		row.configure(cards[id], draft.count(id))
-		row.pressed.connect(_remove_card.bind(id))
+		if PlatformUI.is_touch():
+			row.pressed.connect(func(): inspect_requested.emit(row.card, row.inspect_anchor))
+			row.remove_requested.connect(_remove_card)
+		else: row.pressed.connect(_remove_card.bind(id))
 		row.inspect_requested.connect(func(card: Dictionary, source: Control): inspect_requested.emit(card, source))
 		row_column.add_child(row)
 		row_nodes[id] = row
@@ -300,19 +303,19 @@ func _update_editor(highlight: String = "") -> void:
 			row.modulate = Color("#ffeeaa")
 			row.create_tween().tween_property(row, "modulate", Color.WHITE, 0.3)
 	if draft.is_empty():
-		_text(row_column, "拖入第一张卡牌", Rect2(0, 0, 306, 95), 22, JADE, true, HORIZONTAL_ALIGNMENT_CENTER)
+		_text(row_column, "点 ＋ 加入卡牌" if PlatformUI.is_touch() else "拖入第一张卡牌", Rect2(0, 0, 306, 95), 22, JADE, true, HORIZONTAL_ALIGNMENT_CENTER)
 	row_scroll.set_deferred("scroll_vertical", scroll)
 
 func _fly_into_row(id: String, source: Vector2) -> void:
 	var flying: Control = factory.call(cards[id], Vector2(100, 140))
-	flying.position = source - global_position - flying.size / 2.0
+	flying.position = get_global_transform().affine_inverse() * source - flying.size / 2.0
 	flying.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	flying.pivot_offset = flying.size / 2.0
 	effects.add_child(flying)
 	await get_tree().process_frame
 	if not is_instance_valid(row_nodes.get(id)): flying.queue_free(); return
 	var row: Control = row_nodes[id]
-	var destination := row.global_position - global_position + row.size / 2.0 - flying.size / 2.0
+	var destination := get_global_transform().affine_inverse() * row.global_position + row.size / 2.0 - flying.size / 2.0
 	var tween := flying.create_tween().set_parallel(true)
 	tween.tween_property(flying, "position", destination, 0.24).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tween.tween_property(flying, "scale", Vector2.ONE * 0.3, 0.24)
@@ -343,15 +346,15 @@ func _library_motion(element: String, data: Array[Dictionary]) -> CardPageMotion
 		page_turn_tween = tween
 		_update_page_navigation())
 	motion.turn_finished.connect(func(): page_turn_busy = false; page_turn_tween = null)
-	motion.configure(data, PAGE_SIZE, _create_library_card)
+	motion.configure(data, 6 if PlatformUI.is_touch() else PAGE_SIZE, _create_library_card)
 	cached_pages[element] = motion
 	return motion
 
 func _create_library_card(card: Dictionary, index: int, sheet: Control) -> Control:
 	var view := DeckLibraryCard.new()
-	view.configure(card, factory, CARD_WIDTH)
+	view.configure(card, factory, 180.0 if PlatformUI.is_touch() else CARD_WIDTH)
 	view.set_copies(draft.count(card["id"]))
-	view.position = Vector2(247 + (index % 6) * 148, 211 + (index / 6) * 277)
+	view.position = Vector2(267 + (index % 3) * 300, 190 + (index / 3) * 302) if PlatformUI.is_touch() else Vector2(247 + (index % 6) * 148, 211 + (index / 6) * 277)
 	view.inspect_requested.connect(func(data: Dictionary, source: Control):
 		if not page_turn_busy: inspect_requested.emit(data, source))
 	view.add_requested.connect(func(id: String):
@@ -477,7 +480,7 @@ func _button(parent: Node, caption: String, rect: Rect2, action: Callable, tint:
 	var button := Button.new()
 	button.text = caption
 	button.position = rect.position
-	button.size = rect.size
+	button.size = Vector2(rect.size.x, maxf(rect.size.y, 64.0)) if PlatformUI.is_touch() else rect.size
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	button.add_theme_stylebox_override("normal", _style(INK, Color(tint, 0.45)))
 	button.add_theme_stylebox_override("hover", _style(Color("#2d4d42"), tint))
@@ -485,7 +488,7 @@ func _button(parent: Node, caption: String, rect: Rect2, action: Callable, tint:
 	button.add_theme_stylebox_override("disabled", _style(Color("#142726"), Color("#47554b")))
 	button.add_theme_color_override("font_color", tint)
 	button.add_theme_color_override("font_disabled_color", Color("#69786f"))
-	button.add_theme_font_size_override("font_size", 18)
+	button.add_theme_font_size_override("font_size", 24 if PlatformUI.is_touch() else 18)
 	button.pressed.connect(action)
 	parent.add_child(button)
 	return button

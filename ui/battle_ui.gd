@@ -101,8 +101,21 @@ var pending_player_draws := 0
 var pending_enemy_draws := 0
 var draw_generation := 0
 var draw_animation_active := false
+var touch_finger := -1
+var touch_hand_index := -1
+var touch_origin := Vector2.ZERO
+var touch_inspecting := false
+var touch_block_mouse := false
+var touch_shade: ColorRect
+var status_touch_regions: Array[Dictionary] = []
+var back_dialog: Control
 
 func _ready() -> void:
+	if OS.has_feature("android"):
+		get_tree().auto_accept_quit = false
+		Engine.max_fps = 60
+		get_viewport().size_changed.connect(_fit_mobile_surface)
+		_fit_mobile_surface()
 	var custom_theme := Theme.new()
 	custom_theme.default_font = GameFonts.body()
 	custom_theme.default_font_size = 18
@@ -174,13 +187,28 @@ func _button(parent: Node, value: String, rect: Rect2, action: Callable, color: 
 	parent.add_child(b)
 	return b
 
+func _fit_mobile_surface() -> void:
+	var available := get_viewport_rect()
+	var safe := DisplayServer.get_display_safe_area()
+	if safe.size.x > 0 and safe.size.y > 0:
+		var inverse := get_viewport().get_screen_transform().affine_inverse()
+		available = available.intersection(Rect2(inverse * Vector2(safe.position), inverse.basis_xform(Vector2(safe.size))))
+	var fitted := PlatformUI.fit_design(available, VIEW_SIZE)
+	set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	position = fitted.position
+	size = VIEW_SIZE
+	scale = Vector2.ONE * fitted.size.x / VIEW_SIZE.x
+
 func _refresh() -> void:
 	if not is_inside_tree():
 		return
 	_clear_hover_preview()
+	status_touch_regions.clear()
+	touch_finger = -1
+	touch_hand_index = -1
 	for child in get_children():
 		if child != manager and child != actor_layer and child != fx_layer:
-			remove_child(child)
+			if child is CanvasItem: child.hide()
 			child.queue_free()
 	if manager.phase == "menu":
 		_clear_discard_animations()
@@ -341,6 +369,10 @@ func _build_status_icons(actor: Combatant, side: String) -> void:
 			icon.position = origin + Vector2(12.0 + column * STATUS_ICON_STEP, -8.0 - STATUS_ICON_SIZE.y - row * STATUS_ICON_STEP)
 		else:
 			icon.position = origin + Vector2(HUD_SIZE.x - 12.0 - STATUS_ICON_SIZE.x - column * STATUS_ICON_STEP, HUD_SIZE.y + 8.0 + row * STATUS_ICON_STEP)
+		if PlatformUI.is_touch():
+			icon.scale = Vector2.ONE * 1.15
+			icon.position.x = origin.x + (12.0 + column * 54.0 if side == "player" else HUD_SIZE.x - 12.0 - 50.6 - column * 54.0)
+			status_touch_regions.append({"rect": Rect2(icon.position, STATUS_ICON_SIZE * 1.15).grow(3), "text": manager.status_tooltip(status)})
 		add_child(icon)
 
 func _portrait(parent: Node, actor_id: String, pos: Vector2, sz: Vector2, enemy_side: bool) -> void:
@@ -481,7 +513,7 @@ func _build_hand() -> void:
 			view.visible = false
 
 func _hand_card_position(index: int, count: int) -> Vector2:
-	return _fan_card_position(index, count, PLAYER_HAND_BASE_Y)
+	return _fan_card_position(index, count, PLAYER_HAND_BASE_Y - (30.0 if PlatformUI.is_touch() else 0.0))
 
 func _fan_card_position(index: int, count: int, base_y: float) -> Vector2:
 	var width := HAND_CARD_SIZE.x
@@ -489,10 +521,12 @@ func _fan_card_position(index: int, count: int, base_y: float) -> Vector2:
 	# Additional cards overlap instead of shrinking.
 	var step := minf(width - 2.0, HAND_MAX_SPAN / maxf(1.0, float(count - 1)))
 	var offset := float(index) - float(count - 1) / 2.0
-	return Vector2(HAND_CENTER_X + offset * step - width / 2.0, base_y + 6.0 * offset * offset)
+	var half := maxf(1.0, float(count - 1) / 2.0)
+	var arc := minf(54.0, 6.0 * half * half) * pow(offset / half, 2.0)
+	return Vector2(HAND_CENTER_X + offset * step - width / 2.0, base_y + arc)
 
 func _hand_angle(index: int, count: int) -> float:
-	return (float(index) - float(count - 1) / 2.0) * 3.8
+	return (float(index) - float(count - 1) / 2.0) * minf(3.8, 22.8 / maxf(1.0, float(count - 1)))
 
 func _hand_card_center(index: int, count: int) -> Vector2:
 	return _hand_card_position(index, count) + Vector2(HAND_CARD_SIZE.x / 2.0, HAND_CARD_SIZE.y * 0.45)
@@ -549,7 +583,7 @@ func _build_decks() -> void:
 	_label(self, str(manager.enemy.draw_pile.size()), ENEMY_DECK_POS + Vector2(0, DECK_SIZE.y + 2), Vector2(DECK_SIZE.x, 24), 17, GOLD, HORIZONTAL_ALIGNMENT_CENTER)
 
 func _on_hand_hover(index: int) -> void:
-	if drag_index >= 0 or action_busy or index >= hand_cards.size():
+	if PlatformUI.is_touch() or drag_index >= 0 or action_busy or index >= hand_cards.size():
 		return
 	hovered_index = index
 	var view := hand_cards[index]
@@ -559,7 +593,7 @@ func _on_hand_hover(index: int) -> void:
 	_show_hover_preview(index)
 
 func _on_hand_exit(index: int) -> void:
-	if hovered_index != index or drag_index >= 0:
+	if PlatformUI.is_touch() or hovered_index != index or drag_index >= 0:
 		return
 	hovered_index = -1
 	if index < hand_cards.size() and is_instance_valid(hand_cards[index]):
@@ -580,6 +614,10 @@ func _show_hover_preview(index: int) -> void:
 	_show_hover_keywords(card)
 
 func _on_summon_hover(side: String, slot: int) -> void:
+	if PlatformUI.is_touch(): return
+	_show_summon_preview(side, slot)
+
+func _show_summon_preview(side: String, slot: int) -> void:
 	if drag_index >= 0 or action_busy:
 		return
 	var owner: Combatant = manager.player if side == "player" else manager.enemy
@@ -600,6 +638,7 @@ func _on_summon_hover(side: String, slot: int) -> void:
 	_show_hover_keywords(card)
 
 func _on_summon_exit(side: String, slot: int) -> void:
+	if PlatformUI.is_touch(): return
 	if hovered_summon_side == side and hovered_summon_slot == slot:
 		_clear_hover_preview()
 
@@ -611,6 +650,9 @@ func _show_hover_keywords(card: Dictionary) -> void:
 	hover_keywords.configure(entries, Rect2(hover_preview.position, hover_preview.size), VIEW_SIZE)
 
 func _clear_hover_preview() -> void:
+	touch_inspecting = false
+	if is_instance_valid(touch_shade): touch_shade.queue_free()
+	touch_shade = null
 	if is_instance_valid(hover_keywords):
 		hover_keywords.hide()
 		hover_keywords.queue_free()
@@ -622,25 +664,150 @@ func _clear_hover_preview() -> void:
 	hovered_summon_slot = -1
 
 func _on_hand_input(event: InputEvent, index: int) -> void:
-	if manager.phase != "player_action" or action_busy or index >= manager.player.hand.size():
-		return
+	if PlatformUI.is_touch(): return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		var card: Dictionary = manager.cards[manager.player.hand[index]]
-		if not manager.player.can_pay(card):
-			var reason := "召唤位已满" if manager.card_target_mode(card) == "slot" and manager.player.first_free_summon_slot() < 0 else "灵气不足"
-			_show_floating(reason, "player", RED, 0, _hand_card_center(index, manager.player.hand.size()) + Vector2(-90, -120))
-			return
-		drag_index = index
-		pointer_down = get_global_mouse_position()
-		drag_offset = HAND_CARD_SIZE / 2.0
-		_clear_hover_preview()
-		if index < hand_cards.size():
-			hand_cards[index].visible = false
-		drag_card = _card_front(card, HAND_CARD_SIZE)
-		drag_card.position = pointer_down - drag_offset
-		_show_drag_hints(card)
-		fx_layer.add_child(drag_card)
+		_begin_hand_drag(index, get_local_mouse_position())
+
+func _begin_hand_drag(index: int, pointer: Vector2) -> bool:
+	if manager.phase != "player_action" or action_busy or index < 0 or index >= manager.player.hand.size(): return false
+	var card: Dictionary = manager.cards[manager.player.hand[index]]
+	if not manager.player.can_pay(card):
+		var reason := "召唤位已满" if manager.card_target_mode(card) == "slot" and manager.player.first_free_summon_slot() < 0 else "灵气不足"
+		_show_floating(reason, "player", RED, 0, _hand_card_center(index, manager.player.hand.size()) + Vector2(-90, -120))
+		return false
+	drag_index = index
+	pointer_down = pointer
+	drag_offset = HAND_CARD_SIZE / 2.0 + (Vector2(0, 105) if PlatformUI.is_touch() else Vector2.ZERO)
+	_clear_hover_preview()
+	if index < hand_cards.size(): hand_cards[index].visible = false
+	drag_card = _card_front(card, HAND_CARD_SIZE)
+	drag_card.position = pointer - drag_offset
+	_show_drag_hints(card)
+	fx_layer.add_child(drag_card)
+	return true
+
+func _finish_hand_drag(release: Vector2) -> void:
+	if drag_index < 0 or not is_instance_valid(drag_card): return
+	var index := drag_index
+	var card: Dictionary = manager.cards[manager.player.hand[index]]
+	var selection := _drop_selection(card, release)
+	drag_index = -1
+	drag_card.queue_free()
+	drag_card = null
+	_clear_drag_hints()
+	var moved := PlatformUI.is_touch() or release.distance_to(pointer_down) > 45
+	var released_in_hand := PlatformUI.is_touch() and release.y >= 640 and release.x >= 490 and release.x <= 1260
+	if moved and not released_in_hand and manager.valid_card_target(manager.player, card, selection) and selection.get("kind", "") != "invalid":
+		_play_card_from(index, release, selection)
+	else:
+		_refresh()
+
+func _touch_hand_at(point: Vector2, sliding: bool = false) -> int:
+	if hand_cards.is_empty() or point.x < 490 or point.x > 1260 or point.y < (610 if sliding else 640): return -1
+	var closest := -1
+	var distance := INF
+	for i in hand_cards.size():
+		if not is_instance_valid(hand_cards[i]) or not hand_cards[i].visible: continue
+		var center := _hand_card_center(i, hand_cards.size())
+		var delta := absf(point.x - center.x)
+		if delta < distance:
+			closest = i
+			distance = delta
+	return closest if distance < HAND_CARD_SIZE.x else -1
+
+func _show_touch_card(index: int) -> void:
+	if touch_hand_index == index and touch_inspecting: return
+	touch_hand_index = index
+	_show_hover_preview(index)
+	if not is_instance_valid(hover_preview): return
+	_place_touch_preview()
+
+func _place_touch_preview() -> void:
+	# A large stationary inspection card stays clear of the finger and the hand.
+	var card_data: Dictionary
+	if touch_hand_index >= 0:
+		card_data = manager.cards[manager.player.hand[touch_hand_index]]
+	else:
+		var owner: Combatant = manager.player if hovered_summon_side == "player" else manager.enemy
+		card_data = manager.cards[owner.summons[hovered_summon_slot].card_id]
+	if is_instance_valid(hover_keywords): hover_keywords.queue_free()
+	hover_keywords = null
+	hover_preview.queue_free()
+	touch_shade = ColorRect.new()
+	touch_shade.color = Color("#03101b8c")
+	touch_shade.size = VIEW_SIZE
+	touch_shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fx_layer.add_child(touch_shade)
+	hover_preview = _card_front(card_data, Vector2(400, 560))
+	hover_preview.position = Vector2(600, 90)
+	fx_layer.add_child(hover_preview)
+	hover_preview.modulate.a = 0.0
+	hover_preview.create_tween().tween_property(hover_preview, "modulate:a", 1.0, 0.13)
+	touch_inspecting = true
+	_show_hover_keywords(card_data)
+
+func _handle_touch(event: InputEvent) -> void:
+	if event is not InputEventScreenTouch and event is not InputEventScreenDrag: return
+	var point := PlatformUI.local_point(self, event.position)
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			if touch_finger >= 0:
+				get_viewport().set_input_as_handled()
+				return
+			if is_instance_valid(back_dialog): return
+			var index := _touch_hand_at(point)
+			if index >= 0 and not action_busy:
+				touch_finger = event.index
+				touch_origin = point
+				_show_touch_card(index)
+				get_viewport().set_input_as_handled()
+				return
+			# Inspection is modal until an outside tap; that tap does not play a card.
+			if touch_inspecting:
+				if not Rect2(hover_preview.position, hover_preview.size).has_point(point): _clear_hover_preview()
+				get_viewport().set_input_as_handled()
+				return
+			if action_busy: return
+			for entry in status_touch_regions:
+				if entry.rect.has_point(point):
+					_show_touch_status(entry.text)
+					get_viewport().set_input_as_handled()
+					return
+			for side in ["player", "enemy"]:
+				var owner := manager.player if side == "player" else manager.enemy
+				for slot in owner.summons.size():
+					if owner.summons[slot] != null and point.distance_to(_summon_point(side, slot)) < SUMMON_TARGET_RADIUS:
+						touch_hand_index = -1
+						_show_summon_preview(side, slot)
+						_place_touch_preview()
+						get_viewport().set_input_as_handled()
+						return
+		elif event.index == touch_finger:
+			touch_finger = -1
+			if event.canceled:
+				if drag_index >= 0: _finish_hand_drag(Vector2(880, 850))
+				_clear_hover_preview()
+			elif drag_index >= 0: _finish_hand_drag(point)
+			get_viewport().set_input_as_handled()
+	elif event.index == touch_finger:
+		if drag_index >= 0:
+			drag_card.position = point - drag_offset
+			_update_drag_hints(manager.cards[manager.player.hand[drag_index]], point)
+		elif touch_hand_index >= 0:
+			if point.y < 610 and point.y < touch_origin.y - 42:
+				if _begin_hand_drag(touch_hand_index, point): _update_drag_hints(manager.cards[manager.player.hand[drag_index]], point)
+			else:
+				var index := _touch_hand_at(point, true)
+				if index >= 0: _show_touch_card(index)
 		get_viewport().set_input_as_handled()
+
+func _show_touch_status(description: String) -> void:
+	_clear_hover_preview()
+	touch_hand_index = -1
+	hover_preview = _panel(fx_layer, Rect2(525, 315, 550, 210), PANEL_DARK, GOLD)
+	_label(hover_preview, description, Vector2(24, 18), Vector2(502, 140), 30)
+	_label(hover_preview, "轻点空白处收起", Vector2(24, 164), Vector2(502, 32), 22, MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	touch_inspecting = true
 
 func _drop_selection(card: Dictionary, point: Vector2) -> Dictionary:
 	match manager.card_target_mode(card):
@@ -686,10 +853,10 @@ func _show_drag_hints(card: Dictionary) -> void:
 		fx_layer.add_child(marker)
 		drag_hints.append(marker)
 	if mode == "damage":
-		damage_preview = _panel(fx_layer, Rect2(Vector2.ZERO, Vector2(200, 42)), Color("#09121ff2"), GOLD, 8)
+		damage_preview = _panel(fx_layer, Rect2(Vector2.ZERO, Vector2(200, 58 if PlatformUI.is_touch() else 42)), Color("#09121ff2"), GOLD, 8)
 		damage_preview.z_index = 20
 		damage_preview.visible = false
-		damage_preview_label = _label(damage_preview, "", Vector2(8, 0), Vector2(184, 42), 18, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+		damage_preview_label = _label(damage_preview, "", Vector2(8, 0), Vector2(184, 58 if PlatformUI.is_touch() else 42), 32 if PlatformUI.is_touch() else 18, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 
 func _clear_drag_hints() -> void:
 	for hint in drag_hints:
@@ -722,40 +889,88 @@ func _update_drag_hints(card: Dictionary, pointer: Vector2) -> void:
 		total += damage
 	var value := parts[0] if parts.size() == 1 else "%s=%d" % ["+".join(parts), total]
 	var caption := "预计伤害 " + value
-	var width := clampf(44.0 + caption.length() * 12.0, 180.0, 520.0)
-	damage_preview.size = Vector2(width, 42)
+	var width := clampf(44.0 + caption.length() * (22.0 if PlatformUI.is_touch() else 12.0), 180.0, 520.0)
+	var height := 58.0 if PlatformUI.is_touch() else 42.0
+	damage_preview.size = Vector2(width, height)
 	damage_preview_label.text = caption
-	damage_preview_label.size = Vector2(width - 16.0, 42)
+	damage_preview_label.size = Vector2(width - 16.0, height)
 	var preview_x := pointer.x + HAND_CARD_SIZE.x / 2.0 + 20.0
 	if preview_x + width > VIEW_SIZE.x - 8.0:
 		preview_x = pointer.x - HAND_CARD_SIZE.x / 2.0 - width - 20.0
-	damage_preview.position = Vector2(clampf(preview_x, 8.0, VIEW_SIZE.x - width - 8.0), clampf(pointer.y - 21.0, 8.0, VIEW_SIZE.y - 50.0))
+	damage_preview.position = Vector2(clampf(preview_x, 8.0, VIEW_SIZE.x - width - 8.0), clampf(pointer.y - (165.0 if PlatformUI.is_touch() else 21.0), 8.0, VIEW_SIZE.y - 50.0))
 	damage_preview.visible = true
 
 func _input(event: InputEvent) -> void:
-	if drag_index < 0 or not is_instance_valid(drag_card):
+	if PlatformUI.is_touch():
+		# Android may synthesize mouse events after a handled touch. Consume those
+		# too, so dismissing an inspection cannot also click End Turn underneath.
+		if event.device == InputEvent.DEVICE_ID_EMULATION and touch_block_mouse:
+			get_viewport().set_input_as_handled()
+			if event is InputEventMouseButton and not event.pressed: touch_block_mouse = false
+			return
+		if event is InputEventScreenTouch and event.pressed: touch_block_mouse = false
+		if manager.phase != "menu":
+			_handle_touch(event)
+			if event is InputEventScreenTouch and event.pressed and get_viewport().is_input_handled(): touch_block_mouse = true
 		return
+	if drag_index < 0 or not is_instance_valid(drag_card): return
 	if event is InputEventMouseMotion:
-		var pointer := get_global_mouse_position()
+		var pointer := get_local_mouse_position()
 		drag_card.position = pointer - drag_offset
 		drag_card.rotation_degrees = 0
-		if drag_index < manager.player.hand.size():
-			_update_drag_hints(manager.cards[manager.player.hand[drag_index]], pointer)
+		if drag_index < manager.player.hand.size(): _update_drag_hints(manager.cards[manager.player.hand[drag_index]], pointer)
 		get_viewport().set_input_as_handled()
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
-		var release := get_global_mouse_position()
-		var index := drag_index
-		var card: Dictionary = manager.cards[manager.player.hand[index]]
-		var selection := _drop_selection(card, release)
-		drag_index = -1
-		drag_card.queue_free()
-		drag_card = null
-		_clear_drag_hints()
-		if release.distance_to(pointer_down) > 45 and manager.valid_card_target(manager.player, card, selection) and selection.get("kind", "") != "invalid":
-			_play_card_from(index, release, selection)
-		else:
-			_refresh()
+		_finish_hand_drag(get_local_mouse_position())
 		get_viewport().set_input_as_handled()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST: _request_back()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if manager != null and manager.phase != "menu" and event.is_action_pressed("ui_cancel"):
+		_request_back()
+		get_viewport().set_input_as_handled()
+
+func _request_back() -> void:
+	if manager == null: return
+	if manager.phase == "menu":
+		for child in get_children():
+			if child is MainMenu: child.go_back()
+		return
+	if touch_inspecting:
+		_clear_hover_preview()
+		return
+	if drag_index >= 0:
+		touch_finger = -1
+		_finish_hand_drag(Vector2(880, 850))
+		return
+	if is_instance_valid(back_dialog):
+		back_dialog.queue_free()
+		back_dialog = null
+		return
+	back_dialog = Control.new()
+	back_dialog.size = VIEW_SIZE
+	back_dialog.mouse_filter = Control.MOUSE_FILTER_STOP
+	fx_layer.add_child(back_dialog)
+	var shade := ColorRect.new()
+	shade.size = VIEW_SIZE
+	shade.color = Color("#03101bdc")
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	back_dialog.add_child(shade)
+	var panel := _panel(back_dialog, Rect2(520, 315, 560, 260), PANEL_DARK, GOLD)
+	_label(panel, "返回山门？", Vector2(30, 28), Vector2(500, 65), 36, GOLD, HORIZONTAL_ALIGNMENT_CENTER)
+	_button(panel, "继续对战", Rect2(38, 155, 216, 70), func(): back_dialog.queue_free(); back_dialog = null)
+	_button(panel, "返回山门", Rect2(306, 155, 216, 70), func():
+		back_dialog.queue_free()
+		back_dialog = null
+		manager.battle_generation += 1
+		manager.phase = "menu"
+		draw_generation += 1
+		action_busy = false
+		_clear_drag_hints()
+		battle_fx.clear_effects()
+		_refresh())
 
 func _target_point(side: String, selection: Dictionary) -> Vector2:
 	side = str(selection.get("side", side))
@@ -770,18 +985,22 @@ func _play_card_from(card_index: int, source: Vector2, selection: Dictionary = {
 	if not manager.player.can_pay(card) or not manager.valid_card_target(manager.player, card, selection):
 		_refresh()
 		return
+	var generation := manager.battle_generation
 	action_busy = true
 	player_hidden_index = card_index
 	_clear_hover_preview()
 	_refresh()
 	await _present_card(card, "player", source)
+	if generation != manager.battle_generation: return
 	if manager.phase == "player_action" and card_index < manager.player.hand.size():
 		var mode := manager.card_target_mode(card)
 		var destination := _target_point("player" if mode == "slot" else "enemy", selection) if mode != "none" else Vector2(-1, -1)
 		await get_tree().create_timer(_cast_card(card, "player", destination)).timeout
+		if generation != manager.battle_generation: return
 		player_hidden_index = -1
 		manager.play_player_card(card_index, selection)
 		await get_tree().create_timer(EFFECT_PAUSE_SECONDS).timeout
+	if generation != manager.battle_generation: return
 	player_hidden_index = -1
 	action_busy = false
 	_refresh()

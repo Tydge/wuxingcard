@@ -23,17 +23,17 @@ func configure(data: Dictionary, card_factory: Callable, width: float) -> void:
 	front.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(front)
 	copies_label = Label.new()
-	copies_label.position = Vector2(0, size.y + 9)
-	copies_label.size = Vector2(width - 32, 26)
-	copies_label.add_theme_font_size_override("font_size", 16)
+	copies_label.position = Vector2(0, size.y + (2 if PlatformUI.is_touch() else 9))
+	copies_label.size = Vector2(width - (58 if PlatformUI.is_touch() else 32), 46 if PlatformUI.is_touch() else 26)
+	copies_label.add_theme_font_size_override("font_size", 20 if PlatformUI.is_touch() else 16)
 	copies_label.add_theme_color_override("font_color", Color("#c8d5bf"))
 	copies_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(copies_label)
 	plus = Button.new()
 	plus.text = "+"
-	plus.position = Vector2(width - 28, size.y + 9)
-	plus.size = Vector2(28, 26)
-	plus.add_theme_font_size_override("font_size", 22)
+	plus.position = Vector2(width - (56 if PlatformUI.is_touch() else 28), size.y + (2 if PlatformUI.is_touch() else 9))
+	plus.size = Vector2(56, 46) if PlatformUI.is_touch() else Vector2(28, 26)
+	plus.add_theme_font_size_override("font_size", 30 if PlatformUI.is_touch() else 22)
 	plus.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color("#284335")

@@ -20,6 +20,39 @@ Godot 4.6 的单机 PVE 五行卡牌战斗原型。三份 v0.3 原始设计文�
 
 五行主题色统一由 `BattleRules.COLORS` 定义：金系为亮黄色，土系为较暗的陶土棕色。卡牌边框、属性筛选、能量图标与元素特效共用这套配色。
 
+## PC / Android 兼容开发
+
+维护同一个 Godot 项目，双方共用战斗规则、卡牌 JSON、美术和卡组保存逻辑。平台差异集中在 `ui/platform_ui.gd`、界面布局和输入处理；以后新增功能必须同时考虑鼠标与触屏，不复制两份战斗实现。
+
+- PC 保留悬停查看、鼠标拖牌、右键查看携带条目和 Esc 返回。
+- Android 横屏：轻点手牌放大；按住沿手牌左右滑动换牌；向上拖出手牌才进入出牌，松手释放，拖回手牌取消。灵气不足仍能查看。拖动的卡牌及预计伤害避开手指。
+- 轻点召唤物、状态图标查看详情；点空白处立即收起。卡牌关键词保持 0.5 秒后渐入。
+- 手机藏经阁每页 8 张，编牌每页 6 张；点击 ＋ 入组，放大查看时也可点击下方「入组」；轻点携带条目查看，点击 − 移除。PC 页数和操作保持原有方式。
+- 同一 1600×900 设计画布按比例显示，Android 额外避开屏幕安全区；宽屏和平板可能有留边，保证目标位置与触控坐标一致。返回键先关闭详情或确认框，再返回上一层；战斗和退出应用均需确认。
+- 卡组保存在各设备的 `user://decks.json`，目前没有跨设备同步。覆盖安装同包名、同签名且版本号更高的 APK 可保留卡组。
+
+桌面可通过 `-- --touch-ui` 启用 Android 布局；触屏事件检查命令为：
+
+```sh
+/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/verify_touch_ui.gd -- --touch-ui
+```
+
+## Android 试玩导出
+
+```sh
+python3 tools/build_android.py
+```
+
+输出位于 `dist/WuxingMingpan-Android-日期_时分秒/`：APK、试玩说明、授权和构建记录；同名 ZIP 可整体分发。面向 Android 7.0+ 的 ARM64 设备，需要 OpenGL ES 3.0；横屏且支持两个横屏方向。当前是离线试玩，不申请联网权限。
+
+使用 Godot 4.6.3 的官方 Android 预编译模板，无自定义 Gradle 构建。此 Mac 已配置 Java SDK `/Library/Java/JavaVirtualMachines/jdk-17.0.1.jdk/Contents/Home` 和 Android SDK `/Users/wangtaizhi/Library/Android/sdk`，安装了 Platform 36、Build Tools 36.0.0、Platform Tools 和匹配的 Godot 导出模板。复制到别的机器时，先在 Godot 编辑器设置中配置两条 SDK 路径；构建脚本支持 `--godot`、`--sdk`、`--java` 覆盖本机工具路径。
+
+Release 签名配置保存在本机 `~/.config/wuxingcard/android-signing.json`，包含 `keystore`、`alias`、`password` 三项；密钥文件也在该目录。**密钥和密码不提交仓库，后续更新应继续使用同一密钥，并自行备份该目录。** 构建脚本通过环境变量传入签名，版本号由同目录 `android-version.txt` 自动递增；更换构建机器时一并迁移签名配置和版本记录。也可通过 `--signing` 指定配置文件、`--version-code` 指定更大的版本号。
+
+Android 和 Windows 共用导出暂存与图片优化：排除未使用图片，保留原尺寸，透明立绘无损、不透明插画使用 0.95 质量压缩。每次构建检查图片尺寸与质量、完整资源包及模拟对战，再验证 APK 签名、包名、ARM64 架构和压缩包完整性。`dist/` 和 `work/` 不进 Git。
+
+本机另有独立测试模拟器 `Wuxing_API35`（Apple Silicon / Android 15），不使用其他已有虚拟机或设备；首次安装、启动和触控实测可通过 Android SDK 的 adb 执行。
+
 ## 已实现
 
 - 五行能量同时作为费用、同系抗性和被克制属性的弱点，0–10 上限并跨回合保留。
