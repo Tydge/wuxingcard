@@ -2,6 +2,7 @@ extends SceneTree
 
 var failures := 0
 var manager: BattleManager
+var tie_events := 0
 
 func _initialize() -> void:
 	call_deferred("run")
@@ -10,6 +11,9 @@ func check(condition: bool, message: String) -> void:
 	if not condition:
 		failures += 1
 		push_error(message)
+
+func track_result(_message: String, side: String, kind: String, _element: String, _amount: int) -> void:
+	if side == "system" and kind == "tie": tie_events += 1
 
 func prepare() -> void:
 	manager.start_battle("ember", "random", 918)
@@ -34,6 +38,7 @@ func summon(actor: Combatant, slot: int, id: String, hp: int = -1) -> void:
 func run() -> void:
 	manager = BattleManager.new()
 	root.add_child(manager)
+	manager.action_event.connect(track_result)
 	# The new opposite pairs cancel without inheriting the older ten-layer cap.
 	var actor := Combatant.new()
 	for pair in [["strong_attack", "weak_attack"], ["strong_defense", "weak_defense"]]:
@@ -127,9 +132,10 @@ func run() -> void:
 		caster.energy["fire"] = 2
 		manager.phase = caster_side + "_action"
 		manager._play_card(caster, manager.enemy if caster == manager.player else manager.player, 0, {"kind":"hero"})
-		check(manager.phase == "draw" and manager.player.hp == 0 and manager.enemy.hp == 0, "simultaneous lethal is a draw regardless of caster")
+		check(manager.phase == "tie" and manager.player.hp == 0 and manager.enemy.hp == 0, "simultaneous lethal is a tie regardless of caster")
 		for owner in [manager.player, manager.enemy]:
 			for summoned: Summon in owner.summons: check(summoned.hp == 3, "all summons resolve even when both heroes die")
+	check(tie_events == 2, "simultaneous lethal emits a distinct tie event for either caster")
 
 	prepare()
 	ready_card("metal_temper")

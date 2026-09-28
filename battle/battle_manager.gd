@@ -13,7 +13,7 @@ const CARD_PATH := "res://data/cards.json"
 const BATTLE_PATH := "res://data/battles.json"
 const SUMMON_PATH := "res://data/summons.json"
 const STATUS_NAMES := CardKeywords.NAMES
-const FINISHED_PHASES := ["victory", "defeat", "draw"]
+const FINISHED_PHASES := ["victory", "defeat", "tie"]
 # Both sides use slots 0 / 1 / 2 for the top / middle / bottom of the battlefield.
 const SUMMON_TRIGGER_ORDER := [0, 1, 2]
 const RANDOM_DECK_SIZE := 25
@@ -220,7 +220,7 @@ func _start_turn(actor: Combatant) -> void:
 	if _check_finish():
 		return
 	await _trigger_summons(actor, "turn_start")
-	if generation != battle_generation or phase in ["menu", "victory", "defeat", "draw"]:
+	if generation != battle_generation or phase in ["menu", "victory", "defeat", "tie"]:
 		return
 	if _check_finish():
 		return
@@ -250,7 +250,7 @@ func _trigger_summons(actor: Combatant, timing: String = "turn_start") -> void:
 			summon_triggered.emit(_side(actor), slot, timing, resolved)
 			if summon_presenter.is_valid():
 				await summon_presenter.call(_side(actor), slot, summoned, resolved, "cast")
-			if generation != battle_generation or phase in ["menu", "victory", "defeat", "draw"]:
+			if generation != battle_generation or phase in ["menu", "victory", "defeat", "tie"]:
 				return
 			if actor.summons[slot] != summoned:
 				break
@@ -258,7 +258,7 @@ func _trigger_summons(actor: Combatant, timing: String = "turn_start") -> void:
 			if summon_presenter.is_valid():
 				changed.emit()
 				await summon_presenter.call(_side(actor), slot, summoned, resolved, "resolved")
-			if generation != battle_generation or phase in ["menu", "victory", "defeat", "draw"]:
+			if generation != battle_generation or phase in ["menu", "victory", "defeat", "tie"]:
 				return
 
 func lowest_life_target(owner: Combatant) -> Dictionary:
@@ -584,7 +584,7 @@ func _end_turn(actor: Combatant) -> void:
 	actor.decay_status("tenacity")
 	actor.tick_status_durations()
 	await _trigger_summons(actor, "turn_end")
-	if generation != battle_generation or phase in ["menu", "victory", "defeat", "draw"]:
+	if generation != battle_generation or phase in ["menu", "victory", "defeat", "tie"]:
 		return
 	_check_finish()
 	changed.emit()
@@ -614,7 +614,7 @@ func end_player_turn() -> void:
 	var generation := battle_generation
 	changed.emit()
 	await _end_turn(player)
-	if generation == battle_generation and phase not in ["menu", "victory", "defeat", "draw"]:
+	if generation == battle_generation and phase not in ["menu", "victory", "defeat", "tie"]:
 		await _start_turn(enemy)
 
 func peek_enemy_action() -> Dictionary:
@@ -638,7 +638,7 @@ func enemy_step(chosen_index: int = -2, selection: Dictionary = {}) -> bool:
 		var generation := battle_generation
 		changed.emit()
 		await _end_turn(enemy)
-		if generation == battle_generation and phase not in ["menu", "victory", "defeat", "draw"]:
+		if generation == battle_generation and phase not in ["menu", "victory", "defeat", "tie"]:
 			await _start_turn(player)
 		return false
 	if selection.is_empty() and index < enemy.hand.size():
@@ -755,8 +755,8 @@ func _enemy_action_score(card: Dictionary, selection: Dictionary) -> float:
 func _check_finish() -> bool:
 	if phase in FINISHED_PHASES: return true
 	if enemy.hp <= 0 and player.hp <= 0:
-		phase = "draw"
-		_report("平局。双方同时倒下", "system", "draw")
+		phase = "tie"
+		_report("平局。双方同时倒下", "system", "tie")
 		changed.emit()
 		return true
 	if enemy.hp <= 0:

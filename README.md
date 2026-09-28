@@ -22,6 +22,8 @@ Godot 4.6 的单机 PVE 五行卡牌战斗原型。三份 v0.3 原始设计文�
 
 ## PC / Android 兼容开发
 
+音乐和音效由 `audio/audio_director.gd` 统一播放，PC 与 Android 使用相同资源及事件。战斗中随机轮播 `Dangerous Duel`、`Whisper of the Dragon (3)`；`Whisper of the Dragon (2)` 暂不播放。山门、藏经阁和卡组界面随机轮播其余四首。切换场景会交叉淡入淡出。山门右下角的「声音」及战斗返回确认框内的「声音」可分别调整总音量、音乐、战斗音效和界面音效，设置保存在本机 `user://audio_settings.json`。来源与许可记录见 [音频说明](assets/audio/README.md)。
+
 维护同一个 Godot 项目，双方共用战斗规则、卡牌 JSON、美术和卡组保存逻辑。平台差异集中在 `ui/platform_ui.gd`、界面布局和输入处理；以后新增功能必须同时考虑鼠标与触屏，不复制两份战斗实现。
 
 - PC 保留悬停查看、鼠标拖牌、右键查看携带条目和 Esc 返回。

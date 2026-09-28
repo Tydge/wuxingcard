@@ -20,6 +20,10 @@ config/quit_on_go_back=false
 run/main_scene="res://battle/battle_scene.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 
+[autoload]
+
+AudioDirector="*res://audio/audio_director.gd"
+
 [display]
 
 window/size/viewport_width=1600

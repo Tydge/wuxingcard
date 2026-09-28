@@ -38,6 +38,11 @@ func run() -> void:
 		check(not ResourceLoader.exists("res://assets/cards/elements/%s.webp" % element), "unused shared card placeholder excluded: " + element)
 	for background in ["arena", "mountain_gate"]:
 		check(ResourceLoader.exists("res://assets/backgrounds/%s.webp" % background), "battle and home background included: " + background)
+	check(ResourceLoader.exists("res://audio/audio_director.gd"), "shared desktop/Android audio director is packaged")
+	for path in AudioDirector.MENU_TRACKS + AudioDirector.BATTLE_TRACKS:
+		check(load(path) is AudioStream, "BGM loads: " + path)
+	for path in AudioDirector.SFX.values():
+		check(load(path) is AudioStream, "sound effect loads: " + path)
 	check(GameFonts.SERIF.get_supported_chars().contains("克") and GameFonts.SERIF.get_supported_chars().contains("抵"), "damage font covers matchup labels")
 	if OS.has_feature("windows"): check(GameFonts.body() is FontFile, "Windows body text uses the bundled CJK font")
 	for seed_value in 15:

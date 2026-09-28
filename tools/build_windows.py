@@ -24,7 +24,7 @@ def prepare_project(stage):
         runtime.update([f"assets/characters/{actor['id']}.webp", f"assets/characters/{actor['id']}_standee.webp"])
     runtime.update(['assets/backgrounds/arena.webp', 'assets/backgrounds/mountain_gate.webp'])
     # Keep literal references as well as the artwork loaded dynamically by ID.
-    for directory in ['ui', 'battle', 'data']:
+    for directory in ['ui', 'battle', 'data', 'audio']:
         for source in (ROOT / directory).rglob('*'):
             if source.suffix in ['.gd', '.tscn']:
                 runtime.update(p for p in re.findall(r'res://(assets/[^"\s]+)', source.read_text()) if '%' not in p)
@@ -102,6 +102,8 @@ def main():
         shutil.copy2(ROOT / 'assets' / 'fonts' / name, licenses / name)
     for name in ['Godot-LICENSE.txt', 'Godot-COPYRIGHT.txt']:
         shutil.copy2(ROOT / 'licenses' / name, licenses / name)
+    for source in sorted((ROOT / 'assets/audio/licenses').glob('*.txt')):
+        shutil.copy2(source, licenses / f'Kenney-{source.name}')
     revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     manifest = {'built':built.isoformat(), 'revision':revision, 'engine':subprocess.check_output([args.godot, '--version'],text=True).strip(), 'platform':'Windows x86_64', 'cards':card_count, 'summons':len(json.loads((ROOT / 'data/summons.json').read_text())), 'art':art_report, 'files':[]}
     for path in sorted(folder.rglob('*')):

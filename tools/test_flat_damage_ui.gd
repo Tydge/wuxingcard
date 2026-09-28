@@ -98,10 +98,10 @@ func run() -> void:
 	manager.player.hand = ["fire_all_targets"]
 	ui.call("_refresh")
 	await ui.call("_play_card_from", 0, Vector2(800, 730), own_selection)
-	check(manager.phase == "draw" and labels(ui).has("平 局"), "actual card presentation opens the draw result")
+	check(manager.phase == "tie" and labels(ui).has("平 局"), "actual card presentation opens the tie result")
 	for actor in [manager.player, manager.enemy]:
-		for summoned: Summon in actor.summons: check(summoned.hp == 3, "all summon hits finish before the draw result")
-	await shot("draw_result")
+		for summoned: Summon in actor.summons: check(summoned.hp == 3, "all summon hits finish before the tie result")
+	await shot("tie_result")
 	manager.phase = "menu"
 	ui.call("_refresh")
 	await process_frame
@@ -121,5 +121,5 @@ func run() -> void:
 	await shot("cleansing_collection")
 	menu.call("_close_inspector")
 	await create_timer(0.4).timeout
-	print("Flat damage UI: status icons, delayed keywords, multi-hit preview, all-eight targeting and draw result; %d failures" % failures)
+	print("Flat damage UI: status icons, delayed keywords, multi-hit preview, all-eight targeting and tie result; %d failures" % failures)
 	quit(1 if failures > 0 else 0)

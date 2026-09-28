@@ -193,6 +193,7 @@ func _button(parent: Node, value: String, rect: Rect2, action: Callable, color: 
 	b.add_theme_color_override("font_color", WHITE)
 	b.add_theme_color_override("font_disabled_color", MUTED.darkened(0.35))
 	b.add_theme_font_size_override("font_size", 21)
+	b.pressed.connect(func(): GameAudio.play_sfx("ui_select", 0.0, 70))
 	b.pressed.connect(action)
 	parent.add_child(b)
 	return b
@@ -212,6 +213,7 @@ func _fit_mobile_surface() -> void:
 func _refresh() -> void:
 	if not is_inside_tree():
 		return
+	GameAudio.set_context("menu" if manager.phase == "menu" else "battle")
 	var keep_touch_card := PlatformUI.is_touch() and touch_finger >= 0 and touch_hand_index >= 0 and touch_hand_index < manager.player.hand.size() and touch_inspecting and manager.phase != "menu" and manager.phase not in BattleManager.FINISHED_PHASES and manager.player.hand[touch_hand_index] == touch_hand_card_id
 	if not keep_touch_card: _clear_hover_preview()
 	status_touch_regions.clear()
@@ -613,6 +615,7 @@ func _on_hand_hover(index: int) -> void:
 	if PlatformUI.is_touch() or manager.phase in BattleManager.FINISHED_PHASES or drag_index >= 0 or index >= hand_cards.size():
 		return
 	hovered_index = index
+	GameAudio.play_sfx("card_focus", 0.0, 180)
 	var view := hand_cards[index]
 	view.position.y -= 28
 	view.rotation_degrees = 0
@@ -708,6 +711,7 @@ func _begin_hand_drag(index: int, pointer: Vector2) -> bool:
 	if not manager.player.can_pay(card):
 		if not PlatformUI.is_touch() or not touch_warning_shown:
 			var reason := "召唤位已满" if manager.card_target_mode(card) == "slot" and manager.player.first_free_summon_slot() < 0 else "灵气不足"
+			GameAudio.play_sfx("ui_error", 0.0, 450)
 			_show_floating(reason, "player", RED, 0, _hand_card_center(index, manager.player.hand.size()) + Vector2(-90, -120))
 			touch_warning_shown = true
 		return false
@@ -782,6 +786,7 @@ func _set_touch_hand_collapsed(value: bool) -> void:
 
 func _show_touch_card(index: int) -> void:
 	if touch_hand_index == index and touch_inspecting: return
+	GameAudio.play_sfx("card_focus", 0.0, 155)
 	_clear_hover_preview()
 	touch_hand_index = index
 	if index < 0 or index >= manager.player.hand.size(): return
@@ -1094,6 +1099,7 @@ func _request_back() -> void:
 	back_dialog.add_child(shade)
 	var panel := _panel(back_dialog, Rect2(520, 315, 560, 260), PANEL_DARK, GOLD)
 	_label(panel, "返回山门？", Vector2(30, 28), Vector2(500, 65), 36, GOLD, HORIZONTAL_ALIGNMENT_CENTER)
+	_button(panel, "声音", Rect2(449, 14, 92, 45), _open_audio_settings)
 	_button(panel, "继续对战", Rect2(38, 155, 216, 70), func(): back_dialog.queue_free(); back_dialog = null)
 	_button(panel, "返回山门", Rect2(306, 155, 216, 70), func():
 		back_dialog.queue_free()
@@ -1105,6 +1111,10 @@ func _request_back() -> void:
 		_clear_drag_hints()
 		battle_fx.clear_effects()
 		_refresh())
+
+func _open_audio_settings() -> void:
+	var settings := AudioSettings.new()
+	fx_layer.add_child(settings)
 
 func _target_point(side: String, selection: Dictionary) -> Vector2:
 	side = str(selection.get("side", side))
@@ -1198,6 +1208,7 @@ func _run_enemy_turn() -> void:
 	_refresh()
 
 func _cast_card(card: Dictionary, side: String, destination: Vector2) -> float:
+	GameAudio.play_cast(str(card.get("element", "")))
 	for effect in card["effects"]:
 		if effect.get("scope", "single") not in ["all_opponents", "all"]: continue
 		var actor := manager.player if side == "player" else manager.enemy
@@ -1223,6 +1234,7 @@ func _cast_card(card: Dictionary, side: String, destination: Vector2) -> float:
 	return duration + maxi(0, hits - 1) * 0.16
 
 func _present_card(card: Dictionary, side: String, source: Vector2) -> void:
+	GameAudio.play_sfx("card_play", 0.0, 100)
 	var dim := ColorRect.new()
 	dim.color = Color(0.0, 0.01, 0.02, 0.19)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1262,6 +1274,7 @@ func _animate_pending_draws(player_count: int, enemy_count: int, generation: int
 			var hand_size := HAND_CARD_SIZE
 			var target := _hand_card_position(index, views.size()) + hand_size / 2.0 if side == "player" else _enemy_card_position(index, views.size()) + hand_size / 2.0
 			var source := _draw_pile_point(side)
+			GameAudio.play_sfx("card_draw", -2.0, 125)
 			var flying := _card_back(hand_size, side == "enemy")
 			fx_layer.add_child(flying)
 			flying.position = source - flying.size / 2.0
@@ -1310,6 +1323,7 @@ func _on_hand_card_removed(side: String, card_id: String, index: int, reason: St
 	if reason != "discard":
 		card.hide()
 		return
+	GameAudio.play_sfx("card_discard", 0.0, 90)
 	if not PlatformUI.is_touch() or touch_hand_index < 0: _clear_hover_preview()
 	hovered_index = -1
 	# Keep the existing prefab and its exact fan transform across HUD rebuilds.
@@ -1344,8 +1358,8 @@ func _build_result() -> void:
 	add_child(dim)
 	var box := _panel(self, Rect2(480, 225, 640, 425), PANEL_DARK, GOLD, 18)
 	var won := manager.phase == "victory"
-	var result_title := "平 局" if manager.phase == "draw" else ("胜 利" if won else "败 北")
-	_label(box, result_title, Vector2(70, 36), Vector2(500, 73), 54, GOLD if won or manager.phase == "draw" else RED, HORIZONTAL_ALIGNMENT_CENTER)
+	var result_title := "平 局" if manager.phase == "tie" else ("胜 利" if won else "败 北")
+	_label(box, result_title, Vector2(70, 36), Vector2(500, 73), 54, GOLD if won or manager.phase == "tie" else RED, HORIZONTAL_ALIGNMENT_CENTER)
 	_label(box, "对阵 %s · %d 回合" % [manager.enemy.display_name, manager.round_number], Vector2(60, 122), Vector2(520, 40), 24, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	_label(box, "打出 %d 张牌     造成 %d 伤害     削减 %d 能量" % [manager.played_cards, manager.player_damage, manager.energy_destroyed], Vector2(40, 190), Vector2(560, 65), 19, MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 	_button(box, "再次挑战", Rect2(70, 296, 225, 62), func(): _start_battle(), Color("#604a31"), GOLD)
@@ -1396,14 +1410,18 @@ func _on_summon_event(side: String, slot: int, kind: String, element: String, am
 	var point := _summon_point(side, slot)
 	var key := "%s_%d" % [side, slot]
 	match kind:
-		"spawn": battle_fx.energy(point, element, true)
+		"spawn":
+			battle_fx.energy(point, element, true)
+			GameAudio.play_sfx("summon_open", -3.0, 100)
 		"damage":
 			battle_fx.impact(element, point)
+			GameAudio.play_hit(element, false, amount)
 			if amount > 0:
 				_play_hit_feedback(summon_views.get(key), side)
 				_show_damage_number(amount, point, matchup)
 		"destroy":
 			battle_fx.impact(element, point)
+			GameAudio.play_sfx("summon_death", -2.0, 90)
 			var fallen: SummonView = summon_views.get(key)
 			if is_instance_valid(fallen):
 				summon_views.erase(key)
@@ -1423,6 +1441,7 @@ func _present_summon_effect(side: String, slot: int, summoned: Summon, effect: D
 		if is_instance_valid(view):
 			view.play_trigger()
 		var element := str(effect.get("element", effect.get("to", summoned.element)))
+		GameAudio.play_cast(element, true)
 		var target_side := side if effect.get("target", "self") == "self" else ("enemy" if side == "player" else "player")
 		var destination := _anchor(target_side)
 		var selection: Dictionary = effect.get("selection", {})
@@ -1449,22 +1468,31 @@ func _on_action_event(message: String, side: String, kind: String, element: Stri
 		return
 	if kind == "turn":
 		_show_turn_notice("enemy" if manager.phase.begins_with("enemy") else "player")
+		GameAudio.play_sfx("page_turn", -4.0, 250)
+		return
+	# A tie has its own event name so card draws always reach the deal queue.
+	if side == "system" and kind in ["victory", "defeat", "tie"]:
+		GameAudio.play_sfx("ui_confirm" if kind == "victory" else "ui_back", 2.0)
 		return
 	if side not in ["player", "enemy"]:
 		return
 	var target := _anchor(side)
 	if kind == "damage":
 		battle_fx.impact(element, target, "shield" if message.contains("护盾抵消") else "")
+		GameAudio.play_hit(element, message.contains("护盾抵消"), amount)
 		if amount > 0:
 			_play_hit_feedback(standee_nodes.get(side), side)
 			var matchup := "克制" if message.contains("克制") else "抵抗" if message.contains("抵抗") else ""
 			_show_damage_number(amount, target, matchup)
 	elif kind == "heal" and amount > 0:
 		battle_fx.heal(target, element)
+		GameAudio.play_sfx("heal", 0.0, 120)
 	elif kind in ["energy", "energy_loss", "play"] and amount > 0:
 		battle_fx.energy(_energy_point(side, element), element, kind == "energy")
+		if kind != "play": GameAudio.play_sfx("energy", -2.0, 170)
 	elif kind.begins_with("status_"):
 		battle_fx.status(target, element, kind.trim_prefix("status_"))
+		GameAudio.play_sfx("status", 0.0, 145)
 	elif kind in ["draw", "discard"]:
 		if kind == "draw" and not message.contains("手牌已满"):
 			if side == "player":

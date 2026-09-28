@@ -133,6 +133,7 @@ func _show_home() -> void:
 		button.position = Vector2(1088, 178 + i * 115)
 		content.add_child(button)
 		mode_buttons[entry[0]] = button
+		button.pressed.connect(func(): GameAudio.play_sfx("ui_confirm", 0.0, 100))
 		if entry[0] == "test":
 			button.pressed.connect(_show_decks)
 		elif entry[0] == "collection":
@@ -142,6 +143,11 @@ func _show_home() -> void:
 		entrance.tween_interval(0.08 * i)
 		entrance.tween_property(button, "modulate:a", 1.0, 0.45)
 	_text(content, "五行 · 命盘", Rect2(114, 836, 350, 28), 16, Color("#a0b5a5"))
+	_button(content, "声音", Rect2(1390, 779, 130, 48), _open_audio_settings)
+
+func _open_audio_settings() -> void:
+	var settings := AudioSettings.new()
+	add_child(settings)
 
 func _show_decks() -> void:
 	view_mode = "decks"
@@ -263,6 +269,7 @@ func _change_page(direction: int) -> void:
 	var next := clampi(page + direction, 0, page_motion.page_roots.size() - 1)
 	if next == page: return
 	page_turn_busy = true
+	GameAudio.play_sfx("page_turn", 0.0, 120)
 	page_motion.turn_to(next, direction)
 
 func _card_input(event: InputEvent, card: Dictionary, source: Control) -> void:
@@ -272,6 +279,7 @@ func _card_input(event: InputEvent, card: Dictionary, source: Control) -> void:
 
 func _open_inspector(card: Dictionary, source: Control) -> void:
 	if is_instance_valid(inspector): return
+	GameAudio.play_sfx("card_focus", 0.0, 150)
 	inspect_source = source
 	inspect_origin = get_global_transform().affine_inverse() * source.global_position
 	var inspect_width := 480.0 if PlatformUI.is_touch() else INSPECT_WIDTH
@@ -413,6 +421,7 @@ func _button(parent: Node, caption: String, rect: Rect2, action: Callable, tint:
 	button.add_theme_color_override("font_color", tint)
 	button.add_theme_color_override("font_disabled_color", Color("#69786f"))
 	button.add_theme_font_size_override("font_size", 24 if PlatformUI.is_touch() else 18)
+	button.pressed.connect(func(): GameAudio.play_sfx("ui_select", 0.0, 70))
 	button.pressed.connect(action)
 	parent.add_child(button)
 	return button

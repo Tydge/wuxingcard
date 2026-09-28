@@ -33,6 +33,8 @@ def main():
     stage = ROOT / 'work' / f'android-export-{stamp}'
     report = prepare_project(stage)
     shutil.copytree(ROOT / 'licenses', stage / 'licenses')
+    for source in sorted((ROOT / 'assets/audio/licenses').glob('*.txt')):
+        shutil.copy2(source, stage / 'licenses' / f'Kenney-{source.name}')
     for name in ['NotoSansCJK-LICENSE.txt', 'NotoSerifCJK-LICENSE.txt']:
         shutil.copy2(ROOT / 'assets/fonts' / name, stage / 'licenses' / name)
     # Increment release versions locally so subsequent APKs can update in place.

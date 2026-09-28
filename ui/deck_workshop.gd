@@ -374,6 +374,7 @@ func _change_page(amount: int) -> void:
 	var next := clampi(page + amount, 0, page_motion.page_roots.size() - 1)
 	if next == page: return
 	page_turn_busy = true
+	GameAudio.play_sfx("page_turn", 0.0, 120)
 	page_motion.turn_to(next, amount)
 
 func _save() -> void:
@@ -489,6 +490,7 @@ func _button(parent: Node, caption: String, rect: Rect2, action: Callable, tint:
 	button.add_theme_color_override("font_color", tint)
 	button.add_theme_color_override("font_disabled_color", Color("#69786f"))
 	button.add_theme_font_size_override("font_size", 24 if PlatformUI.is_touch() else 18)
+	button.pressed.connect(func(): GameAudio.play_sfx("ui_select", 0.0, 70))
 	button.pressed.connect(action)
 	parent.add_child(button)
 	return button
