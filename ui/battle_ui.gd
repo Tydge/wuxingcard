@@ -65,6 +65,11 @@ const TURN_PLATE := Rect2(640, 330, 320, 44)
 const SUMMON_SIZE := Vector2(190, 190)
 const SUMMON_CENTERS := [Vector2(540, 320), Vector2(700, 452), Vector2(540, 584)]
 const SUMMON_TARGET_RADIUS := 82.0
+const SUMMON_DROP_RADIUS_MOUSE := 100.0
+const SUMMON_DROP_RADIUS_TOUCH := 120.0
+const TOUCH_DRAG_ANGLE_TANGENT := 0.17 # Just under ten degrees from horizontal.
+const TOUCH_HAND_COLLAPSE_SCALE := 0.82
+const TOUCH_HAND_COLLAPSE_DROP := 76.0
 const ENEMY_HERO_TARGET := Rect2(1180, 198, 345, 445)
 
 var manager: BattleManager
@@ -103,10 +108,15 @@ var draw_generation := 0
 var draw_animation_active := false
 var touch_finger := -1
 var touch_hand_index := -1
+var touch_hand_card_id := ""
 var touch_origin := Vector2.ZERO
 var touch_inspecting := false
 var touch_block_mouse := false
+var touch_drag_rejected := false
+var touch_warning_shown := false
+var touch_hand_collapsed := false
 var touch_shade: ColorRect
+var touch_returning_preview: Control
 var status_touch_regions: Array[Dictionary] = []
 var back_dialog: Control
 
@@ -202,10 +212,14 @@ func _fit_mobile_surface() -> void:
 func _refresh() -> void:
 	if not is_inside_tree():
 		return
-	_clear_hover_preview()
+	var keep_touch_card := PlatformUI.is_touch() and touch_finger >= 0 and touch_hand_index >= 0 and touch_hand_index < manager.player.hand.size() and touch_inspecting and manager.phase != "menu" and manager.phase not in BattleManager.FINISHED_PHASES and manager.player.hand[touch_hand_index] == touch_hand_card_id
+	if not keep_touch_card: _clear_hover_preview()
 	status_touch_regions.clear()
-	touch_finger = -1
-	touch_hand_index = -1
+	if not keep_touch_card:
+		touch_finger = -1
+		touch_hand_index = -1
+	touch_drag_rejected = false
+	touch_warning_shown = false
 	for child in get_children():
 		if child != manager and child != actor_layer and child != fx_layer:
 			if child is CanvasItem: child.hide()
@@ -234,6 +248,14 @@ func _refresh() -> void:
 		move_child(art, 1)
 	move_child(actor_layer, 2 if texture != null else 1)
 	_build_battle()
+	if keep_touch_card:
+		hand_cards[touch_hand_index].hide()
+		var preview_target := _touch_preview_target(touch_hand_index)
+		if is_instance_valid(hover_preview):
+			hover_preview.create_tween().tween_property(hover_preview, "position", preview_target, 0.18).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		if is_instance_valid(hover_keywords):
+			hover_keywords.card_rect = Rect2(preview_target, Vector2(340, 476))
+			hover_keywords.call_deferred("_place")
 	move_child(fx_layer, get_child_count() - 1)
 
 func _build_menu() -> void:
@@ -252,6 +274,7 @@ func _start_test_battle(deck: Dictionary = {}) -> void:
 	_start_battle()
 
 func _start_battle() -> void:
+	touch_hand_collapsed = false
 	_clear_discard_animations()
 	_clear_actors()
 	enemy_animating = false
@@ -442,6 +465,7 @@ func _build_summons() -> void:
 			view.mouse_entered.connect(_on_summon_hover.bind(side, slot))
 			view.mouse_exited.connect(_on_summon_exit.bind(side, slot))
 			actor_layer.add_child(view)
+			view.set_health_foreground(drag_index >= 0 and PlatformUI.is_touch())
 			summon_views[key] = view
 
 func _standee(actor_id: String, x: float, mirrored: bool, bob_seconds: float) -> Control:
@@ -500,6 +524,9 @@ func _build_hand() -> void:
 		view.position = _hand_card_position(i, old_count) if pending_player_draws > 0 and i < old_count else target_position
 		view.pivot_offset = Vector2(card_size.x / 2.0, card_size.y * 0.82)
 		view.rotation_degrees = _hand_angle(i, count)
+		if PlatformUI.is_touch() and touch_hand_collapsed:
+			view.position.y += TOUCH_HAND_COLLAPSE_DROP
+			view.scale = Vector2.ONE * TOUCH_HAND_COLLAPSE_SCALE
 		view.modulate = Color.WHITE if manager.player.can_pay(card) else Color(0.68, 0.73, 0.78)
 		view.mouse_filter = Control.MOUSE_FILTER_STOP
 		view.mouse_entered.connect(_on_hand_hover.bind(i))
@@ -507,7 +534,7 @@ func _build_hand() -> void:
 		view.gui_input.connect(_on_hand_input.bind(i))
 		add_child(view)
 		hand_cards.append(view)
-		if view.position != target_position:
+		if view.position != target_position and not touch_hand_collapsed:
 			view.create_tween().tween_property(view, "position", target_position, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		if i >= count - pending_player_draws or i == player_hidden_index:
 			view.visible = false
@@ -583,7 +610,7 @@ func _build_decks() -> void:
 	_label(self, str(manager.enemy.draw_pile.size()), ENEMY_DECK_POS + Vector2(0, DECK_SIZE.y + 2), Vector2(DECK_SIZE.x, 24), 17, GOLD, HORIZONTAL_ALIGNMENT_CENTER)
 
 func _on_hand_hover(index: int) -> void:
-	if PlatformUI.is_touch() or drag_index >= 0 or action_busy or index >= hand_cards.size():
+	if PlatformUI.is_touch() or manager.phase in BattleManager.FINISHED_PHASES or drag_index >= 0 or index >= hand_cards.size():
 		return
 	hovered_index = index
 	var view := hand_cards[index]
@@ -618,7 +645,7 @@ func _on_summon_hover(side: String, slot: int) -> void:
 	_show_summon_preview(side, slot)
 
 func _show_summon_preview(side: String, slot: int) -> void:
-	if drag_index >= 0 or action_busy:
+	if manager.phase in BattleManager.FINISHED_PHASES or drag_index >= 0 or action_busy:
 		return
 	var owner: Combatant = manager.player if side == "player" else manager.enemy
 	var summoned: Summon = owner.summons[slot]
@@ -642,15 +669,22 @@ func _on_summon_exit(side: String, slot: int) -> void:
 	if hovered_summon_side == side and hovered_summon_slot == slot:
 		_clear_hover_preview()
 
-func _show_hover_keywords(card: Dictionary) -> void:
+func _show_hover_keywords(card: Dictionary, display_rect: Rect2 = Rect2()) -> void:
 	var entries := CardKeywords.entries(card, manager.summon_templates)
 	if entries.is_empty(): return
 	hover_keywords = CardKeywordPopup.new()
 	fx_layer.add_child(hover_keywords)
-	hover_keywords.configure(entries, Rect2(hover_preview.position, hover_preview.size), VIEW_SIZE)
+	hover_keywords.configure(entries, display_rect if display_rect.size != Vector2.ZERO else Rect2(hover_preview.position, hover_preview.size), VIEW_SIZE)
 
 func _clear_hover_preview() -> void:
+	if is_instance_valid(touch_returning_preview):
+		touch_returning_preview.hide()
+		touch_returning_preview.queue_free()
+	touch_returning_preview = null
 	touch_inspecting = false
+	touch_hand_card_id = ""
+	if touch_hand_index >= 0 and touch_hand_index < hand_cards.size() and is_instance_valid(hand_cards[touch_hand_index]):
+		hand_cards[touch_hand_index].show()
 	if is_instance_valid(touch_shade): touch_shade.queue_free()
 	touch_shade = null
 	if is_instance_valid(hover_keywords):
@@ -672,13 +706,19 @@ func _begin_hand_drag(index: int, pointer: Vector2) -> bool:
 	if manager.phase != "player_action" or action_busy or index < 0 or index >= manager.player.hand.size(): return false
 	var card: Dictionary = manager.cards[manager.player.hand[index]]
 	if not manager.player.can_pay(card):
-		var reason := "召唤位已满" if manager.card_target_mode(card) == "slot" and manager.player.first_free_summon_slot() < 0 else "灵气不足"
-		_show_floating(reason, "player", RED, 0, _hand_card_center(index, manager.player.hand.size()) + Vector2(-90, -120))
+		if not PlatformUI.is_touch() or not touch_warning_shown:
+			var reason := "召唤位已满" if manager.card_target_mode(card) == "slot" and manager.player.first_free_summon_slot() < 0 else "灵气不足"
+			_show_floating(reason, "player", RED, 0, _hand_card_center(index, manager.player.hand.size()) + Vector2(-90, -120))
+			touch_warning_shown = true
 		return false
 	drag_index = index
 	pointer_down = pointer
 	drag_offset = HAND_CARD_SIZE / 2.0 + (Vector2(0, 105) if PlatformUI.is_touch() else Vector2.ZERO)
 	_clear_hover_preview()
+	if PlatformUI.is_touch():
+		_set_touch_hand_collapsed(true)
+		for view in summon_views.values():
+			if is_instance_valid(view): view.set_health_foreground(true)
 	if index < hand_cards.size(): hand_cards[index].visible = false
 	drag_card = _card_front(card, HAND_CARD_SIZE)
 	drag_card.position = pointer - drag_offset
@@ -692,35 +732,101 @@ func _finish_hand_drag(release: Vector2) -> void:
 	var card: Dictionary = manager.cards[manager.player.hand[index]]
 	var selection := _drop_selection(card, release)
 	drag_index = -1
+	if PlatformUI.is_touch():
+		_set_touch_hand_collapsed(false)
+		for view in summon_views.values():
+			if is_instance_valid(view): view.set_health_foreground(false)
 	drag_card.queue_free()
 	drag_card = null
 	_clear_drag_hints()
 	var moved := PlatformUI.is_touch() or release.distance_to(pointer_down) > 45
-	var released_in_hand := PlatformUI.is_touch() and release.y >= 640 and release.x >= 490 and release.x <= 1260
+	var released_in_hand := PlatformUI.is_touch() and release.y >= 690 and release.x >= 490 and release.x <= 1260
 	if moved and not released_in_hand and manager.valid_card_target(manager.player, card, selection) and selection.get("kind", "") != "invalid":
 		_play_card_from(index, release, selection)
 	else:
 		_refresh()
 
 func _touch_hand_at(point: Vector2, sliding: bool = false) -> int:
-	if hand_cards.is_empty() or point.x < 490 or point.x > 1260 or point.y < (610 if sliding else 640): return -1
+	var low_edge := 745.0 if touch_hand_collapsed else (610.0 if sliding else 640.0)
+	if hand_cards.is_empty() or point.x < 490 or point.x > 1260 or point.y < low_edge: return -1
 	var closest := -1
 	var distance := INF
 	for i in hand_cards.size():
-		if not is_instance_valid(hand_cards[i]) or not hand_cards[i].visible: continue
+		if not is_instance_valid(hand_cards[i]) or (not hand_cards[i].visible and (i != touch_hand_index or touch_finger < 0)): continue
 		var center := _hand_card_center(i, hand_cards.size())
 		var delta := absf(point.x - center.x)
 		if delta < distance:
 			closest = i
 			distance = delta
-	return closest if distance < HAND_CARD_SIZE.x else -1
+	if distance >= HAND_CARD_SIZE.x: return -1
+	if sliding and touch_hand_index >= 0 and closest != touch_hand_index:
+		var current_x := _hand_card_center(touch_hand_index, hand_cards.size()).x
+		var candidate_x := _hand_card_center(closest, hand_cards.size()).x
+		var midpoint := (current_x + candidate_x) / 2.0
+		var margin := minf(18.0, absf(candidate_x - current_x) * 0.2)
+		if (candidate_x > current_x and point.x < midpoint + margin) or (candidate_x < current_x and point.x > midpoint - margin):
+			return touch_hand_index
+	return closest
+
+func _set_touch_hand_collapsed(value: bool) -> void:
+	if not PlatformUI.is_touch() or touch_hand_collapsed == value: return
+	touch_hand_collapsed = value
+	for i in hand_cards.size():
+		var view := hand_cards[i]
+		if not is_instance_valid(view): continue
+		var target := _hand_card_position(i, hand_cards.size())
+		if value: target.y += TOUCH_HAND_COLLAPSE_DROP
+		var tween := view.create_tween().set_parallel(true)
+		tween.tween_property(view, "position", target, 0.23).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tween.tween_property(view, "scale", Vector2.ONE * (TOUCH_HAND_COLLAPSE_SCALE if value else 1.0), 0.23).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 func _show_touch_card(index: int) -> void:
 	if touch_hand_index == index and touch_inspecting: return
+	_clear_hover_preview()
 	touch_hand_index = index
-	_show_hover_preview(index)
-	if not is_instance_valid(hover_preview): return
-	_place_touch_preview()
+	if index < 0 or index >= manager.player.hand.size(): return
+	touch_hand_card_id = manager.player.hand[index]
+	var card: Dictionary = manager.cards[manager.player.hand[index]]
+	var center := _hand_card_center(index, manager.player.hand.size())
+	var target := _touch_preview_target(index)
+	hover_preview = _card_front(card, Vector2(340, 476))
+	hover_preview.pivot_offset = Vector2(170, 238)
+	hover_preview.position = Vector2(center.x - 170.0, center.y - 238.0)
+	hover_preview.scale = Vector2.ONE * (HAND_CARD_SIZE.x / 340.0)
+	fx_layer.add_child(hover_preview)
+	hand_cards[index].hide()
+	var tween := hover_preview.create_tween().set_parallel(true)
+	tween.tween_property(hover_preview, "position", target, 0.19).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(hover_preview, "scale", Vector2.ONE, 0.19).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	touch_inspecting = true
+	_show_hover_keywords(card, Rect2(target, Vector2(340, 476)))
+
+func _touch_preview_target(index: int) -> Vector2:
+	return Vector2(clampf(_hand_card_center(index, manager.player.hand.size()).x - 170.0, 380.0, 1060.0), 220.0)
+
+func _release_touch_card() -> void:
+	if touch_hand_index < 0:
+		_clear_hover_preview()
+		return
+	var index := touch_hand_index
+	var preview := hover_preview
+	var source: Control = hand_cards[index] if index < hand_cards.size() else null
+	var center := _hand_card_center(index, manager.player.hand.size())
+	if is_instance_valid(hover_keywords):
+		hover_keywords.hide()
+		hover_keywords.queue_free()
+	hover_keywords = null
+	hover_preview = null
+	touch_hand_index = -1
+	touch_hand_card_id = ""
+	touch_inspecting = false
+	if not is_instance_valid(preview): return
+	if is_instance_valid(source): source.show()
+	touch_returning_preview = preview
+	var tween := preview.create_tween().set_parallel(true)
+	tween.tween_property(preview, "position", Vector2(center.x - 170, center.y - 238), 0.16).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tween.tween_property(preview, "scale", Vector2.ONE * (HAND_CARD_SIZE.x / 340.0), 0.16).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tween.chain().tween_callback(preview.queue_free)
 
 func _place_touch_preview() -> void:
 	# A large stationary inspection card stays clear of the finger and the hand.
@@ -748,6 +854,7 @@ func _place_touch_preview() -> void:
 
 func _handle_touch(event: InputEvent) -> void:
 	if event is not InputEventScreenTouch and event is not InputEventScreenDrag: return
+	if manager.phase in BattleManager.FINISHED_PHASES: return
 	var point := PlatformUI.local_point(self, event.position)
 	if event is InputEventScreenTouch:
 		if event.pressed:
@@ -756,9 +863,15 @@ func _handle_touch(event: InputEvent) -> void:
 				return
 			if is_instance_valid(back_dialog): return
 			var index := _touch_hand_at(point)
-			if index >= 0 and not action_busy:
+			if index >= 0:
+				if touch_hand_collapsed:
+					_set_touch_hand_collapsed(false)
+					get_viewport().set_input_as_handled()
+					return
 				touch_finger = event.index
 				touch_origin = point
+				touch_drag_rejected = false
+				touch_warning_shown = false
 				_show_touch_card(index)
 				get_viewport().set_input_as_handled()
 				return
@@ -767,7 +880,6 @@ func _handle_touch(event: InputEvent) -> void:
 				if not Rect2(hover_preview.position, hover_preview.size).has_point(point): _clear_hover_preview()
 				get_viewport().set_input_as_handled()
 				return
-			if action_busy: return
 			for entry in status_touch_regions:
 				if entry.rect.has_point(point):
 					_show_touch_status(entry.text)
@@ -782,23 +894,38 @@ func _handle_touch(event: InputEvent) -> void:
 						_place_touch_preview()
 						get_viewport().set_input_as_handled()
 						return
+			if point.x > 470 and point.x < 1270 and point.y > 180 and point.y < 640:
+				_set_touch_hand_collapsed(true)
+				get_viewport().set_input_as_handled()
+				return
 		elif event.index == touch_finger:
 			touch_finger = -1
 			if event.canceled:
 				if drag_index >= 0: _finish_hand_drag(Vector2(880, 850))
 				_clear_hover_preview()
-			elif drag_index >= 0: _finish_hand_drag(point)
+			elif drag_index >= 0:
+				_finish_hand_drag(point)
+			elif touch_hand_index >= 0:
+				_release_touch_card()
 			get_viewport().set_input_as_handled()
 	elif event.index == touch_finger:
 		if drag_index >= 0:
 			drag_card.position = point - drag_offset
 			_update_drag_hints(manager.cards[manager.player.hand[drag_index]], point)
 		elif touch_hand_index >= 0:
-			if point.y < 610 and point.y < touch_origin.y - 42:
-				if _begin_hand_drag(touch_hand_index, point): _update_drag_hints(manager.cards[manager.player.hand[drag_index]], point)
+			var travel := point - touch_origin
+			if not touch_drag_rejected and travel.y < -10.0 and travel.length() > 24.0 and -travel.y > absf(travel.x) * TOUCH_DRAG_ANGLE_TANGENT:
+				if _begin_hand_drag(touch_hand_index, point):
+					drag_card.position = point - drag_offset
+					_update_drag_hints(manager.cards[manager.player.hand[drag_index]], point)
+				else:
+					touch_drag_rejected = true
 			else:
 				var index := _touch_hand_at(point, true)
-				if index >= 0: _show_touch_card(index)
+				if index >= 0 and index != touch_hand_index:
+					_show_touch_card(index)
+					touch_origin = point
+					touch_drag_rejected = false
 		get_viewport().set_input_as_handled()
 
 func _show_touch_status(description: String) -> void:
@@ -812,9 +939,16 @@ func _show_touch_status(description: String) -> void:
 func _drop_selection(card: Dictionary, point: Vector2) -> Dictionary:
 	match manager.card_target_mode(card):
 		"slot":
+			var nearest := -1
+			var nearest_distance := INF
+			var radius := SUMMON_DROP_RADIUS_TOUCH if PlatformUI.is_touch() else SUMMON_DROP_RADIUS_MOUSE
 			for slot in manager.player.summons.size():
-				if manager.player.summons[slot] == null and point.distance_to(_summon_point("player", slot)) <= SUMMON_TARGET_RADIUS:
-					return {"kind": "slot", "slot": slot}
+				if manager.player.summons[slot] == null:
+					var distance := point.distance_to(_summon_point("player", slot))
+					if distance <= radius and distance < nearest_distance:
+						nearest = slot
+						nearest_distance = distance
+			if nearest >= 0: return {"kind": "slot", "slot": nearest}
 		"damage":
 			for side in manager.damage_target_sides(manager.player, card):
 				var owner := manager.player if side == "player" else manager.enemy
@@ -1162,6 +1296,13 @@ func _on_hand_card_removed(side: String, card_id: String, index: int, reason: St
 	var views: Array[Control] = hand_cards if side == "player" else enemy_backs
 	if index < 0 or index >= views.size() or not is_instance_valid(views[index]):
 		return
+	if side == "player" and PlatformUI.is_touch() and touch_finger >= 0 and touch_hand_index >= 0:
+		if index == touch_hand_index:
+			_clear_hover_preview()
+			touch_hand_index = -1
+			touch_finger = -1
+		elif index < touch_hand_index:
+			touch_hand_index -= 1
 	var card := views[index]
 	# Keep the remaining view indices aligned with the model's hand before any
 	# subsequent discard chooses a slot. Matching by card ID would mix up copies.
@@ -1169,7 +1310,7 @@ func _on_hand_card_removed(side: String, card_id: String, index: int, reason: St
 	if reason != "discard":
 		card.hide()
 		return
-	_clear_hover_preview()
+	if not PlatformUI.is_touch() or touch_hand_index < 0: _clear_hover_preview()
 	hovered_index = -1
 	# Keep the existing prefab and its exact fan transform across HUD rebuilds.
 	card.reparent(fx_layer)

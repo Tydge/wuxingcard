@@ -12,6 +12,17 @@ func run() -> void:
 	await create_timer(5.4).timeout
 	var manager: BattleManager = ui.get("manager")
 	var index := 2
+	manager.phase = "enemy_action"
+	ui.action_busy = true
+	ui.call("_refresh")
+	ui.call("_on_hand_hover", index)
+	if not is_instance_valid(ui.get("hover_preview")):
+		push_error("PC hand hover should remain available during the enemy turn")
+		quit(1)
+		return
+	ui.call("_on_hand_exit", index)
+	manager.phase = "player_action"
+	ui.action_busy = false
 	manager.player.hand[index] = "fire_strike"
 	manager.player.energy["fire"] = 10
 	ui.call("_refresh")

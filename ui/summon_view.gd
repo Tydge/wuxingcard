@@ -5,6 +5,7 @@ const VIEW_SIZE := Vector2(190, 190)
 var summon_ref: Summon
 var portrait: TextureRect
 var hp_label: Label
+var hp_badge: Panel
 var trigger_tween: Tween
 
 func configure(summoned: Summon, mirrored: bool = false) -> void:
@@ -33,7 +34,7 @@ func configure(summoned: Summon, mirrored: bool = false) -> void:
 	var breath_tween := portrait.create_tween().set_loops()
 	breath_tween.tween_property(portrait, "scale", art_size * 1.025, float_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	breath_tween.tween_property(portrait, "scale", art_size, float_seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	var hp_badge := Panel.new()
+	hp_badge = Panel.new()
 	hp_badge.position = Vector2(57, 160)
 	hp_badge.size = Vector2(76, 26)
 	hp_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -45,6 +46,11 @@ func configure(summoned: Summon, mirrored: bool = false) -> void:
 	hp_badge.add_theme_stylebox_override("panel", badge_style)
 	add_child(hp_badge)
 	hp_label = _label(hp_badge, "%d / %d" % [summoned.hp, summoned.max_hp], Vector2.ZERO, hp_badge.size, 15, Color.WHITE)
+
+func set_health_foreground(value: bool) -> void:
+	if is_instance_valid(hp_badge):
+		hp_badge.z_as_relative = false
+		hp_badge.z_index = 2 if value else 0
 
 func refresh_health() -> void:
 	if is_instance_valid(hp_label):
