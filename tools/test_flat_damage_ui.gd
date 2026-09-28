@@ -33,11 +33,16 @@ func run() -> void:
 	ui.call("_start_test_battle")
 	await create_timer(5.8).timeout
 	manager = ui.get("manager")
+	# Preserve the original all-board UI regression as a test-only spell.
+	var all_board: Dictionary = manager.cards["fire_all_targets"].duplicate(true)
+	all_board["id"] = "test_all_board"
+	all_board["effects"] = [{"type":"damage", "scope":"all", "amount":12, "element":"fire"}]
+	manager.cards["test_all_board"] = all_board
 	for actor in [manager.player, manager.enemy]:
 		actor.hp = 80
 		actor.statuses.clear()
 		for element in BattleRules.ELEMENTS: actor.energy[element] = 0
-	manager.player.hand = ["metal_twin_blades", "metal_temper", "earth_stone_body", "fire_clear_weak", "water_tide_scroll", "fire_all_targets"]
+	manager.player.hand = ["metal_twin_blades", "metal_temper", "earth_stone_body", "fire_clear_weak", "water_tide_scroll", "test_all_board"]
 	manager.player.energy["metal"] = 3
 	manager.player.add_status("strong_attack", 3, 0)
 	manager.player.add_status("strong_defense", 3, 0)
@@ -78,7 +83,7 @@ func run() -> void:
 			actor.summons[slot].setup(manager.summon_templates["water_spring"])
 	manager.player.energy["fire"] = 2
 	ui.call("_refresh")
-	card = manager.cards["fire_all_targets"]
+	card = manager.cards["test_all_board"]
 	ui.call("_show_drag_hints", card)
 	ui.call("_update_drag_hints", card, ui.call("_anchor", "player"))
 	var hints: Array = ui.get("drag_hints")
@@ -93,9 +98,31 @@ func run() -> void:
 	check(fx.active.size() == 8, "global spell sends effects to every affected unit")
 	fx.clear_effects()
 	ui.call("_clear_drag_hints")
+	# Samadhi Fire now selects enemy summons only, with one visible cast per summon.
+	card = manager.cards["fire_all_targets"]
+	ui.call("_show_drag_hints", card)
+	ui.call("_update_drag_hints", card, ui.call("_summon_point", "enemy", 0))
+	var summon_hints: Array = ui.get("drag_hints")
+	check(summon_hints.size() == 3, "Samadhi Fire marks only the three enemy summons")
+	for hint in summon_hints: check(hint.highlighted, "Samadhi Fire highlights each enemy summon together")
+	fx.clear_effects()
+	ui.call("_cast_card", card, "player", ui.call("_summon_point", "enemy", 0))
+	check(fx.active.size() == 3, "Samadhi Fire sends a separate cast to each enemy summon")
+	fx.clear_effects()
+	ui.call("_clear_drag_hints")
+	var saved_summon: Summon = manager.player.summons[2]
+	manager.player.summons[2] = null
+	manager.player.hand = ["fire_sun_awakening", "metal_thunder_marten_card"]
+	manager.player.energy["fire"] = 5
+	manager.player.energy["metal"] = 5
+	ui.call("_refresh")
+	var hand: Array = ui.get("hand_cards")
+	check(hand.size() == 2 and is_instance_valid(hand[0].condition_glow) and is_instance_valid(hand[1].condition_glow), "pre-cost spell and post-cost summon conditions glow in hand")
+	await shot("condition_hand")
+	manager.player.summons[2] = saved_summon
 	manager.player.hp = 12
 	manager.enemy.hp = 12
-	manager.player.hand = ["fire_all_targets"]
+	manager.player.hand = ["test_all_board"]
 	ui.call("_refresh")
 	await ui.call("_play_card_from", 0, Vector2(800, 730), own_selection)
 	check(manager.phase == "tie" and labels(ui).has("平 局"), "actual card presentation opens the tie result")

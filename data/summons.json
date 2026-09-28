@@ -13,5 +13,10 @@
   {"id":"water_koi","card_id":"water_koi_card","name":"灵汐鲤","element":"water","hp":20,"art_scale":1.08,"turn_start":[{"type":"heal","target":"self","amount":3},{"type":"damage","target":"opponent","element":"water","amount":3}]},
   {"id":"wood_frog","card_id":"wood_frog_card","name":"碧瘴蛙","element":"wood","hp":6,"art_scale":0.82,"turn_end":[{"type":"status","target":"opponent","status":"poison","stacks":2}]},
   {"id":"fire_fox","card_id":"fire_fox_card","name":"赤尾狐","element":"fire","hp":10,"art_scale":0.96,"turn_end":[{"type":"status","target":"opponent","status":"burn","stacks":1}]},
-  {"id":"earth_badger","card_id":"earth_badger_card","name":"岩甲獾","element":"earth","hp":16,"art_scale":1.08,"turn_end":[{"type":"status","target":"self","status":"shield","stacks":5}]}
+  {"id":"earth_badger","card_id":"earth_badger_card","name":"岩甲獾","element":"earth","hp":16,"art_scale":1.08,"turn_end":[{"type":"status","target":"self","status":"shield","stacks":5}]},
+  {"id":"metal_thunder_marten","card_id":"metal_thunder_marten_card","name":"霆光貂","element":"metal","hp":10,"art_scale":0.85,"on_spawn":[{"type":"damage","target":"opponent","element":"metal","amount":8,"condition":{"type":"energy_at_least","element":"metal","amount":3}}],"turn_start":[{"type":"damage","target":"opponent","element":"metal","amount":3}]},
+  {"id":"water_frost_moth","card_id":"water_frost_moth_card","name":"寒汐蛾","element":"water","hp":16,"art_scale":0.9,"turn_end":[{"type":"status","target":"opponent","status":"weak","stacks":2}]},
+  {"id":"wood_thorn_flower","card_id":"wood_thorn_flower_card","name":"青棘花灵","element":"wood","hp":16,"art_scale":0.95,"turn_start":[{"type":"damage","target":"opponent","element":"wood","amount":4},{"type":"heal_summon","target":"summon_self","amount":4}]},
+  {"id":"fire_ember_lizard","card_id":"fire_ember_lizard_card","name":"焰尾蜥","element":"fire","hp":9,"art_scale":0.8,"on_spawn":[{"type":"damage","target":"self","element":"fire","amount":5}],"turn_end":[{"type":"damage","target":"lowest_opponent","element":"fire","amount":3}]},
+  {"id":"earth_sand_rhino","card_id":"earth_sand_rhino_card","name":"砂背犀","element":"earth","hp":24,"art_scale":1.25,"turn_start":[{"type":"damage","target":"highest_opponent","element":"earth","amount":5}]}
 ]

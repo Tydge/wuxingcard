@@ -136,6 +136,7 @@ func _ready() -> void:
 	manager.action_event.connect(_on_action_event)
 	manager.hand_card_removed.connect(_on_hand_card_removed)
 	manager.summon_event.connect(_on_summon_event)
+	manager.summon_triggered.connect(_on_summon_triggered)
 	actor_layer = Control.new()
 	actor_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	actor_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -535,6 +536,7 @@ func _build_hand() -> void:
 		view.mouse_exited.connect(_on_hand_exit.bind(i))
 		view.gui_input.connect(_on_hand_input.bind(i))
 		add_child(view)
+		view.call("set_condition_highlight", manager.player.can_pay(card) and manager.card_condition_met(manager.player, card))
 		hand_cards.append(view)
 		if view.position != target_position and not touch_hand_collapsed:
 			view.create_tween().tween_property(view, "position", target_position, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
@@ -963,6 +965,12 @@ func _drop_selection(card: Dictionary, point: Vector2) -> Dictionary:
 				var hero_rect := ENEMY_HERO_TARGET
 				if side == "player": hero_rect.position.x = VIEW_SIZE.x - hero_rect.end.x
 				if hero_rect.has_point(point): return {"kind": "hero", "side": side}
+		"ally_summon", "enemy_summons":
+			var side := "player" if manager.card_target_mode(card) == "ally_summon" else "enemy"
+			var owner := manager.player if side == "player" else manager.enemy
+			for slot in owner.summons.size():
+				if owner.summons[slot] != null and point.distance_to(_summon_point(side, slot)) <= SUMMON_TARGET_RADIUS:
+					return {"kind": "summon", "slot": slot, "side": side}
 		"none":
 			if point.y < DROP_ZONE_Y:
 				return {}
@@ -983,6 +991,12 @@ func _show_drag_hints(card: Dictionary) -> void:
 			for slot in owner.summons.size():
 				if owner.summons[slot] != null:
 					choices.append({"selection": {"kind": "summon", "slot": slot, "side": side}, "point": _summon_point(side, slot)})
+	elif mode in ["ally_summon", "enemy_summons"]:
+		var side := "player" if mode == "ally_summon" else "enemy"
+		var owner := manager.player if side == "player" else manager.enemy
+		for slot in owner.summons.size():
+			if owner.summons[slot] != null:
+				choices.append({"selection": {"kind": "summon", "slot": slot, "side": side}, "point": _summon_point(side, slot)})
 	for choice in choices:
 		var marker := TARGET_MARKER_SCRIPT.new()
 		marker.configure(mode == "slot")
@@ -1013,7 +1027,7 @@ func _update_drag_hints(card: Dictionary, pointer: Vector2) -> void:
 		var selected: Dictionary = hint.get_meta("selection")
 		var all_targets := false
 		for effect in card["effects"]:
-			if effect.get("scope", "single") in ["all_opponents", "all"]: all_targets = true
+			if effect.get("scope", "single") in ["all_opponents", "all", "all_enemy_summons"]: all_targets = true
 		hint.call("set_highlighted", selected == selection or (all_targets and manager.valid_card_target(manager.player, card, selection)))
 	if not is_instance_valid(damage_preview):
 		return
@@ -1210,15 +1224,16 @@ func _run_enemy_turn() -> void:
 func _cast_card(card: Dictionary, side: String, destination: Vector2) -> float:
 	GameAudio.play_cast(str(card.get("element", "")))
 	for effect in card["effects"]:
-		if effect.get("scope", "single") not in ["all_opponents", "all"]: continue
+		if effect.get("scope", "single") not in ["all_opponents", "all", "all_enemy_summons"]: continue
 		var actor := manager.player if side == "player" else manager.enemy
 		var duration := 0.0
 		for target_side in manager.damage_target_sides(actor, card):
 			var owner := manager.player if target_side == "player" else manager.enemy
-			duration = battle_fx.cast(card, side, Vector2(-1, -1), _anchor(target_side))
+			if effect.get("scope", "single") != "all_enemy_summons":
+				duration = battle_fx.cast(card, side, Vector2(-1, -1), _anchor(target_side))
 			for slot in owner.summons.size():
 				if owner.summons[slot] != null:
-					battle_fx.cast(card, side, Vector2(-1, -1), _summon_point(target_side, slot))
+					duration = battle_fx.cast(card, side, Vector2(-1, -1), _summon_point(target_side, slot))
 		return duration
 	var duration := battle_fx.cast(card, side, Vector2(-1, -1), destination)
 	var hits := 0
@@ -1419,6 +1434,9 @@ func _on_summon_event(side: String, slot: int, kind: String, element: String, am
 			if amount > 0:
 				_play_hit_feedback(summon_views.get(key), side)
 				_show_damage_number(amount, point, matchup)
+		"heal":
+			battle_fx.heal(point, element)
+			GameAudio.play_sfx("heal", 0.0, 120)
 		"destroy":
 			battle_fx.impact(element, point)
 			GameAudio.play_sfx("summon_death", -2.0, 90)
@@ -1431,6 +1449,13 @@ func _on_summon_event(side: String, slot: int, kind: String, element: String, am
 				fade.tween_property(fallen, "self_modulate:a", 0.0, 0.4)
 				fade.tween_property(fallen, "scale", Vector2(0.84, 0.84), 0.4)
 				fade.chain().tween_callback(fallen.queue_free)
+
+func _on_summon_triggered(side: String, slot: int, timing: String, effect: Dictionary) -> void:
+	if timing != "on_spawn": return
+	var owner := manager.player if side == "player" else manager.enemy
+	if slot < 0 or slot >= owner.summons.size(): return
+	var summoned: Summon = owner.summons[slot]
+	if summoned != null: _present_summon_effect(side, slot, summoned, effect, "cast")
 
 func _present_summon_effect(side: String, slot: int, summoned: Summon, effect: Dictionary, stage: String) -> void:
 	var generation := manager.battle_generation
@@ -1447,6 +1472,8 @@ func _present_summon_effect(side: String, slot: int, summoned: Summon, effect: D
 		var selection: Dictionary = effect.get("selection", {})
 		if selection.get("kind", "") == "summon":
 			destination = _summon_point(selection.get("side", target_side), int(selection["slot"]))
+		elif effect.get("target", "") == "summon_self":
+			destination = _summon_point(side, slot)
 		match str(effect["type"]):
 			"gain_energy", "lose_energy", "convert_energy": destination = _energy_point(target_side, element)
 			"draw", "discard": destination = _draw_pile_point(target_side)

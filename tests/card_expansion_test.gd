@@ -48,7 +48,7 @@ func run() -> void:
 	check(cast("metal_rainbow_blade", {"kind":"hero"}) and manager.enemy.hp == 60, "metal spell deals twenty")
 	prepare()
 	manager.player.add_status("poison", 2, 0)
-	check(cast("wood_spirit_vine", {"kind":"hero"}) and manager.enemy.hp == 68, "wood spell deals twelve")
+	check(cast("wood_spirit_vine", {"kind":"hero"}) and manager.enemy.hp == 66, "wood spell deals fourteen")
 	var energy := 0
 	for element in BattleRules.ELEMENTS: energy += int(manager.player.energy[element])
 	check(energy == 1 and manager.player.hp == 78 and manager.player.status_stacks("poison") == 1, "one random gain triggers poison once")

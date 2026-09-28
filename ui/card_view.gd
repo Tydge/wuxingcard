@@ -9,6 +9,7 @@ var art_texture: Texture2D
 var art_source_region := Rect2()
 var art_target := Rect2()
 var fallback_color := Color.TRANSPARENT
+var condition_glow: Panel
 
 func configure(card: Dictionary, card_width: float) -> void:
 	var factor := card_width / DESIGN_SIZE.x
@@ -44,7 +45,10 @@ func configure(card: Dictionary, card_width: float) -> void:
 	var title := _add_label(self, card["name"], Vector2(14, 204) * factor, Vector2(212, 36) * factor, maxi(8, roundi(23 * factor)), Color("#dec596"))
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF
 	title.clip_text = true
-	var description := _add_label(self, _wrap_text(card["text"], 11), Vector2(17, 243) * factor, Vector2(206, 80) * factor, maxi(7, roundi(18 * factor)), Color("#f5f1e9"))
+	var wrapped := _wrap_text(card["text"], 11)
+	var lines := wrapped.count("\n") + 1
+	var description_size := 18 if lines <= 3 else 15 if lines == 4 else 13
+	var description := _add_label(self, wrapped, Vector2(17, 243) * factor, Vector2(206, 80) * factor, maxi(7, roundi(description_size * factor)), Color("#f5f1e9"))
 	description.clip_text = true
 	description.autowrap_mode = TextServer.AUTOWRAP_OFF
 
@@ -56,6 +60,32 @@ func _ready() -> void:
 	# text sideways. The theme resolves as soon as we enter the tree, so re-assert
 	# every designed rect here.
 	_reapply_designed_sizes(self)
+
+func set_condition_highlight(active: bool) -> void:
+	if not active:
+		if is_instance_valid(condition_glow): condition_glow.queue_free()
+		condition_glow = null
+		return
+	if is_instance_valid(condition_glow): return
+	clip_contents = false
+	condition_glow = Panel.new()
+	condition_glow.position = Vector2(-5, -5)
+	condition_glow.size = size + Vector2(10, 10)
+	condition_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color.TRANSPARENT
+	style.border_color = Color("#ffe181")
+	style.set_border_width_all(maxi(2, roundi(size.x / 55.0)))
+	style.set_corner_radius_all(maxi(6, roundi(size.x / 20.0)))
+	style.shadow_color = Color("#ffd04b99")
+	style.shadow_size = maxi(5, roundi(size.x / 18.0))
+	condition_glow.add_theme_stylebox_override("panel", style)
+	add_child(condition_glow)
+	move_child(condition_glow, 0)
+
+func _process(_delta: float) -> void:
+	if is_instance_valid(condition_glow):
+		condition_glow.modulate.a = 0.64 + 0.30 * sin(float(Time.get_ticks_msec()) * 0.004)
 
 func _reapply_designed_sizes(node: Node) -> void:
 	for child in node.get_children():

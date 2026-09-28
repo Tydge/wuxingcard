@@ -32,7 +32,7 @@ func run() -> void:
 	manager = BattleManager.new()
 	root.add_child(manager)
 	prepare()
-	check(manager.cards.size() == 50 and manager.summon_templates.size() == 15, "expanded pool has 50 cards and 15 summons")
+	check(manager.cards.size() == 60 and manager.summon_templates.size() == 20, "expanded pool has 60 cards and 20 summons")
 	var expected := {"metal_falcon":[2,12], "water_koi":[3,20], "wood_frog":[1,6], "fire_fox":[2,10], "earth_badger":[2,16]}
 	for id in expected:
 		prepare()
@@ -148,7 +148,7 @@ func run() -> void:
 			var deck: Array = owner.hand + owner.draw_pile + owner.discard_pile
 			check(manager.valid_random_deck(deck), "expanded random decks retain size, copies and cost limits")
 			for id in deck: pool_seen[id] = true
-	check(pool_seen.size() == 50, "all new summons participate in random deck generation")
+	check(pool_seen.size() == 60, "all new summons participate in random deck generation")
 	print("Summon expansion: targeting, ties, element damage, healing, fresh shield and random pool; %d failures" % failures)
 	quit(1 if failures > 0 else 0)
 

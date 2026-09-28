@@ -17,6 +17,11 @@ func track_result(_message: String, side: String, kind: String, _element: String
 
 func prepare() -> void:
 	manager.start_battle("ember", "random", 918)
+	# Keep the all-board damage regression with a test-only card after Samadhi Fire's retargeting.
+	var all_board: Dictionary = manager.cards["fire_all_targets"].duplicate(true)
+	all_board["id"] = "test_all_board"
+	all_board["effects"] = [{"type":"damage", "scope":"all", "amount":12, "element":"fire"}]
+	manager.cards["test_all_board"] = all_board
 	for actor in [manager.player, manager.enemy]:
 		actor.hp = 80
 		actor.statuses.clear()
@@ -104,7 +109,7 @@ func run() -> void:
 	manager.enemy.add_status("strong_defense", 1, 0)
 	for owner in [manager.player, manager.enemy]:
 		for slot in 3: summon(owner, slot, ["metal_furnace", "wood_seedling", "fire_lantern"][slot], 40)
-	card = ready_card("fire_all_targets")
+	card = ready_card("test_all_board")
 	check(manager.preview_damage_segments(manager.player, card, {"kind":"hero", "side":"player"}) == [13], "own preview accounts for payment and its own defense")
 	check(manager.preview_damage_segments(manager.player, card, {"kind":"hero", "side":"enemy"}) == [14], "opponent preview uses the same simultaneous source bonus")
 	manager.play_player_card(0, {"kind":"hero", "side":"player"})
@@ -128,7 +133,7 @@ func run() -> void:
 		for owner in [manager.player, manager.enemy]:
 			for slot in 3: summon(owner, slot, "water_spring")
 		var caster := manager.player if caster_side == "player" else manager.enemy
-		caster.hand = ["fire_all_targets"]
+		caster.hand = ["test_all_board"]
 		caster.energy["fire"] = 2
 		manager.phase = caster_side + "_action"
 		manager._play_card(caster, manager.enemy if caster == manager.player else manager.player, 0, {"kind":"hero"})
@@ -158,7 +163,7 @@ func run() -> void:
 	ready_card("water_tide_scroll")
 	var pile_size := manager.player.draw_pile.size()
 	manager.play_player_card(0, {"kind":"hero"})
-	check(manager.enemy.hp == 52 and manager.player.hand.size() == 1 and manager.player.draw_pile.size() == pile_size - 1, "water spell deals twenty-eight and draws one")
+	check(manager.enemy.hp == 55 and manager.player.hand.size() == 1 and manager.player.draw_pile.size() == pile_size - 1, "water spell deals twenty-five and draws one")
 	check(int(manager.cards["water_thought"]["cost"]) == 2, "Tide Thought now costs two")
 
 	prepare()
@@ -185,7 +190,7 @@ func run() -> void:
 	prepare()
 	manager.player.hp = 1
 	manager.player.add_status("bleed", 2, 0)
-	card = ready_card("fire_all_targets")
+	card = ready_card("test_all_board")
 	check(manager.preview_damage_segments(manager.player, card, {"kind":"hero"}).is_empty(), "lethal bleed prevents the pending spell preview")
 	manager.play_player_card(0, {"kind":"hero"})
 	check(manager.phase == "defeat" and manager.enemy.hp == 80, "pre-cast life loss prevents the global damage")
