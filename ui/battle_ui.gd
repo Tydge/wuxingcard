@@ -649,13 +649,15 @@ func _on_summon_hover(side: String, slot: int) -> void:
 	if PlatformUI.is_touch(): return
 	_show_summon_preview(side, slot)
 
-func _show_summon_preview(side: String, slot: int) -> void:
-	if manager.phase in BattleManager.FINISHED_PHASES or drag_index >= 0 or action_busy:
-		return
+func _show_summon_preview(side: String, slot: int) -> bool:
+	if manager.phase in BattleManager.FINISHED_PHASES or drag_index >= 0 or action_busy or enemy_animating:
+		return false
+	if side not in ["player", "enemy"]: return false
 	var owner: Combatant = manager.player if side == "player" else manager.enemy
+	if slot < 0 or slot >= owner.summons.size(): return false
 	var summoned: Summon = owner.summons[slot]
 	if summoned == null or not manager.cards.has(summoned.card_id):
-		return
+		return false
 	_clear_hover_preview()
 	hovered_summon_side = side
 	hovered_summon_slot = slot
@@ -668,6 +670,7 @@ func _show_summon_preview(side: String, slot: int) -> void:
 	hover_preview.modulate.a = 0.0
 	hover_preview.create_tween().tween_property(hover_preview, "modulate:a", 1.0, 0.13)
 	_show_hover_keywords(card)
+	return true
 
 func _on_summon_exit(side: String, slot: int) -> void:
 	if PlatformUI.is_touch(): return
@@ -837,11 +840,21 @@ func _release_touch_card() -> void:
 
 func _place_touch_preview() -> void:
 	# A large stationary inspection card stays clear of the finger and the hand.
+	if not is_instance_valid(hover_preview): return
 	var card_data: Dictionary
 	if touch_hand_index >= 0:
+		if touch_hand_index >= manager.player.hand.size():
+			_clear_hover_preview()
+			return
 		card_data = manager.cards[manager.player.hand[touch_hand_index]]
 	else:
+		if hovered_summon_side not in ["player", "enemy"]:
+			_clear_hover_preview()
+			return
 		var owner: Combatant = manager.player if hovered_summon_side == "player" else manager.enemy
+		if hovered_summon_slot < 0 or hovered_summon_slot >= owner.summons.size() or owner.summons[hovered_summon_slot] == null:
+			_clear_hover_preview()
+			return
 		card_data = manager.cards[owner.summons[hovered_summon_slot].card_id]
 	if is_instance_valid(hover_keywords): hover_keywords.queue_free()
 	hover_keywords = null
@@ -896,9 +909,9 @@ func _handle_touch(event: InputEvent) -> void:
 				var owner := manager.player if side == "player" else manager.enemy
 				for slot in owner.summons.size():
 					if owner.summons[slot] != null and point.distance_to(_summon_point(side, slot)) < SUMMON_TARGET_RADIUS:
-						touch_hand_index = -1
-						_show_summon_preview(side, slot)
-						_place_touch_preview()
+						if _show_summon_preview(side, slot):
+							touch_hand_index = -1
+							_place_touch_preview()
 						get_viewport().set_input_as_handled()
 						return
 			if point.x > 470 and point.x < 1270 and point.y > 180 and point.y < 640:

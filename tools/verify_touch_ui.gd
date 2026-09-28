@@ -227,6 +227,32 @@ func run() -> void:
 	manager.enemy.summons[0] = summon
 	ui.call("_refresh")
 	await process_frame
+	var summon_point: Vector2 = ui.call("_summon_point", "enemy", 0)
+	ui.action_busy = true
+	press(summon_point, true)
+	press(summon_point, false)
+	check(not ui.touch_inspecting and not is_instance_valid(ui.hover_preview), "busy summon tap does not open an uninitialized card preview")
+	ui.action_busy = false
+	ui.enemy_animating = true
+	press(summon_point, true)
+	press(summon_point, false)
+	check(not ui.touch_inspecting and not is_instance_valid(ui.hover_preview), "enemy card animation also blocks summon inspection")
+	ui.enemy_animating = false
+	manager.player.hand.assign(["metal_strike"])
+	manager.player.energy.metal = 10
+	ui.call("_refresh")
+	var played_before: int = manager.played_cards
+	ui.call("_play_card_from", 0, hand_point(0), {"kind":"hero"})
+	check(ui.action_busy, "card presentation has started before tapping the summon")
+	press(summon_point, true)
+	press(summon_point, false)
+	check(not ui.touch_inspecting and not is_instance_valid(ui.hover_preview), "summon tap during card animation leaves inspection closed")
+	await create_timer(4.8).timeout
+	check(manager.played_cards == played_before + 1 and not ui.action_busy, "card animation and battle action finish after ignored summon tap")
+	manager.player.hand.assign(original_hand)
+	manager.player.energy.metal = 10
+	ui.call("_refresh")
+	await process_frame
 	press(ui.call("_summon_point", "enemy", 0), true)
 	press(ui.call("_summon_point", "enemy", 0), false)
 	check(ui.touch_inspecting and ui.hovered_summon_side == "enemy", "tap enemy summon opens its card")
