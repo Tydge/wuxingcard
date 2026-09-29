@@ -1439,7 +1439,7 @@ func _on_summon_event(side: String, slot: int, kind: String, element: String, am
 	var key := "%s_%d" % [side, slot]
 	match kind:
 		"spawn":
-			battle_fx.energy(point, element, true)
+			battle_fx.summon_activation(point, element)
 			GameAudio.play_sfx("summon_open", -3.0, 100)
 		"damage":
 			battle_fx.impact(element, point)
@@ -1491,8 +1491,7 @@ func _present_summon_effect(side: String, slot: int, summoned: Summon, effect: D
 			"gain_energy", "lose_energy", "convert_energy": destination = _energy_point(target_side, element)
 			"draw", "discard": destination = _draw_pile_point(target_side)
 		var source := _summon_point(side, slot) + Vector2(0, -14)
-		battle_fx.summon_activation(source, summoned.element)
-		var cast_data := {"element": element, "effects": [effect], "fx_scale": 0.8}
+		var cast_data := {"element": element, "effects": [effect], "fx_scale": 0.8, "summon_cast": true}
 		for key in ["fx_id", "fx_speed", "fx_scale", "fx_intensity"]:
 			if effect.has(key):
 				cast_data[key] = effect[key]
@@ -1517,9 +1516,14 @@ func _on_action_event(message: String, side: String, kind: String, element: Stri
 	if side not in ["player", "enemy"]:
 		return
 	var target := _anchor(side)
-	if kind == "damage":
-		battle_fx.impact(element, target, "shield" if message.contains("护盾抵消") else "")
-		GameAudio.play_hit(element, message.contains("护盾抵消"), amount)
+	var is_damage := kind in ["damage", "poison_damage"]
+	if is_damage:
+		if kind == "poison_damage":
+			battle_fx.status(target, "wood", "poison")
+			GameAudio.play_sfx("status", -3.0, 150)
+		else:
+			battle_fx.impact(element, target, "shield" if message.contains("护盾抵消") else "")
+			GameAudio.play_hit(element, message.contains("护盾抵消"), amount)
 		if amount > 0:
 			_play_hit_feedback(standee_nodes.get(side), side)
 			var matchup := "克制" if message.contains("克制") else "抵抗" if message.contains("抵抗") else ""
@@ -1539,12 +1543,12 @@ func _on_action_event(message: String, side: String, kind: String, element: Stri
 				pending_player_draws += 1
 			else:
 				pending_enemy_draws += 1
-	if kind == "damage" and amount == 0:
+	if is_damage and amount == 0:
 		_show_floating("格挡" if message.contains("护盾抵消") else "免疫", side, Color("#bde9ff"))
 		return
-	if kind not in ["damage", "heal", "energy", "energy_loss"] or amount <= 0:
+	if kind not in ["damage", "poison_damage", "heal", "energy", "energy_loss"] or amount <= 0:
 		return
-	if kind == "damage":
+	if is_damage:
 		return
 	var float_point := Vector2(-1, -1)
 	if kind in ["energy", "energy_loss"]:

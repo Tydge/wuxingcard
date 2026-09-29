@@ -32,6 +32,19 @@ func capture() -> void:
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(output.path_join("fire_impact.png"))
 	fx.clear_effects()
+	fx.heal(Vector2(292, 452), "wood")
+	fx.status(Vector2(1308, 452), "earth", "shield")
+	await create_timer(0.28).timeout
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png(output.path_join("healing_shield.png"))
+	for effect_name in ["fire", "shield", "summon", "burn", "poison"]:
+		await _capture_sequence(fx, output, effect_name)
+	fx.clear_effects()
+	ui.call("_on_action_event", "五行守阵者 中毒：失去 3 生命", "enemy", "poison_damage", "wood", 3)
+	await create_timer(0.32).timeout
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png(output.path_join("poison_trigger.png"))
+	fx.clear_effects()
 	ui.call("_on_action_event", "护盾生效", "enemy", "status_shield", "earth", 10)
 	ui.call("_on_action_event", "获得水能量", "player", "energy", "water", 1)
 	await create_timer(0.22).timeout
@@ -76,3 +89,16 @@ func capture() -> void:
 	await create_timer(1.1).timeout
 	print("FX previews: ", output)
 	quit()
+
+func _capture_sequence(fx: BattleFX, output: String, effect_name: String) -> void:
+	fx.clear_effects()
+	match effect_name:
+		"fire": fx.impact("fire", Vector2(1308, 452))
+		"shield": fx.status(Vector2(1308, 452), "earth", "shield")
+		"summon": fx.summon_activation(Vector2(800, 452), "metal")
+		"burn": fx.status(Vector2(1308, 452), "fire", "burn")
+		"poison": fx.status(Vector2(1308, 452), "wood", "poison")
+	for frame in 8:
+		await create_timer(0.06 if effect_name == "fire" else 0.075 if effect_name in ["shield", "summon"] else 0.10).timeout
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png(output.path_join("%s_sequence_%02d.png" % [effect_name, frame]))

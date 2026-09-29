@@ -676,7 +676,7 @@ func _trigger_poison(actor: Combatant) -> void:
 		return
 	actor.hp = maxi(0, actor.hp - stacks)
 	actor.decay_status("poison")
-	_report("%s 中毒：失去 %d 生命" % [actor.display_name, stacks], _side(actor), "damage", "", stacks)
+	_report("%s 中毒：失去 %d 生命" % [actor.display_name, stacks], _side(actor), "poison_damage", "", stacks)
 	_check_finish()
 
 func _trigger_bleed(actor: Combatant) -> void:
