@@ -13,6 +13,7 @@ const PAGE_SIZE := 12
 
 var cards: Dictionary
 var summons: Dictionary
+var artifacts: Dictionary
 var factory: Callable
 var store: DeckStore
 var brush_font: Font
@@ -23,6 +24,9 @@ var selected_id := ""
 var edit_id := ""
 var edit_name := ""
 var draft: Array[String] = []
+var draft_loadout: Dictionary = {"implement": "", "guard": "", "pendant": ""}
+var enter_after_equipping := false
+var selected_artifact_slot := "all"
 var baseline: Dictionary = {}
 var selected_element := "all"
 var page := 0
@@ -31,6 +35,7 @@ var card_nodes: Array[DeckLibraryCard] = []
 var filter_buttons := {}
 var deck_buttons := {}
 var row_nodes := {}
+var artifact_rows: Dictionary = {}
 var name_edit: LineEdit
 var total_label: Label
 var save_button: Button
@@ -54,6 +59,7 @@ var next_page_button: Button
 func configure(data: Dictionary, card_factory: Callable, summon_data: Dictionary, path: String = DeckStore.DEFAULT_PATH) -> void:
 	cards = data
 	summons = summon_data
+	artifacts = ArtifactLibrary.load_all()
 	factory = card_factory
 	store = DeckStore.new(cards, path)
 	store.load_decks()
@@ -164,6 +170,7 @@ func _build_showcase() -> void:
 	play_button.disabled = not random and not store.problem(deck["cards"]).is_empty()
 	if not random:
 		_button(content, "编修", Rect2(595, 716, 145, 50), _open_editor.bind(deck))
+		_button(content, "法宝", Rect2(910, 716, 125, 50), _open_artifacts.bind(deck))
 		_button(content, "删除", Rect2(757, 716, 120, 50), _ask_delete.bind(deck), Color("#cd9a80"))
 		if play_button.disabled:
 			_text(content, store.problem(deck["cards"]), Rect2(1020, 723, 163, 35), 18, JADE, false, HORIZONTAL_ALIGNMENT_RIGHT)
@@ -178,7 +185,8 @@ func _open_editor(deck: Dictionary) -> void:
 	selected_id = edit_id
 	edit_name = str(deck.get("name", "新卡组"))
 	draft.assign(deck.get("cards", []))
-	baseline = {"name": edit_name, "cards": draft.duplicate()}
+	draft_loadout = ArtifactLibrary.normalize(deck.get("artifacts", {}), artifacts)
+	baseline = {"name": edit_name, "cards": draft.duplicate(), "artifacts": draft_loadout.duplicate()}
 	selected_element = "all"
 	page = 0
 	_build_editor()
@@ -378,17 +386,130 @@ func _change_page(amount: int) -> void:
 	page_motion.turn_to(next, amount)
 
 func _save() -> void:
-	var saved := store.save_deck(edit_id, edit_name, draft)
+	var saved := store.save_deck(edit_id, edit_name, draft, true, draft_loadout)
+	if saved.has("error"): _toast(saved["error"]); return
+	edit_id = saved["id"]
+	selected_id = saved["id"]
+	enter_after_equipping = false
+	_build_artifact_editor()
+
+func _save_and_play() -> void:
+	if not store.problem(draft).is_empty(): _toast(store.problem(draft)); return
+	var saved := store.save_deck(edit_id, edit_name, draft, false, draft_loadout)
+	if saved.has("error"): _toast(saved["error"]); return
+	edit_id = saved["id"]
+	selected_id = saved["id"]
+	enter_after_equipping = true
+	_build_artifact_editor()
+
+func _open_artifacts(deck: Dictionary) -> void:
+	edit_id = str(deck.get("id", ""))
+	selected_id = edit_id
+	edit_name = str(deck.get("name", "新卡组"))
+	draft.assign(deck.get("cards", []))
+	draft_loadout = ArtifactLibrary.normalize(deck.get("artifacts", {}), artifacts)
+	enter_after_equipping = false
+	selected_element = "all"
+	selected_artifact_slot = "all"
+	page = 0
+	_build_artifact_editor()
+
+func _artifact_entries() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for entry: Dictionary in artifacts.values():
+		if selected_element != "all" and entry["element"] != selected_element: continue
+		if selected_artifact_slot != "all" and entry["slot"] != selected_artifact_slot: continue
+		result.append(entry)
+	result.sort_custom(func(a: Dictionary, b: Dictionary):
+		var aslot := ArtifactLibrary.SLOTS.find(a["slot"])
+		var bslot := ArtifactLibrary.SLOTS.find(b["slot"])
+		if aslot != bslot: return aslot < bslot
+		return BattleRules.ELEMENTS.find(a["element"]) < BattleRules.ELEMENTS.find(b["element"]))
+	return result
+
+func _build_artifact_editor() -> void:
+	view_mode = "artifacts"
+	_reset()
+	artifact_rows.clear()
+	_text(content, "择宝", Rect2(65, 48, 235, 70), 49, GOLD, true)
+	_text(content, edit_name, Rect2(240, 75, 780, 38), 24, JADE)
+	_button(content, "返回卡组", Rect2(1340, 64, 180, 48), _save_artifacts)
+	_panel(content, Rect2(190, 184, 935, 597), Color("#142e29ed"), Color("#88744d"))
+	_panel(content, Rect2(1150, 184, 380, 597), Color("#0b211fef"), Color("#bd9d6566"))
+	var filters := ["all"] + BattleRules.ELEMENTS
+	for i in filters.size():
+		var element: String = filters[i]
+		var tint := GOLD if element == "all" else BattleRules.color(element)
+		var button := _button(content, "全部" if element == "all" else BattleRules.element_name(element) + "系", Rect2(50, 190 + i * 85, 122, 61), func(): selected_element = element; page = 0; _build_artifact_editor(), tint)
+		if element == selected_element: button.add_theme_stylebox_override("normal", _style(Color("#385246"), tint))
+	var slot_filters := ["all"] + ArtifactLibrary.SLOTS
+	for i in slot_filters.size():
+		var slot: String = slot_filters[i]
+		var button := _button(content, "全部法宝" if slot == "all" else ArtifactLibrary.SLOT_NAMES[slot], Rect2(213 + i * 222, 130, 198, 46), func(): selected_artifact_slot = slot; page = 0; _build_artifact_editor())
+		if slot == selected_artifact_slot: button.add_theme_stylebox_override("normal", _style(Color("#385246"), GOLD))
+	var entries := _artifact_entries()
+	var pages := maxi(1, ceili(float(entries.size()) / 8.0))
+	page = clampi(page, 0, pages - 1)
+	for i in range(page * 8, mini(entries.size(), page * 8 + 8)):
+		var entry: Dictionary = entries[i]
+		var local := i - page * 8
+		var view := ArtifactLibraryCard.new()
+		view.configure(entry, Vector2(182, 254))
+		view.position = Vector2(219 + (local % 4) * 221, 207 + (local / 4) * 275)
+		content.add_child(view)
+		view.equip_requested.connect(_equip_artifact_id)
+		view.inspect_requested.connect(func(item: Dictionary, source: Control): inspect_requested.emit(item, source))
+	_text(content, "拖入右侧对应位置 · 点击查看", Rect2(245, 765, 840, 25), 16, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
+	_button(content, "‹", Rect2(547, 805, 70, 48), func(): page = maxi(0, page - 1); _build_artifact_editor())
+	_text(content, "%d / %d" % [page + 1, pages], Rect2(630, 805, 130, 48), 20, GOLD, false, HORIZONTAL_ALIGNMENT_CENTER)
+	_button(content, "›", Rect2(773, 805, 70, 48), func(): page = mini(pages - 1, page + 1); _build_artifact_editor())
+	_text(content, "随身法宝", Rect2(1180, 204, 320, 44), 30, GOLD, true, HORIZONTAL_ALIGNMENT_CENTER)
+	for i in ArtifactLibrary.SLOTS.size():
+		var slot: String = ArtifactLibrary.SLOTS[i]
+		var id := str(draft_loadout.get(slot, ""))
+		var row := ArtifactLoadoutRow.new()
+		row.position = Vector2(1175, 273 + i * 125)
+		row.configure(slot, artifacts.get(id, {}))
+		row.equipped.connect(_equip_artifact)
+		row.remove_requested.connect(_unequip_artifact)
+		row.inspect_requested.connect(func(item: Dictionary, source: Control): inspect_requested.emit(item, source))
+		content.add_child(row)
+		artifact_rows[slot] = row
+	_button(content, "保存", Rect2(1175, 684, 145, 64), _save_artifacts)
+	var enter_button := _button(content, "入阵", Rect2(1355, 684, 150, 64), _enter_with_artifacts)
+	enter_button.disabled = not store.problem(draft).is_empty()
+
+func _equip_artifact_id(id: String) -> void:
+	if not artifacts.has(id): return
+	_equip_artifact(str(artifacts[id]["slot"]), id)
+
+func _equip_artifact(slot: String, id: String) -> void:
+	if not artifacts.has(id) or str(artifacts[id]["slot"]) != slot: return
+	draft_loadout[slot] = id
+	_refresh_artifact_row(slot)
+
+func _unequip_artifact(slot: String) -> void:
+	draft_loadout[slot] = ""
+	_refresh_artifact_row(slot)
+
+func _refresh_artifact_row(slot: String) -> void:
+	if not is_instance_valid(artifact_rows.get(slot)): return
+	var row: ArtifactLoadoutRow = artifact_rows[slot]
+	row.configure(slot, artifacts.get(str(draft_loadout.get(slot, "")), {}))
+	row.modulate = Color("#fff0c7")
+	row.create_tween().tween_property(row, "modulate", Color.WHITE, 0.24)
+
+func _save_artifacts() -> void:
+	var saved := store.save_deck(edit_id, edit_name, draft, true, draft_loadout)
 	if saved.has("error"): _toast(saved["error"]); return
 	selected_id = saved["id"]
 	_show_library()
 	_toast("已保存")
 
-func _save_and_play() -> void:
+func _enter_with_artifacts() -> void:
 	if not store.problem(draft).is_empty(): _toast(store.problem(draft)); return
-	var saved := store.save_deck(edit_id, edit_name, draft)
+	var saved := store.save_deck(edit_id, edit_name, draft, false, draft_loadout)
 	if saved.has("error"): _toast(saved["error"]); return
-	selected_id = saved["id"]
 	battle_requested.emit(saved)
 
 func _leave_editor() -> void:
@@ -443,6 +564,7 @@ func _toast(caption: String) -> void:
 func go_back() -> void:
 	if is_instance_valid(modal): _dismiss_modal()
 	elif view_mode == "editor": _leave_editor()
+	elif view_mode == "artifacts": _save_artifacts()
 	else: back_requested.emit()
 
 func _style(fill: Color, edge: Color) -> StyleBoxFlat:

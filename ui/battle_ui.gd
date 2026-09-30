@@ -73,6 +73,7 @@ const TOUCH_HAND_COLLAPSE_DROP := 76.0
 const ENEMY_HERO_TARGET := Rect2(1180, 198, 345, 445)
 
 var manager: BattleManager
+var artifact_layer: Control
 var actor_layer: Control
 var fx_layer: Control
 var battle_fx: BattleFX
@@ -118,7 +119,12 @@ var touch_hand_collapsed := false
 var touch_shade: ColorRect
 var touch_returning_preview: Control
 var status_touch_regions: Array[Dictionary] = []
+var energy_touch_regions: Array[Dictionary] = []
+var information_panel: BattleInfoPanel
 var back_dialog: Control
+var artifact_aiming := false
+var hovered_artifact_slot := ""
+var artifact_preview_button: Button
 
 func _ready() -> void:
 	if OS.has_feature("android"):
@@ -137,6 +143,10 @@ func _ready() -> void:
 	manager.hand_card_removed.connect(_on_hand_card_removed)
 	manager.summon_event.connect(_on_summon_event)
 	manager.summon_triggered.connect(_on_summon_triggered)
+	artifact_layer = Control.new()
+	artifact_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	artifact_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(artifact_layer)
 	actor_layer = Control.new()
 	actor_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	actor_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -218,15 +228,18 @@ func _refresh() -> void:
 	var keep_touch_card := PlatformUI.is_touch() and touch_finger >= 0 and touch_hand_index >= 0 and touch_hand_index < manager.player.hand.size() and touch_inspecting and manager.phase != "menu" and manager.phase not in BattleManager.FINISHED_PHASES and manager.player.hand[touch_hand_index] == touch_hand_card_id
 	if not keep_touch_card: _clear_hover_preview()
 	status_touch_regions.clear()
+	energy_touch_regions.clear()
 	if not keep_touch_card:
 		touch_finger = -1
 		touch_hand_index = -1
 	touch_drag_rejected = false
 	touch_warning_shown = false
 	for child in get_children():
-		if child != manager and child != actor_layer and child != fx_layer:
+		if child != manager and child != artifact_layer and child != actor_layer and child != fx_layer:
 			if child is CanvasItem: child.hide()
 			child.queue_free()
+	for child in artifact_layer.get_children():
+		child.queue_free()
 	if manager.phase == "menu":
 		_clear_discard_animations()
 		hand_cards.clear()
@@ -249,7 +262,8 @@ func _refresh() -> void:
 		art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		add_child(art)
 		move_child(art, 1)
-	move_child(actor_layer, 2 if texture != null else 1)
+	move_child(artifact_layer, 2 if texture != null else 1)
+	move_child(actor_layer, 3 if texture != null else 2)
 	_build_battle()
 	if keep_touch_card:
 		hand_cards[touch_hand_index].hide()
@@ -279,6 +293,7 @@ func _start_test_battle(deck: Dictionary = {}) -> void:
 func _start_battle() -> void:
 	touch_hand_collapsed = false
 	_clear_discard_animations()
+	if is_instance_valid(information_panel): information_panel.dismiss()
 	_clear_actors()
 	enemy_animating = false
 	selected_index = -1
@@ -302,7 +317,10 @@ func _build_battle() -> void:
 	_build_combatant_hud("player")
 	_build_decks()
 	_build_hand()
+	_build_artifacts()
 	_build_end_turn()
+	_button(self, "规则", Rect2(680, 25, 112, 58), _open_rules)
+	_button(self, "记录", Rect2(810, 25, 112, 58), _open_journal)
 	if not draw_animation_active and (pending_player_draws > 0 or pending_enemy_draws > 0):
 		var player_count := pending_player_draws
 		var enemy_count := pending_enemy_draws
@@ -379,7 +397,15 @@ func _energy_orb(parent: Node, actor: Combatant, side: String, index: int) -> vo
 	# The orb row is centred in the panel and deliberately not mirrored, so both
 	# sides read 金水木火土 left to right; only the surrounding text mirrors.
 	var local := Rect2(Vector2(ORB_ROW_X + float(index) * ORB_STEP, ORB_ROW_Y), Vector2(ORB_DIAMETER, ORB_DIAMETER))
-	var orb := _panel(parent, local, Color("#0c1826").lerp(tint, 0.14), tint.darkened(0.1), int(ORB_DIAMETER / 2.0), 2)
+	var orb := EnergyOrb.new()
+	orb.position = local.position
+	orb.size = local.size
+	orb.add_theme_stylebox_override("panel", _box(Color("#0c1826").lerp(tint, 0.14), tint.darkened(0.1), int(ORB_DIAMETER / 2.0), 2))
+	orb.tooltip_text = BattleRules.energy_tooltip(actor, element)
+	orb.mouse_filter = Control.MOUSE_FILTER_STOP
+	orb.mouse_default_cursor_shape = Control.CURSOR_HELP
+	parent.add_child(orb)
+	energy_touch_regions.append({"rect": _hud_global_rect(side, local), "text": orb.tooltip_text})
 	_label(orb, BattleRules.element_name(element), Vector2(0, 2), Vector2(ORB_DIAMETER, 18), 14, tint, HORIZONTAL_ALIGNMENT_CENTER)
 	_label(orb, str(actor.energy[element]), Vector2(0, 17), Vector2(ORB_DIAMETER, 30), 24, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 
@@ -425,6 +451,7 @@ func _portrait(parent: Node, actor_id: String, pos: Vector2, sz: Vector2, enemy_
 func _clear_actors() -> void:
 	standee_nodes.clear()
 	summon_views.clear()
+	artifact_aiming = false
 	for child in actor_layer.get_children():
 		child.queue_free()
 		actor_layer.remove_child(child)
@@ -434,6 +461,136 @@ func _build_standees() -> void:
 		return
 	standee_nodes["player"] = _standee("player", STANDEE_MARGIN, false, 2.4)
 	standee_nodes["enemy"] = _standee(manager.enemy.id, VIEW_SIZE.x - STANDEE_MARGIN - STANDEE_SIZE.x, MIRROR_ENEMY_STANDEE, 2.0)
+	for side in ["player", "enemy"]:
+		var owner: Combatant = manager.player if side == "player" else manager.enemy
+		var id := str(owner.artifacts.get("implement", ""))
+		if id.is_empty(): continue
+		var path := "res://assets/artifacts/%s_standee.webp" % id
+		if not ResourceLoader.exists(path): continue
+		var weapon := TextureRect.new()
+		weapon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		weapon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		weapon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		weapon.texture = load(path)
+		weapon.flip_h = side == "enemy"
+		actor_layer.add_child(weapon)
+		weapon.position = Vector2(14 if side == "player" else 1486, 200)
+		weapon.size = Vector2(100, 205)
+		var float_tween := weapon.create_tween().set_loops()
+		float_tween.tween_property(weapon, "position:y", 191.0, 2.0).set_trans(Tween.TRANS_SINE)
+		float_tween.tween_property(weapon, "position:y", 200.0, 2.0).set_trans(Tween.TRANS_SINE)
+
+func _build_artifacts() -> void:
+	for side in ["player", "enemy"]:
+		var owner: Combatant = manager.player if side == "player" else manager.enemy
+		var implement: Dictionary = manager.artifact_entry(owner, "implement")
+		if not implement.is_empty():
+			var weapon_button := Button.new()
+			weapon_button.flat = true
+			weapon_button.position = Vector2(14 if side == "player" else 1486, 191)
+			weapon_button.size = Vector2(100, 214)
+			add_child(weapon_button)
+			weapon_button.mouse_entered.connect(_show_artifact_preview.bind(side, "implement"))
+			weapon_button.mouse_exited.connect(_hide_artifact_preview.bind(side, "implement"))
+			weapon_button.pressed.connect(func():
+				if side == "player": _on_artifact_pressed()
+				else: _show_artifact_preview(side, "implement"))
+		for i in ArtifactLibrary.SLOTS.size():
+			var slot: String = ArtifactLibrary.SLOTS[i]
+			var entry: Dictionary = manager.artifact_entry(owner, slot)
+			var pos := Vector2(68, 423 + i * 78) if side == "player" else Vector2(1466, 423 + i * 78)
+			var control := _panel(artifact_layer, Rect2(pos, Vector2(66, 66)), Color("#0d1d27dd"), BattleRules.color(str(entry.get("element", "metal"))) if not entry.is_empty() else Color("#686a66"), 33, 2)
+			if not entry.is_empty():
+				var icon := TextureRect.new()
+				icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+				icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+				icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				icon.texture = load("res://assets/artifacts/%s.webp" % entry["id"])
+				control.add_child(icon)
+				icon.position = Vector2(3, 3)
+				icon.size = Vector2(60, 60)
+				var circle := Shader.new()
+				circle.code = "shader_type canvas_item; uniform float cooling = 0.0; void fragment() { vec4 art = texture(TEXTURE, UV); float edge = 1.0 - smoothstep(0.46, 0.5, distance(UV, vec2(0.5))); float gray = dot(art.rgb, vec3(0.299, 0.587, 0.114)); COLOR = vec4(mix(art.rgb, vec3(gray), cooling * 0.85) * (1.0 - cooling * 0.28), art.a * edge); }"
+				var circle_material := ShaderMaterial.new()
+				circle_material.shader = circle
+				icon.material = circle_material
+				if slot == "guard":
+					var durability_badge := ArtifactBadge.new()
+					control.add_child(durability_badge)
+					durability_badge.configure("guard", owner.artifact_durability, BattleRules.color(str(entry["element"])), 27.0)
+					durability_badge.position = Vector2(-7, -7)
+				if slot == "implement" and owner.own_turn_count < owner.artifact_ready_turn:
+					circle_material.set_shader_parameter("cooling", 1.0)
+					var cool := _panel(control, Rect2(4, 4, 58, 58), Color("#10182087"), Color.TRANSPARENT, 29, 0)
+					cool.mouse_filter = Control.MOUSE_FILTER_IGNORE
+					_label(control, str(owner.artifact_ready_turn - owner.own_turn_count), Vector2.ZERO, control.size, 35, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+			var trigger := Button.new()
+			trigger.flat = true
+			trigger.position = Vector2.ZERO
+			trigger.size = control.size
+			trigger.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			control.add_child(trigger)
+			if not entry.is_empty():
+				trigger.mouse_entered.connect(_show_artifact_preview.bind(side, slot))
+				trigger.mouse_exited.connect(_hide_artifact_preview.bind(side, slot))
+				trigger.pressed.connect(func():
+					if PlatformUI.is_touch(): _show_artifact_preview(side, slot)
+					elif side == "player" and slot == "implement": _on_artifact_pressed())
+			if side == "player" and slot == "implement" and not entry.is_empty() and manager.artifact_can_activate(owner) and not action_busy:
+				control.self_modulate = Color("#fff7db")
+	if artifact_aiming: _build_artifact_targets()
+
+func _show_artifact_preview(side: String, slot: String) -> void:
+	if manager.phase in BattleManager.FINISHED_PHASES: return
+	var owner: Combatant = manager.player if side == "player" else manager.enemy
+	var entry := manager.artifact_entry(owner, slot)
+	if entry.is_empty() or hovered_artifact_slot == side + slot: return
+	_clear_hover_preview()
+	hovered_artifact_slot = side + slot
+	if PlatformUI.is_touch(): touch_inspecting = true
+	hover_preview = ArtifactView.new()
+	hover_preview.configure(entry, Vector2(270, 378), owner.artifact_durability if slot == "guard" else maxi(0, owner.artifact_ready_turn - owner.own_turn_count) if slot == "implement" else -1)
+	hover_preview.position = Vector2(222, 450) if side == "player" else Vector2(1108, 200)
+	fx_layer.add_child(hover_preview)
+	hover_preview.modulate.a = 0.0
+	hover_preview.create_tween().tween_property(hover_preview, "modulate:a", 1.0, 0.14)
+	if PlatformUI.is_touch() and side == "player" and slot == "implement" and manager.artifact_can_activate(owner):
+		artifact_preview_button = _button(fx_layer, "发动", Rect2(hover_preview.position.x + 53, hover_preview.position.y + 384, 164, 58), _on_artifact_pressed)
+
+func _hide_artifact_preview(side: String, slot: String) -> void:
+	if PlatformUI.is_touch(): return
+	if hovered_artifact_slot == side + slot: _clear_hover_preview()
+
+func _on_artifact_pressed() -> void:
+	if action_busy or not manager.artifact_can_activate(manager.player): return
+	_clear_hover_preview()
+	if manager.artifact_target_mode(manager.player) == "none":
+		_activate_player_artifact({})
+	else:
+		artifact_aiming = true
+		_refresh()
+
+func _build_artifact_targets() -> void:
+	var mode := manager.artifact_target_mode(manager.player)
+	var side := "player" if mode == "self_or_ally_summon" else "enemy"
+	var owner: Combatant = manager.player if side == "player" else manager.enemy
+	var choices: Array[Dictionary] = [{"kind": "hero", "side": side}]
+	for slot in owner.summons.size():
+		if owner.summons[slot] != null: choices.append({"kind": "summon", "side": side, "slot": slot})
+	for selection in choices:
+		if not manager.valid_artifact_target(manager.player, selection): continue
+		var point := _target_point(side, selection)
+		var marker := _button(self, "◎", Rect2(point - Vector2(31, 31), Vector2(62, 62)), _activate_player_artifact.bind(selection), Color("#233439b9"), GOLD)
+		marker.add_theme_font_size_override("font_size", 32)
+	_button(self, "取消发动", Rect2(735, 799, 150, 60), func(): artifact_aiming = false; _refresh())
+
+func _activate_player_artifact(selection: Dictionary) -> void:
+	if not manager.artifact_can_activate(manager.player): return
+	var entry := manager.artifact_entry(manager.player, "implement")
+	var target := _target_point("enemy", selection) if not selection.is_empty() else PLAYER_ANCHOR
+	battle_fx.cast({"element": entry["element"], "effects": manager.artifact_effects(manager.player)}, "player", Vector2(80, 500), target)
+	artifact_aiming = false
+	manager.activate_artifact(manager.player, selection)
 
 func _summon_slot_rect(side: String, slot: int) -> Rect2:
 	var center: Vector2 = SUMMON_CENTERS[slot]
@@ -685,6 +842,9 @@ func _show_hover_keywords(card: Dictionary, display_rect: Rect2 = Rect2()) -> vo
 	hover_keywords.configure(entries, display_rect if display_rect.size != Vector2.ZERO else Rect2(hover_preview.position, hover_preview.size), VIEW_SIZE)
 
 func _clear_hover_preview() -> void:
+	hovered_artifact_slot = ""
+	if is_instance_valid(artifact_preview_button): artifact_preview_button.queue_free()
+	artifact_preview_button = null
 	if is_instance_valid(touch_returning_preview):
 		touch_returning_preview.hide()
 		touch_returning_preview.queue_free()
@@ -872,9 +1032,21 @@ func _place_touch_preview() -> void:
 	touch_inspecting = true
 	_show_hover_keywords(card_data)
 
+func _touch_hits_artifact(point: Vector2) -> bool:
+	for side in ["player", "enemy"]:
+		var owner: Combatant = manager.player if side == "player" else manager.enemy
+		if not manager.artifact_entry(owner, "implement").is_empty() and Rect2(Vector2(14 if side == "player" else 1486, 191), Vector2(100, 214)).has_point(point):
+			return true
+		for i in ArtifactLibrary.SLOTS.size():
+			var slot: String = ArtifactLibrary.SLOTS[i]
+			if manager.artifact_entry(owner, slot).is_empty(): continue
+			var pos := Vector2(68, 423 + i * 78) if side == "player" else Vector2(1466, 423 + i * 78)
+			if Rect2(pos, Vector2(66, 66)).has_point(point): return true
+	return false
+
 func _handle_touch(event: InputEvent) -> void:
 	if event is not InputEventScreenTouch and event is not InputEventScreenDrag: return
-	if manager.phase in BattleManager.FINISHED_PHASES: return
+	if manager.phase in BattleManager.FINISHED_PHASES or is_instance_valid(information_panel): return
 	var point := PlatformUI.local_point(self, event.position)
 	if event is InputEventScreenTouch:
 		if event.pressed:
@@ -882,6 +1054,22 @@ func _handle_touch(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 				return
 			if is_instance_valid(back_dialog): return
+			if artifact_aiming:
+				var mode := manager.artifact_target_mode(manager.player)
+				var side := "player" if mode == "self_or_ally_summon" else "enemy"
+				var owner := manager.player if side == "player" else manager.enemy
+				var targets: Array[Dictionary] = [{"kind": "hero", "side": side}]
+				for slot in owner.summons.size():
+					if owner.summons[slot] != null: targets.append({"kind": "summon", "side": side, "slot": slot})
+				for target in targets:
+					if manager.valid_artifact_target(manager.player, target) and point.distance_to(_target_point(side, target)) < 80.0:
+						_activate_player_artifact(target)
+						get_viewport().set_input_as_handled()
+						return
+				artifact_aiming = false
+				_refresh()
+				get_viewport().set_input_as_handled()
+				return
 			var index := _touch_hand_at(point)
 			if index >= 0:
 				if touch_hand_collapsed:
@@ -897,10 +1085,13 @@ func _handle_touch(event: InputEvent) -> void:
 				return
 			# Inspection is modal until an outside tap; that tap does not play a card.
 			if touch_inspecting:
+				# Mouse-enter can open an artifact preview before the touch press arrives.
+				# Keep it open when that same press lands on the artifact control.
+				if _touch_hits_artifact(point): return
 				if not Rect2(hover_preview.position, hover_preview.size).has_point(point): _clear_hover_preview()
 				get_viewport().set_input_as_handled()
 				return
-			for entry in status_touch_regions:
+			for entry in energy_touch_regions + status_touch_regions:
 				if entry.rect.has_point(point):
 					_show_touch_status(entry.text)
 					get_viewport().set_input_as_handled()
@@ -1100,6 +1291,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _request_back() -> void:
 	if manager == null: return
+	if is_instance_valid(information_panel):
+		information_panel.dismiss()
+		return
 	if manager.phase == "menu":
 		for child in get_children():
 			if child is MainMenu: child.go_back()
@@ -1206,6 +1400,15 @@ func _run_enemy_turn() -> void:
 	while manager.phase == "enemy_action":
 		var action := manager.peek_enemy_action()
 		var chosen_index := int(action["index"])
+		if action.get("kind", "") == "artifact":
+			var entry := manager.artifact_entry(manager.enemy, "implement")
+			var target := _target_point("player", action["target"]) if not action["target"].is_empty() else ENEMY_ANCHOR
+			battle_fx.cast({"element": entry["element"], "effects": manager.artifact_effects(manager.enemy)}, "enemy", Vector2(1520, 500), target)
+			await get_tree().create_timer(0.52).timeout
+			if generation != manager.battle_generation: return
+			await manager.enemy_step(-1, action["target"], "artifact")
+			await get_tree().create_timer(0.3).timeout
+			continue
 		if chosen_index < 0:
 			await manager.enemy_step(-1)
 			break
@@ -1503,6 +1706,8 @@ func _present_summon_effect(side: String, slot: int, summoned: Summon, effect: D
 			await get_tree().process_frame
 
 func _on_action_event(message: String, side: String, kind: String, element: String, amount: int) -> void:
+	if is_instance_valid(information_panel) and information_panel.can_export and is_instance_valid(information_panel.body):
+		information_panel.body.text = _journal_text()
 	if fx_layer == null or not is_inside_tree():
 		return
 	if kind == "turn":
@@ -1578,3 +1783,25 @@ func _show_floating(value: String, side: String, color: Color, y_offset: float =
 	tween.tween_property(floating, "position:y", floating.position.y - 72.0, 0.85)
 	tween.tween_property(floating, "modulate:a", 0.0, 0.85)
 	tween.chain().tween_callback(floating.queue_free)
+
+func _open_rules() -> void:
+	_open_information("五行入门", BattleInfoPanel.RULES)
+
+func _open_journal() -> void:
+	_open_information("战斗记录", _journal_text(), true)
+
+func _journal_text() -> String:
+	var events := manager.battle_log.duplicate()
+	events.reverse()
+	return "对阵%s · 第%d回合\n\n%s" % [manager.enemy.display_name, manager.round_number, "\n".join(events)]
+
+func _open_information(caption: String, text: String, exportable: bool = false) -> void:
+	if is_instance_valid(information_panel): return
+	_clear_hover_preview()
+	information_panel = BattleInfoPanel.new()
+	information_panel.configure(caption, text, exportable)
+	information_panel.closed.connect(func(): information_panel = null)
+	information_panel.export_requested.connect(func():
+		var report := manager.export_battle_report()
+		information_panel.message.text = "保存失败，请重试" if report.is_empty() else "已保存到本机战报目录")
+	fx_layer.add_child(information_panel)

@@ -30,6 +30,7 @@ func summon(actor: Combatant, slot: int, id: String) -> Summon:
 
 func run() -> void:
 	manager = BattleManager.new()
+	manager.random_artifacts_enabled = false
 	root.add_child(manager)
 	prepare()
 	check(manager.cards.size() == 60 and manager.summon_templates.size() == 20, "expanded pool has 60 cards and 20 summons")

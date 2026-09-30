@@ -36,6 +36,8 @@ static func damage_breakdown(target: Combatant, amount: int, element: String, so
 	var weak_stacks := source.status_stacks("weak") if source != null else 0
 	var charge: int = source.status_stacks("charge") if source != null else 0
 	var total_multiplier := maxf(0.0, 1.0 + (weak - same + vulnerable - tenacity + charge - weak_stacks) * 0.1)
+	if target.artifact_durability > 0:
+		total_multiplier = maxf(0.0, total_multiplier - float(target.artifact_resistances.get(element, 0.0)))
 	var fixed_amount := maxi(0, amount + attack_adjustment(source) + defense_adjustment(target))
 	var before_shield: int = roundi(fixed_amount * total_multiplier)
 	return {"base": amount, "same": same, "weak": weak, "multiplier": multiplier,
@@ -55,3 +57,7 @@ static func summon_damage(amount: int, source: Combatant = null, target_element:
 	var matchup := summon_matchup(target_element, attack_element) if target_element != "" else ""
 	var elemental := -0.5 if matchup == "抵抗" else 0.5 if matchup == "克制" else 0.0
 	return roundi(maxi(0, amount + attack_adjustment(source)) * maxf(0.0, 1.0 + elemental + (charge - weak_stacks) * 0.1))
+
+static func energy_tooltip(actor: Combatant, element: String) -> String:
+	var amount := int(actor.energy[element])
+	return "%s能量 %d\n%s系伤害抗性+%d%%\n%s系伤害抗性-%d%%" % [element_name(element), amount, element_name(element), amount * 10, element_name(counter_of(element)), amount * 10]

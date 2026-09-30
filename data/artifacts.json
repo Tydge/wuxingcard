@@ -1,0 +1,238 @@
+[
+  {
+    "id": "metal_thunder_ruler",
+    "name": "鸣雷尺",
+    "element": "metal",
+    "slot": "implement",
+    "description": "造成5点伤害。",
+    "cooldown": 2,
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 5,
+        "element": "metal"
+      }
+    ],
+    "target_mode": "enemy"
+  },
+  {
+    "id": "water_return_cup",
+    "name": "回澜盏",
+    "element": "water",
+    "slot": "implement",
+    "description": "为自身或我方召唤物恢复5点生命。",
+    "cooldown": 2,
+    "effects": [
+      {
+        "type": "heal_selected",
+        "amount": 5
+      }
+    ],
+    "target_mode": "self_or_ally_summon"
+  },
+  {
+    "id": "wood_bamboo_scroll",
+    "name": "青简卷",
+    "element": "wood",
+    "slot": "implement",
+    "description": "抽一张牌。",
+    "cooldown": 2,
+    "effects": [
+      {
+        "type": "draw",
+        "target": "self",
+        "amount": 1
+      }
+    ],
+    "target_mode": "none"
+  },
+  {
+    "id": "fire_sun_mirror",
+    "name": "赤曜镜",
+    "element": "fire",
+    "slot": "implement",
+    "description": "获得1点火能量。",
+    "cooldown": 2,
+    "effects": [
+      {
+        "type": "gain_energy",
+        "target": "self",
+        "element": "fire",
+        "amount": 1
+      }
+    ],
+    "target_mode": "none"
+  },
+  {
+    "id": "earth_mountain_talisman",
+    "name": "镇岳符",
+    "element": "earth",
+    "slot": "implement",
+    "description": "获得8层护盾。",
+    "cooldown": 2,
+    "effects": [
+      {
+        "type": "status",
+        "target": "self",
+        "status": "shield",
+        "stacks": 8
+      }
+    ],
+    "target_mode": "none"
+  },
+  {
+    "id": "metal_silk_robe",
+    "name": "金丝法衣",
+    "element": "metal",
+    "slot": "guard",
+    "description": "每个己方回合首次打出牌时，获得1层强防。",
+    "durability": 3,
+    "trigger": "first_card_own_turn",
+    "effects": [
+      {
+        "type": "status",
+        "target": "self",
+        "status": "strong_defense",
+        "stacks": 1
+      }
+    ]
+  },
+  {
+    "id": "water_frost_gauze",
+    "name": "凝霜纱",
+    "element": "water",
+    "slot": "guard",
+    "description": "受到火伤害时，该次伤害-20%。",
+    "durability": 3,
+    "trigger": "element_damage",
+    "effects": [],
+    "resistances": {
+      "fire": 0.2
+    }
+  },
+  {
+    "id": "wood_vine_robe",
+    "name": "春藤衣",
+    "element": "wood",
+    "slot": "guard",
+    "description": "每次失去生命后，恢复2点生命。",
+    "durability": 3,
+    "trigger": "health_lost",
+    "effects": [
+      {
+        "type": "heal",
+        "target": "self",
+        "amount": 2
+      }
+    ]
+  },
+  {
+    "id": "fire_ember_robe",
+    "name": "余烬袍",
+    "element": "fire",
+    "slot": "guard",
+    "description": "己方回合首获能量：对对手造成2点火伤害。",
+    "durability": 3,
+    "trigger": "first_energy_own_turn",
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 2,
+        "element": "fire"
+      }
+    ]
+  },
+  {
+    "id": "earth_rock_armor",
+    "name": "玄岩甲",
+    "element": "earth",
+    "slot": "guard",
+    "description": "每个敌方回合首次受到伤害后，获得5层护盾。",
+    "durability": 3,
+    "trigger": "first_hit_enemy_turn",
+    "effects": [
+      {
+        "type": "status",
+        "target": "self",
+        "status": "shield",
+        "stacks": 5
+      }
+    ]
+  },
+  {
+    "id": "metal_chime_pendant",
+    "name": "鸣金佩",
+    "element": "metal",
+    "slot": "pendant",
+    "description": "开局获得1点金能量。",
+    "trigger": "battle_start",
+    "effects": [
+      {
+        "type": "gain_energy",
+        "target": "self",
+        "element": "metal",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "water_tide_pearl",
+    "name": "观澜珠",
+    "element": "water",
+    "slot": "pendant",
+    "description": "开局抽一张牌。",
+    "trigger": "battle_start",
+    "effects": [
+      {
+        "type": "draw",
+        "target": "self",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "wood_sprout_pendant",
+    "name": "青芽坠",
+    "element": "wood",
+    "slot": "pendant",
+    "description": "每个己方回合首次打出牌时，自身恢复1点生命。",
+    "trigger": "first_card_own_turn",
+    "effects": [
+      {
+        "type": "heal",
+        "target": "self",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "fire_ember_ring",
+    "name": "烬心环",
+    "element": "fire",
+    "slot": "pendant",
+    "description": "每个己方回合首次失去生命时，获得1点火能量。",
+    "trigger": "first_health_lost_own_turn",
+    "effects": [
+      {
+        "type": "gain_energy",
+        "target": "self",
+        "element": "fire",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "earth_origin_jade",
+    "name": "坤元珏",
+    "element": "earth",
+    "slot": "pendant",
+    "description": "每次召唤时，该召唤物增加2点生命。",
+    "trigger": "summon",
+    "effects": [
+      {
+        "type": "grow_summon",
+        "amount": 2
+      }
+    ]
+  }
+]

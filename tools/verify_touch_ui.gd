@@ -61,6 +61,16 @@ func run() -> void:
 	await shot("collection_inspection")
 	menu.go_back()
 	await create_timer(0.35).timeout
+	menu.collection_type = "artifacts"
+	menu.call("_build_collection")
+	await create_timer(0.4).timeout
+	check(menu.card_nodes.size() == 8, "phone artifact collection shows eight cards per page")
+	menu.call("_open_inspector", menu.filtered_cards[0], menu.card_nodes[0])
+	await create_timer(0.65).timeout
+	check(menu.inspect_card is ArtifactView and is_equal_approx(menu.inspect_card.size.x * menu.inspect_card.scale.x, 480), "phone artifact inspection enlarges the same card")
+	await shot("artifact_inspection")
+	menu.go_back()
+	await create_timer(0.35).timeout
 	menu.call("_show_decks")
 	var workshop := menu.workshop
 	workshop.call("_open_editor", {})
@@ -85,6 +95,19 @@ func run() -> void:
 	row.remove_requested.emit(entry.card.id)
 	check(workshop.draft.size() == 1, "dedicated remove removes one copy")
 	await shot("deck_editor")
+	workshop.call("_open_artifacts", {})
+	await process_frame
+	check(workshop.artifact_rows.size() == 3, "phone loadout shows all three drop slots")
+	var artifact_content: Control = workshop.content
+	var implement_row: ArtifactLoadoutRow = workshop.artifact_rows["implement"]
+	var drag_data := {"kind": "artifact", "slot": "implement", "id": "metal_thunder_ruler"}
+	check(implement_row._can_drop_data(Vector2.ZERO, drag_data), "phone implement slot accepts a matching artifact")
+	check(not implement_row._can_drop_data(Vector2.ZERO, {"kind": "artifact", "slot": "guard", "id": "metal_silk_robe"}), "phone implement slot rejects other artifact types")
+	implement_row._drop_data(Vector2.ZERO, drag_data)
+	check(workshop.draft_loadout["implement"] == "metal_thunder_ruler" and workshop.content == artifact_content, "dropping an artifact updates its row without refreshing the page")
+	workshop.call("_unequip_artifact", "implement")
+	check(workshop.draft_loadout["implement"] == "" and workshop.content == artifact_content, "unequipping preserves the phone loadout page")
+	await shot("artifact_loadout")
 
 	manager.player.setup("player", "云溪月", [], manager.rng)
 	manager.enemy.setup("ember", "炽羽", [], manager.rng)
@@ -221,6 +244,15 @@ func run() -> void:
 	check(ui.touch_inspecting, "status icon opens a touch explanation")
 	ui.call("_request_back")
 	check(not ui.touch_inspecting and not is_instance_valid(ui.back_dialog), "back closes the explanation first")
+	manager.player.artifacts["guard"] = "wood_vine_robe"
+	ui.call("_show_artifact_preview", "player", "guard")
+	check(ui.touch_inspecting and is_instance_valid(ui.hover_preview), "tap artifact opens a touch inspection")
+	press(Vector2(100, 535), true)
+	press(Vector2(100, 535), false)
+	check(ui.touch_inspecting and is_instance_valid(ui.hover_preview), "touch on the artifact does not immediately dismiss its inspection")
+	press(Vector2(900, 360), true)
+	press(Vector2(900, 360), false)
+	check(not ui.touch_inspecting and not is_instance_valid(ui.hover_preview), "outside tap closes artifact inspection")
 
 	var summon := Summon.new()
 	summon.setup(manager.summon_templates["fire_raven"])

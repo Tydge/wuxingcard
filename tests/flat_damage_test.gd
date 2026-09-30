@@ -42,6 +42,7 @@ func summon(actor: Combatant, slot: int, id: String, hp: int = -1) -> void:
 
 func run() -> void:
 	manager = BattleManager.new()
+	manager.random_artifacts_enabled = false
 	root.add_child(manager)
 	manager.action_event.connect(track_result)
 	# The new opposite pairs cancel without inheriting the older ten-layer cap.

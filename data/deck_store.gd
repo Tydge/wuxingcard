@@ -9,10 +9,12 @@ const MAX_COPIES := 2
 var path: String
 var cards: Dictionary
 var decks: Array[Dictionary] = []
+var artifacts: Dictionary = {}
 
 func _init(card_data: Dictionary = {}, save_path: String = DEFAULT_PATH) -> void:
 	cards = card_data
 	path = save_path
+	artifacts = ArtifactLibrary.load_all()
 
 func load_decks() -> void:
 	decks.clear()
@@ -36,7 +38,7 @@ func load_decks() -> void:
 			if cards.has(known_id) and int(copies.get(known_id, 0)) < MAX_COPIES:
 				ids.append(known_id)
 				copies[known_id] = int(copies.get(known_id, 0)) + 1
-		decks.append({"id": id, "name": str(entry.get("name", "无名卡组")), "cards": ids})
+		decks.append({"id": id, "name": str(entry.get("name", "无名卡组")), "cards": ids, "artifacts": ArtifactLibrary.normalize(entry.get("artifacts", {}), artifacts)})
 
 func problem(ids: Array, require_complete: bool = true) -> String:
 	if ids.size() > MAX_CARDS: return "最多30张"
@@ -53,14 +55,14 @@ func find_deck(id: String) -> Dictionary:
 		if deck["id"] == id: return deck.duplicate(true)
 	return {}
 
-func save_deck(id: String, caption: String, ids: Array[String], allow_draft: bool = true) -> Dictionary:
+func save_deck(id: String, caption: String, ids: Array[String], allow_draft: bool = true, loadout: Dictionary = {}) -> Dictionary:
 	var issue := problem(ids, not allow_draft)
 	if not issue.is_empty(): return {"error": issue}
 	var previous := decks.duplicate(true)
 	if id.is_empty(): id = Crypto.new().generate_random_bytes(12).hex_encode()
 	var name := caption.strip_edges().left(24)
 	if name.is_empty(): name = "无名卡组"
-	var saved := {"id": id, "name": name, "cards": ids.duplicate()}
+	var saved := {"id": id, "name": name, "cards": ids.duplicate(), "artifacts": ArtifactLibrary.normalize(loadout, artifacts)}
 	var found := false
 	for i in decks.size():
 		if decks[i]["id"] == id:
@@ -87,7 +89,7 @@ func _write() -> bool:
 	var temporary := path + ".tmp"
 	var file := FileAccess.open(temporary, FileAccess.WRITE)
 	if file == null: return false
-	file.store_string(JSON.stringify({"version": 1, "decks": decks}, "\t"))
+	file.store_string(JSON.stringify({"version": 2, "decks": decks}, "\t"))
 	file.flush()
 	var okay := file.get_error() == OK
 	file.close()

@@ -21,6 +21,7 @@ func populate(actor: Combatant, ids: Array) -> void:
 
 func run() -> void:
 	manager = BattleManager.new()
+	manager.random_artifacts_enabled = false
 	root.add_child(manager)
 	manager.start_battle("ember", "balanced", 12345)
 	manager.summon_presenter = present

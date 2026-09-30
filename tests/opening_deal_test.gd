@@ -15,13 +15,16 @@ func run() -> void:
 	var ui: Node = scene.instantiate()
 	root.add_child(ui)
 	await process_frame
+	var battle: BattleManager = ui.get("manager")
+	# Both random pendants add an opening draw; test the longest deal explicitly.
+	battle.artifacts = {"water_tide_pearl": battle.artifacts["water_tide_pearl"]}
 	ui.call("_start_test_battle", {})
 	await process_frame
 	var manager: Node = ui.get("manager")
 	check(manager.get("phase") == "player_action", "opening reaches the player's action phase")
 	check(ui.get("draw_animation_active"), "opening cards enter the deal animation")
-	check(int(ui.get("pending_player_draws")) == 5 and int(ui.get("pending_enemy_draws")) == 4, "all nine opening draws are queued")
-	await create_timer(5.2).timeout
+	check(int(ui.get("pending_player_draws")) == 6 and int(ui.get("pending_enemy_draws")) == 5, "all eleven opening draws, including pendants, are queued")
+	await create_timer(6.3).timeout
 	check(not ui.get("draw_animation_active") and not ui.get("action_busy"), "opening deal releases the action lock")
 	var end_turn: Button
 	for child in ui.get_children():

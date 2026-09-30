@@ -10,6 +10,8 @@ import subprocess
 import re
 import zipfile
 
+from build_support import ensure_checks, provenance
+
 ROOT = Path(__file__).resolve().parents[1]
 
 def prepare_project(stage):
@@ -17,9 +19,12 @@ def prepare_project(stage):
     stage.mkdir(parents=True, exist_ok=False)
     cards = json.loads((ROOT / 'data/cards.json').read_text())
     summons = json.loads((ROOT / 'data/summons.json').read_text())
+    artifacts = json.loads((ROOT / 'data/artifacts.json').read_text())
     characters = json.loads((ROOT / 'data/characters.json').read_text())
     runtime = {f"assets/cards/generated/{c['id']}.webp" for c in cards}
     runtime.update(f"assets/summons/standee/{s['id']}.webp" for s in summons)
+    runtime.update(f"assets/artifacts/{a['id']}.webp" for a in artifacts)
+    runtime.update(f"assets/artifacts/{a['id']}_standee.webp" for a in artifacts if a['slot'] == 'implement')
     for actor in characters:
         runtime.update([f"assets/characters/{actor['id']}.webp", f"assets/characters/{actor['id']}_standee.webp"])
     runtime.update(['assets/backgrounds/arena.webp', 'assets/backgrounds/mountain_gate.webp'])
@@ -58,7 +63,9 @@ def prepare_project(stage):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--godot', default='/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot')
+    parser.add_argument('--checks-report', type=Path, help='Reuse a passing check_project.py report for this exact source')
     args = parser.parse_args()
+    source_snapshot, checks = ensure_checks(args.godot, args.checks_report)
     built = datetime.now().astimezone()
     stamp = built.strftime('%Y-%m-%d_%H%M%S')
     stage = ROOT / 'work' / f'windows-export-{stamp}'
@@ -88,7 +95,8 @@ def main():
 3. 将伤害牌拖到对手或其召唤物；召唤牌拖到我方空槽位。
 4. 其他牌拖到手牌区域上方释放；点“结束回合”让敌人行动。
 5. “卡牌一览”收录当前 {card_count} 张卡牌，可以按属性筛选、点击放大，点击旁边收回。
-6. 肉鸽、竞技、无尽模式暂未开放。当前版本为单机测试模式。
+6. 悬停五行能量查看抗性，点击“规则”查看说明、“记录”查看或导出战报。
+7. 肉鸽、竞技、无尽模式暂未开放。当前版本为单机测试模式。
 
 反馈问题时，附上截图、刚刚使用的卡牌和发生问题前的操作。
 运行日志：%APPDATA%\\Godot\\app_userdata\\五行 · 命盘\\logs\\godot.log
@@ -104,8 +112,10 @@ def main():
         shutil.copy2(ROOT / 'licenses' / name, licenses / name)
     for source in sorted((ROOT / 'assets/audio/licenses').glob('*.txt')):
         shutil.copy2(source, licenses / f'Kenney-{source.name}')
-    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
-    manifest = {'built':built.isoformat(), 'revision':revision, 'engine':subprocess.check_output([args.godot, '--version'],text=True).strip(), 'platform':'Windows x86_64', 'cards':card_count, 'summons':len(json.loads((ROOT / 'data/summons.json').read_text())), 'art':art_report, 'files':[]}
+    build_source = provenance(source_snapshot)
+    manifest = {'built':built.isoformat(), **build_source, 'engine':subprocess.check_output([args.godot, '--version'],text=True).strip(), 'platform':'Windows x86_64', 'cards':card_count, 'summons':len(json.loads((ROOT / 'data/summons.json').read_text())), 'art':art_report, 'files':[]}
+    (folder / 'source_manifest.json').write_text(json.dumps(source_snapshot, ensure_ascii=False, indent=2) + '\n')
+    (folder / 'checks.json').write_text(json.dumps(checks, ensure_ascii=False, indent=2) + '\n')
     for path in sorted(folder.rglob('*')):
         if not path.is_file() or path.name == 'build_info.json': continue
         manifest['files'].append({'path':path.relative_to(folder).as_posix(), 'bytes':path.stat().st_size, 'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})

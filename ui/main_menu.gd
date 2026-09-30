@@ -14,6 +14,7 @@ const INSPECT_WIDTH := 400.0
 
 var cards: Dictionary
 var summons: Dictionary
+var artifacts: Dictionary = {}
 var inspect_keywords: CardKeywordPopup
 var card_factory: Callable
 var brush_font: Font
@@ -21,6 +22,8 @@ var content: Control
 var atmosphere: Control
 var view_mode := "home"
 var selected_element := "all"
+var collection_type := "cards"
+var selected_artifact_slot := "all"
 var page := 0
 var filtered_cards: Array[Dictionary] = []
 var card_nodes: Array[Control] = []
@@ -43,10 +46,12 @@ var cached_pages := {}
 var previous_page_button: Button
 var next_page_button: Button
 var quit_dialog: Control
+var rules_panel: BattleInfoPanel
 
 func configure(card_data: Dictionary, factory: Callable, summon_data: Dictionary = {}) -> void:
 	cards = card_data
 	summons = summon_data
+	artifacts = ArtifactLibrary.load_all()
 	card_factory = factory
 
 func _exit_tree() -> void:
@@ -125,7 +130,7 @@ func _show_home() -> void:
 		["arena", "竞技模式", "以五行之术，论道争锋", false],
 		["endless", "无尽模式", "长路无尽，万法归一", false],
 		["test", "测试模式", "编修卡组 · 入阵试法", true],
-		["collection", "卡牌一览", "五行法术 · 灵物图鉴", true]]
+		["collection", "万法藏阁", "卡牌 · 法宝", true]]
 	for i in entries.size():
 		var entry: Array = entries[i]
 		var button: MenuEntry = ENTRY_SCRIPT.new()
@@ -142,8 +147,16 @@ func _show_home() -> void:
 		var entrance := button.create_tween()
 		entrance.tween_interval(0.08 * i)
 		entrance.tween_property(button, "modulate:a", 1.0, 0.45)
-	_text(content, "五行 · 命盘", Rect2(114, 836, 350, 28), 16, Color("#a0b5a5"))
+	_text(content, "五行 · 命盘  " + str(ProjectSettings.get_setting("application/config/version", "")), Rect2(114, 836, 350, 28), 16, Color("#a0b5a5"))
+	_button(content, "规则", Rect2(1238, 779, 130, 48), _open_rules)
 	_button(content, "声音", Rect2(1390, 779, 130, 48), _open_audio_settings)
+
+func _open_rules() -> void:
+	if is_instance_valid(rules_panel): return
+	rules_panel = BattleInfoPanel.new()
+	rules_panel.configure("五行入门", BattleInfoPanel.RULES)
+	rules_panel.closed.connect(func(): rules_panel = null)
+	add_child(rules_panel)
 
 func _open_audio_settings() -> void:
 	var settings := AudioSettings.new()
@@ -163,6 +176,7 @@ func _show_decks() -> void:
 func _show_collection() -> void:
 	view_mode = "collection"
 	atmosphere.set("collection", true)
+	collection_type = "cards"
 	selected_element = "all"
 	page = 0
 	_build_collection()
@@ -176,18 +190,24 @@ func _build_collection() -> void:
 	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	content.add_child(veil)
 	_text(content, "藏经阁", Rect2(65, 50, 270, 70), 49, GOLD, true)
-	_text(content, "卡牌一览", Rect2(310, 71, 220, 40), 20, JADE)
+	_text(content, "卡牌与法宝", Rect2(310, 71, 220, 40), 20, JADE)
 	_button(content, "返回山门", Rect2(1340, 65, 180, 48), _show_home)
 	_panel(content, Rect2(244, 171, 1290, 599), Color("#152e2af2"), Color("#88744d"))
+	_button(content, "卡牌", Rect2(555, 116, 130, 48), func(): collection_type = "cards"; page = 0; _build_collection())
+	_button(content, "法宝", Rect2(700, 116, 130, 48), func(): collection_type = "artifacts"; page = 0; _build_collection())
+	if collection_type == "artifacts":
+		for i in (["all"] + ArtifactLibrary.SLOTS).size():
+			var slot: String = (["all"] + ArtifactLibrary.SLOTS)[i]
+			_button(content, "全部" if slot == "all" else ArtifactLibrary.SLOT_NAMES[slot], Rect2(260 + i * 152, 776, 138, 44), func(): selected_artifact_slot = slot; page = 0; _build_collection())
 	filtered_cards = _collection_cards(selected_element)
 	var page_count := maxi(1, ceili(float(filtered_cards.size()) / PAGE_SIZE))
 	page = clampi(page, 0, page_count - 1)
 	var heading := "五行全卷" if selected_element == "all" else BattleRules.element_name(selected_element) + "系卷宗"
-	_text(content, "%s · %d 张" % [heading, filtered_cards.size()], Rect2(1030, 116, 496, 34), 18, JADE, false, HORIZONTAL_ALIGNMENT_RIGHT)
+	_text(content, "%s · %d %s" % [heading, filtered_cards.size(), "件" if collection_type == "artifacts" else "张"], Rect2(1030, 116, 496, 34), 18, JADE, false, HORIZONTAL_ALIGNMENT_RIGHT)
 	var filters := ["all"] + BattleRules.ELEMENTS
 	for i in filters.size():
 		var element: String = filters[i]
-		var count := cards.size() if element == "all" else _element_count(element)
+		var count := (artifacts.size() if collection_type == "artifacts" else cards.size()) if element == "all" else _element_count(element)
 		var name := "全部" if element == "all" else BattleRules.element_name(element) + "系"
 		var tint := GOLD if element == "all" else BattleRules.color(element)
 		var button := _button(content, "%s   %d" % [name, count], Rect2(62, 185 + i * 85, 154, 64), _filter.bind(element), tint)
@@ -195,19 +215,21 @@ func _build_collection() -> void:
 		button.add_theme_font_size_override("font_size", 25)
 		button.add_theme_stylebox_override("normal", _style(Color("#385246") if element == selected_element else INK, tint if element == selected_element else Color(tint, 0.25)))
 		filter_buttons[element] = button
-	page_motion = _collection_motion(selected_element, filtered_cards)
+	page_motion = _collection_motion(collection_type + ":" + selected_element + ":" + selected_artifact_slot, filtered_cards)
 	page_motion.reparent(content)
 	page_motion.show()
 	card_nodes.assign(page_motion.page_views[0])
-	previous_page_button = _button(content, "上一页", Rect2(650, 806, 120, 48), _change_page.bind(-1))
-	page_label = _text(content, "", Rect2(795, 806, 140, 48), 21, GOLD, false, HORIZONTAL_ALIGNMENT_CENTER)
-	next_page_button = _button(content, "下一页", Rect2(960, 806, 120, 48), _change_page.bind(1))
+	var navigation_x := 1060 if collection_type == "artifacts" else 650
+	previous_page_button = _button(content, "上一页", Rect2(navigation_x, 806, 120, 48), _change_page.bind(-1))
+	page_label = _text(content, "", Rect2(navigation_x + 145, 806, 140, 48), 21, GOLD, false, HORIZONTAL_ALIGNMENT_CENTER)
+	next_page_button = _button(content, "下一页", Rect2(navigation_x + 310, 806, 120, 48), _change_page.bind(1))
 	_update_page_navigation()
-	_text(content, "点击卡牌，展开卷宗", Rect2(1170, 810, 355, 40), 16, JADE, false, HORIZONTAL_ALIGNMENT_RIGHT)
+	if collection_type == "cards":
+		_text(content, "点击展开卷宗", Rect2(1170, 810, 355, 40), 16, JADE, false, HORIZONTAL_ALIGNMENT_RIGHT)
 
 func _element_count(element: String) -> int:
 	var count := 0
-	for card in cards.values():
+	for card in (artifacts.values() if collection_type == "artifacts" else cards.values()):
 		if card["element"] == element: count += 1
 	return count
 
@@ -218,13 +240,17 @@ func _filter(element: String) -> void:
 
 func _collection_cards(element: String) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	for card in cards.values():
+	for card in (artifacts.values() if collection_type == "artifacts" else cards.values()):
+		if collection_type == "artifacts" and selected_artifact_slot != "all" and card["slot"] != selected_artifact_slot: continue
 		if element == "all" or card["element"] == element: result.append(card)
 	result.sort_custom(func(a: Dictionary, b: Dictionary):
 		var ai := BattleRules.ELEMENTS.find(a["element"])
 		var bi := BattleRules.ELEMENTS.find(b["element"])
 		if ai != bi: return ai < bi
-		if int(a["cost"]) != int(b["cost"]): return int(a["cost"]) < int(b["cost"])
+		if collection_type == "artifacts":
+			if a["slot"] != b["slot"]: return ArtifactLibrary.SLOTS.find(a["slot"]) < ArtifactLibrary.SLOTS.find(b["slot"])
+		else:
+			if int(a["cost"]) != int(b["cost"]): return int(a["cost"]) < int(b["cost"])
 		return str(a["id"]) < str(b["id"]))
 	return result
 
@@ -248,14 +274,20 @@ func _create_collection_card(card: Dictionary, index: int, sheet: Control) -> Co
 	var width := 184.0 if PlatformUI.is_touch() else CARD_WIDTH
 	var pos := Vector2(322 + (index % columns) * 292, 195 + (index / columns) * 295) if PlatformUI.is_touch() else Vector2(283 + (index % columns) * 177, 209 + (index / columns) * 276)
 	var slot := _panel(sheet, Rect2(pos - Vector2(10, 10), (Vector2(width + 20, width * 1.4 + 40) if PlatformUI.is_touch() else Vector2(176, 263))), Color("#091a193d"), Color("#b79a5b22"))
-	var view: Control = card_factory.call(card, Vector2(width, width * 1.4))
+	var view: Control
+	if card.has("slot"):
+		view = ArtifactView.new()
+		view.configure(card, Vector2(width, width * 1.4))
+	else:
+		view = card_factory.call(card, Vector2(width, width * 1.4))
 	sheet.add_child(view)
 	view.position = pos
 	view.mouse_filter = Control.MOUSE_FILTER_STOP
 	view.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	view.gui_input.connect(_card_input.bind(card, view))
-	var kind := "召唤" if view is SummonCardView else "法术"
-	_text(slot, "%s · %d费" % [kind, int(card["cost"])], (Rect2(0, width * 1.4 + 16, width + 20, 22) if PlatformUI.is_touch() else Rect2(0, 239, 176, 22)), 14, Color("#a6b7a2"), false, HORIZONTAL_ALIGNMENT_CENTER)
+	var kind: String = ArtifactLibrary.SLOT_NAMES.get(card.get("slot", ""), "召唤" if view is SummonCardView else "法术")
+	var caption: String = kind if card.has("slot") else "%s · %d费" % [kind, int(card["cost"])]
+	_text(slot, caption, (Rect2(0, width * 1.4 + 16, width + 20, 22) if PlatformUI.is_touch() else Rect2(0, 239, 176, 22)), 14, Color("#a6b7a2"), false, HORIZONTAL_ALIGNMENT_CENTER)
 	return view
 
 func _update_page_navigation() -> void:
@@ -298,7 +330,11 @@ func _open_inspector(card: Dictionary, source: Control) -> void:
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	inspector.add_child(shade)
 	shade.modulate.a = 0.0
-	inspect_card = card_factory.call(card, Vector2(inspect_width, inspect_width * 1.4))
+	if card.has("slot"):
+		inspect_card = ArtifactView.new()
+		inspect_card.configure(card, Vector2(inspect_width, inspect_width * 1.4))
+	else:
+		inspect_card = card_factory.call(card, Vector2(inspect_width, inspect_width * 1.4))
 	inspector.add_child(inspect_card)
 	inspect_card.mouse_filter = Control.MOUSE_FILTER_STOP
 	inspect_card.position = inspect_origin
@@ -306,7 +342,7 @@ func _open_inspector(card: Dictionary, source: Control) -> void:
 	source.visible = false
 	var hint := _text(inspector, "轻点空白处收起" if PlatformUI.is_touch() else "点击空白处收起 · Esc 返回", Rect2(500, 775, 600, 40), 18, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
 	hint.modulate.a = 0.0
-	var entries := CardKeywords.entries(card, summons)
+	var entries := [] if card.has("slot") else CardKeywords.entries(card, summons)
 	if not entries.is_empty():
 		inspect_keywords = CardKeywordPopup.new()
 		inspector.add_child(inspect_keywords)
@@ -316,7 +352,7 @@ func _open_inspector(card: Dictionary, source: Control) -> void:
 	inspect_tween.tween_property(inspect_card, "scale", Vector2.ONE, 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	inspect_tween.tween_property(shade, "modulate:a", 1.0, 0.3)
 	inspect_tween.tween_property(hint, "modulate:a", 1.0, 0.4)
-	if PlatformUI.is_touch() and view_mode == "decks" and is_instance_valid(workshop) and workshop.view_mode == "editor":
+	if PlatformUI.is_touch() and not card.has("slot") and view_mode == "decks" and is_instance_valid(workshop) and workshop.view_mode == "editor":
 		hint.text = ""
 		var add_button := _button(inspector, "＋ 入组", Rect2(650, 810, 300, 72), func(): workshop.call("_add_card", card["id"]))
 		add_button.pressed.connect(func():
@@ -344,6 +380,9 @@ func _close_inspector() -> void:
 		inspect_card = null)
 
 func go_back() -> void:
+	if is_instance_valid(rules_panel):
+		rules_panel.dismiss()
+		return
 	if is_instance_valid(inspector):
 		_close_inspector()
 	elif is_instance_valid(quit_dialog):

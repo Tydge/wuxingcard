@@ -27,6 +27,7 @@ func cast(id: String, selection: Dictionary = {}) -> bool:
 
 func run() -> void:
 	manager = BattleManager.new()
+	manager.random_artifacts_enabled = false
 	root.add_child(manager)
 	prepare()
 	check(cast("wood_to_fire") and manager.player.energy["wood"] == 0 and manager.player.energy["fire"] == 3, "wood-to-fire needs only its two-cost payment")
@@ -72,6 +73,7 @@ func run() -> void:
 		manager.enemy.summons[slot] = Summon.new()
 		manager.enemy.summons[slot].setup(manager.summon_templates[["metal_furnace", "fire_lantern", "water_spring"][slot]])
 	manager.enemy.add_status("shield", 4, 0)
+	manager.player.energy["fire"] = 3
 	check(manager.preview_damage_segments(manager.player, manager.cards["fire_burning_field"], {"kind":"summon","slot":1}) == [10], "area spell preview uses the pointed summon resistance")
 	check(cast("fire_burning_field", {"kind":"summon","slot":1}), "area spell accepts any opponent as aim")
 	check(manager.enemy.hp == 64 and manager.enemy.summons[0] == null and manager.enemy.summons[1].hp == 5 and manager.enemy.summons[2] == null, "area spell independently resolves all targets, affinity and hero shield")

@@ -10,6 +10,8 @@ import shutil
 import subprocess
 import zipfile
 
+from build_support import ensure_checks, provenance
+
 from build_windows import ROOT, prepare_project
 
 
@@ -20,7 +22,9 @@ def main():
     parser.add_argument('--java', default='/Library/Java/JavaVirtualMachines/jdk-17.0.1.jdk/Contents/Home')
     parser.add_argument('--signing', type=Path, default=Path.home() / '.config/wuxingcard/android-signing.json')
     parser.add_argument('--version-code', type=int)
+    parser.add_argument('--checks-report', type=Path, help='Reuse a passing check_project.py report for this exact source')
     args = parser.parse_args()
+    source_snapshot, checks = ensure_checks(args.godot, args.checks_report)
     if not args.signing.is_file():
         raise SystemExit('Android signing configuration is missing; see README Android export instructions.')
     signing = json.loads(args.signing.read_text())
@@ -44,7 +48,7 @@ def main():
         raise SystemExit('Android version code must be positive.')
     preset = stage / 'export_presets.cfg'
     preset.write_text(preset.read_text().replace('version/code=1', f'version/code={version}')
-                      .replace('version/name="0.1"', f'version/name="0.1.{version}"'))
+                      .replace('version/name="0.1"', f'version/name="0.2.0.{version}"'))
 
     def run(*arguments):
         subprocess.run([args.godot, '--headless', '--path', str(stage), *map(str, arguments)],
@@ -84,8 +88,10 @@ def main():
 轻点手牌查看详情；按住沿手牌左右滑动换牌。
 向上拖出手牌，拖到目标后松手释放；拖回手牌取消。
 预计伤害显示在手指旁上方。召唤牌拖到我方空槽位。
-轻点召唤物或状态图标查看说明，点空白处收起。
+轻点五行能量、召唤物或状态图标查看说明，点空白处收起。
+点击“规则”查看玩法，“记录”查看或导出本局战报。
 卡组页点 ＋ 入组，轻点已携带的牌查看，点 − 移除。
+保存卡组后可配三件法宝：轻点法宝下方 ＋ 装备，或拖至右侧对应槽位；轻点卡面查看详情。
 系统返回键优先收起详情，再返回上一层；对战中返回会询问是否回到山门。
 
 测试模式双方生命 80；随机卡组 25 张，同名最多 2 张。
@@ -96,8 +102,7 @@ def main():
     (folder / '试玩说明.txt').write_text(instructions, encoding='utf-8-sig')
     shutil.copytree(stage / 'licenses', folder / 'licenses')
     manifest = {
-        'built': built.isoformat(), 'revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
-        'working_tree_changes': subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=no'], cwd=ROOT, text=True).strip(),
+        'built': built.isoformat(), **provenance(source_snapshot),
         'engine': subprocess.check_output([args.godot, '--version'], text=True).strip(),
         'platform': 'Android ARM64', 'package': 'com.tydge.wuxingcard', 'version_code': version,
         'cards': len(json.loads((ROOT / 'data/cards.json').read_text())),
@@ -105,6 +110,8 @@ def main():
         'art': json.loads(report.read_text()), 'bytes': apk.stat().st_size,
         'sha256': hashlib.sha256(apk.read_bytes()).hexdigest(),
     }
+    (folder / 'source_manifest.json').write_text(json.dumps(source_snapshot, ensure_ascii=False, indent=2) + '\n')
+    (folder / 'checks.json').write_text(json.dumps(checks, ensure_ascii=False, indent=2) + '\n')
     (folder / 'build_info.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
     (folder / 'apk_manifest.txt').write_text(details)
     bundle = folder.with_suffix('.zip')

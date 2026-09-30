@@ -18,12 +18,24 @@ var discard_pile: Array[String] = []
 var statuses: Array[Dictionary] = []
 var summons: Array = []
 var fatigue_level := 0
+var artifacts: Dictionary = {"implement": "", "guard": "", "pendant": ""}
+var artifact_resistances: Dictionary = {}
+var artifact_durability := 0
+var artifact_ready_turn := 0
+var own_turn_count := 0
+var artifact_flags: Dictionary = {}
 
 func setup(new_id: String, new_name: String, deck: Array, random: RandomNumberGenerator) -> void:
 	id = new_id
 	display_name = new_name
 	hp = max_hp
 	fatigue_level = 0
+	artifacts = {"implement": "", "guard": "", "pendant": ""}
+	artifact_resistances.clear()
+	artifact_durability = 0
+	artifact_ready_turn = 0
+	own_turn_count = 0
+	artifact_flags.clear()
 	energy.clear()
 	for element in BattleRules.ELEMENTS:
 		energy[element] = 1
@@ -130,3 +142,17 @@ func lose_energy(element: String, amount: int) -> int:
 	var before: int = energy[element]
 	energy[element] = maxi(0, before - amount)
 	return before - int(energy[element])
+
+func snapshot() -> Combatant:
+	var copy := Combatant.new()
+	for property in ["id", "display_name", "max_hp", "hp", "fatigue_level", "artifact_durability", "artifact_ready_turn", "own_turn_count"]:
+		copy.set(property, get(property))
+	for property in ["energy", "artifacts", "artifact_resistances", "artifact_flags"]:
+		copy.set(property, get(property).duplicate(true))
+	copy.statuses.assign(statuses.duplicate(true))
+	for property in ["draw_pile", "initial_deck", "hand", "discard_pile"]:
+		copy.get(property).assign(get(property))
+	copy.summons = [null, null, null]
+	for slot in summons.size():
+		if summons[slot] != null: copy.summons[slot] = summons[slot].snapshot()
+	return copy

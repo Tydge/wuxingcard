@@ -17,16 +17,16 @@ func shot(name: String) -> void:
 
 func inspect_popup(popup: CardKeywordPopup, side: String) -> void:
 	check(popup != null and is_zero_approx(popup.modulate.a), "keyword explanation starts hidden")
-	await create_timer(0.36).timeout
+	# Advance the actual reveal tween explicitly so slow render frames cannot
+	# turn the pre-delay assertion into an assertion after the delay.
+	popup.reveal_tween.pause()
+	popup.reveal_tween.custom_step(0.49)
 	check(is_zero_approx(popup.modulate.a), "keyword explanation waits half a second")
-	var saw_fade := false
-	var deadline := Time.get_ticks_msec() + 600
-	while Time.get_ticks_msec() < deadline:
-		await process_frame
-		if popup.modulate.a > 0 and popup.modulate.a < 1: saw_fade = true
-		if is_equal_approx(popup.modulate.a, 1): break
-	check(saw_fade, "keyword explanation quickly fades in")
+	popup.reveal_tween.custom_step(0.07)
+	check(popup.modulate.a > 0 and popup.modulate.a < 1, "keyword explanation quickly fades in")
+	popup.reveal_tween.custom_step(0.07)
 	check(is_equal_approx(popup.modulate.a, 1), "keyword explanation becomes fully visible")
+	await process_frame
 	check(popup.placement_side == side, "keyword explanation chooses the larger free side (%s / %s)" % [popup.placement_side, side])
 	check(popup.position.x >= 0 and popup.position.x + popup.size.x <= 1600 and popup.position.y + popup.size.y <= 900, "keyword explanation stays inside the viewport")
 

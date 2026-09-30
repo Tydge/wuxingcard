@@ -121,14 +121,16 @@ func run() -> void:
 	workshop.name_edit.text = "五行初卷"
 	workshop.name_edit.text_changed.emit("五行初卷")
 	workshop.save_button.pressed.emit()
-	check(workshop.view_mode == "library" and workshop.store.decks.size() == 1 and workshop.play_button.disabled, "small draft is saved in the library and cannot enter combat")
+	check(workshop.view_mode == "artifacts" and workshop.store.decks.size() == 1 and not workshop.store.problem(workshop.draft).is_empty(), "saving a small draft opens artifact setup and still rejects combat")
+	workshop.call("_save_artifacts")
+	check(workshop.view_mode == "library" and workshop.play_button.disabled, "returning from artifact setup preserves the incomplete draft")
 	await create_timer(0.3).timeout
 	await shot("deck_library_draft")
 	var saved_id: String = workshop.selected_id
 	workshop.deck_buttons[saved_id].pressed.emit()
 	check(workshop.view_mode == "editor" and workshop.draft.size() == 1, "saved deck click reopens its editor")
 	workshop.filter_buttons["wood"].pressed.emit()
-	check(workshop.filtered_cards.size() == 10 and workshop.draft.size() == 1, "element filtering preserves the current deck")
+	check(workshop.filtered_cards.size() == 12 and workshop.draft.size() == 1, "element filtering preserves the current deck")
 	for candidate in workshop.card_nodes:
 		if candidate.card["id"] == "wood_regen": card = candidate
 	var point := screen_point(card, Vector2(70, 70))
@@ -185,7 +187,9 @@ func run() -> void:
 	check(is_instance_valid(workshop.modal), "leaving modified deck offers save or discard")
 	workshop.call("_dismiss_modal")
 	workshop.save_button.pressed.emit()
-	check(workshop.store.decks.size() == 1 and not workshop.play_button.disabled, "saving edits replaces the draft rather than adding another deck")
+	check(workshop.store.decks.size() == 1 and workshop.view_mode == "artifacts", "saving edits replaces the draft and opens artifact setup")
+	workshop.call("_save_artifacts")
+	check(workshop.view_mode == "library" and not workshop.play_button.disabled, "completed saved deck is playable from the library")
 	await create_timer(0.3).timeout
 	await shot("deck_library_saved")
 	# Recreate the whole menu to verify real local persistence, not just cached data.
@@ -209,7 +213,9 @@ func run() -> void:
 	check(workshop.row_scroll.scroll_vertical == old_scroll and workshop.draft.size() == 30, "flipping the collection keeps the deck list scroll and contents")
 	var final_cards := workshop.draft.duplicate()
 	workshop.play_button.pressed.emit()
-	await create_timer(5.8).timeout
+	check(workshop.view_mode == "artifacts", "Enter Battle opens the saved loadout before combat")
+	workshop.call("_enter_with_artifacts")
+	await create_timer(6.3).timeout
 	check(find_menu() == null and manager.phase == "player_action", "saved deck enters the existing playable battle")
 	var chosen: Array = manager.player.hand + manager.player.draw_pile
 	chosen.sort()

@@ -5,6 +5,7 @@ var explanations: Array[Dictionary] = []
 var card_rect := Rect2()
 var viewport_size := Vector2(1600, 900)
 var placement_side := ""
+var reveal_tween: Tween
 
 func configure(entries: Array[Dictionary], rect: Rect2, bounds: Vector2) -> void:
 	explanations = entries
@@ -46,9 +47,9 @@ func configure(entries: Array[Dictionary], rect: Rect2, bounds: Vector2) -> void
 			label.add_theme_color_override("font_color", Color("#e4c795") if key == "title" else Color("#f2eee5"))
 			column.add_child(label)
 	call_deferred("_place")
-	var reveal := create_tween()
-	reveal.tween_interval(0.5)
-	reveal.tween_property(self, "modulate:a", 1.0, 0.12)
+	reveal_tween = create_tween()
+	reveal_tween.tween_interval(0.5)
+	reveal_tween.tween_property(self, "modulate:a", 1.0, 0.12)
 
 func _place() -> void:
 	reset_size()

@@ -11,7 +11,7 @@ func check(condition: bool, message: String) -> void:
 		push_error(message)
 
 func run() -> void:
-	check(FileAccess.file_exists("res://data/cards.json") and FileAccess.file_exists("res://data/summons.json") and FileAccess.file_exists("res://data/battles.json"), "all runtime JSON files are packaged")
+	check(FileAccess.file_exists("res://data/cards.json") and FileAccess.file_exists("res://data/summons.json") and FileAccess.file_exists("res://data/artifacts.json") and FileAccess.file_exists("res://data/battles.json"), "all runtime JSON files are packaged")
 	check(not ResourceLoader.exists("res://tests/smoke_test.gd") and not ResourceLoader.exists("res://tools/test_main_menu.gd"), "development tools are excluded")
 	var scene: PackedScene = load("res://battle/battle_scene.tscn")
 	check(scene != null, "main scene loads from exported pack")
@@ -31,6 +31,13 @@ func run() -> void:
 	for summoned: Dictionary in manager.summon_templates.values():
 		var standee: Texture2D = load("res://assets/summons/standee/%s.webp" % summoned["id"])
 		check(standee != null and standee.get_image().detect_alpha() != Image.ALPHA_NONE, "transparent summon art included: " + summoned["id"])
+	check(manager.artifacts.size() == 15, "all artifact definitions are packaged")
+	for artifact: Dictionary in manager.artifacts.values():
+		var art: Texture2D = load("res://assets/artifacts/%s.webp" % artifact["id"])
+		check(art != null and art.get_width() > 0, "artifact card art loads: " + artifact["id"])
+		if artifact["slot"] == "implement":
+			var weapon: Texture2D = load("res://assets/artifacts/%s_standee.webp" % artifact["id"])
+			check(weapon != null and weapon.get_image().detect_alpha() != Image.ALPHA_NONE, "transparent implement standee included: " + artifact["id"])
 	for actor_id in ["player", "ember", "tide", "harmony"]:
 		check(ResourceLoader.exists("res://assets/characters/%s.webp" % actor_id) and ResourceLoader.exists("res://assets/characters/%s_standee.webp" % actor_id), "runtime portrait and full-body standee included: " + actor_id)
 		check(not ResourceLoader.exists("res://assets/characters/fullbody/%s.webp" % actor_id), "unused full-body source excluded: " + actor_id)
@@ -46,9 +53,9 @@ func run() -> void:
 	check(GameFonts.SERIF.get_supported_chars().contains("克") and GameFonts.SERIF.get_supported_chars().contains("抵"), "damage font covers matchup labels")
 	if OS.has_feature("windows"): check(GameFonts.body() is FontFile, "Windows body text uses the bundled CJK font")
 	for seed_value in 15:
-		manager.start_battle("ember", "random", seed_value + 2100)
+		await manager.start_battle("ember", "random", seed_value + 2100)
 		for actor in [manager.player,manager.enemy]:
-			check(actor.hp == 80 and actor.max_hp == 80 and manager.valid_random_deck(actor.hand + actor.draw_pile), "exported game starts with legal 25-card decks and 80 HP")
+			check(actor.hp > 0 and actor.hp <= 80 and actor.max_hp == 80 and manager.valid_random_deck(actor.hand + actor.draw_pile), "exported battle %d %s starts with legal 25-card deck and 80 maximum HP (hp %d/%d, hand %d, pile %d)" % [seed_value, actor.id, actor.hp, actor.max_hp, actor.hand.size(), actor.draw_pile.size()])
 		var steps := 0
 		while manager.phase not in BattleManager.FINISHED_PHASES and steps < 1000:
 			steps += 1

@@ -33,6 +33,7 @@ func cast(id: String, energy: int, selection: Dictionary = {}) -> bool:
 
 func run() -> void:
     manager = BattleManager.new()
+    manager.random_artifacts_enabled = false
     root.add_child(manager)
     check(manager.cards.size() == 60 and manager.summon_templates.size() == 20, "new pool contains 60 cards and 20 summons")
 

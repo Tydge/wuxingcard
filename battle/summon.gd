@@ -24,3 +24,12 @@ func setup(data: Dictionary) -> void:
 	spawn_effects = data.get("on_spawn", []).duplicate(true)
 	turn_start_effects = data.get("turn_start", []).duplicate(true)
 	turn_end_effects = data.get("turn_end", []).duplicate(true)
+
+func snapshot() -> Summon:
+	var copy := Summon.new()
+	for property in ["id", "card_id", "display_name", "element", "max_hp", "hp", "art_scale"]:
+		copy.set(property, get(property))
+	copy.spawn_effects = spawn_effects.duplicate(true)
+	copy.turn_start_effects = turn_start_effects.duplicate(true)
+	copy.turn_end_effects = turn_end_effects.duplicate(true)
+	return copy

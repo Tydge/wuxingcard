@@ -26,6 +26,7 @@ func run_tests() -> void:
 	check(BattleRules.damage_breakdown(target, 20, "fire")["hp"] == 3, "shield preview")
 
 	var manager := BattleManager.new()
+	manager.random_artifacts_enabled = false
 	root.add_child(manager)
 	manager.start_battle("ember", "balanced", 12345)
 	check(manager.player.hand.size() == 5, "opening hand plus first-turn draw")
@@ -138,6 +139,7 @@ func test_status_rules(manager: BattleManager) -> void:
 	actor.add_status("charge", 2, 0)
 	opponent.add_status("tenacity", 1, 0)
 	var strike: Dictionary = manager.cards["metal_strike"]
+	actor.energy["metal"] = 1
 	var preview := manager.preview_damage_segments(actor, strike, {"kind": "hero"})
 	var hp_before := opponent.hp
 	manager.apply_damage(actor, opponent, 10, "metal")

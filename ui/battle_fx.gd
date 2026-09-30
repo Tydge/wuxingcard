@@ -9,9 +9,7 @@ var ring_texture: Texture2D
 var projectile_textures: Dictionary = {}
 var impact_texture: Texture2D
 var healing_texture: Texture2D
-var shield_texture: Texture2D
 var fire_impact_frames: Texture2D
-var shield_pop_frames: Texture2D
 var burn_mark_frames: Texture2D
 var poison_mist_frames: Texture2D
 # Where each fighter's standee sits. The battle UI overrides these so casts can
@@ -32,12 +30,8 @@ func _ready() -> void:
 		impact_texture = load("res://assets/fx/ink_impact.webp")
 	if ResourceLoader.exists("res://assets/fx/healing_vines.webp"):
 		healing_texture = load("res://assets/fx/healing_vines.webp")
-	if ResourceLoader.exists("res://assets/fx/shield_barrier.webp"):
-		shield_texture = load("res://assets/fx/shield_barrier.webp")
 	if ResourceLoader.exists("res://assets/fx/fire_impact_frames.webp"):
 		fire_impact_frames = load("res://assets/fx/fire_impact_frames.webp")
-	if ResourceLoader.exists("res://assets/fx/shield_pop_frames.webp"):
-		shield_pop_frames = load("res://assets/fx/shield_pop_frames.webp")
 	if ResourceLoader.exists("res://assets/fx/burn_mark_frames.webp"):
 		burn_mark_frames = load("res://assets/fx/burn_mark_frames.webp")
 	if ResourceLoader.exists("res://assets/fx/poison_mist_frames.webp"):
@@ -96,7 +90,7 @@ func _default_style(card: Dictionary) -> String:
 	match str(first.get("type", "")):
 		"damage": return {"metal":"metal_slash", "wood":"wood_grow", "water":"water_wave", "fire":"fire_slash", "earth":"earth_impact"}.get(card["element"], "generic_buff")
 		"summon": return "energy_gain"
-		"heal": return "wood_heal"
+		"heal", "heal_selected", "heal_summon": return "wood_heal"
 		"draw": return "card_draw"
 		"gain_energy", "gain_random_energy", "convert_energy": return "energy_gain"
 		"lose_energy": return "energy_loss"
@@ -316,13 +310,20 @@ func _draw_heal(e: Dictionary, p: float, c: Color) -> void:
 
 func _draw_shield(e: Dictionary, p: float, c: Color) -> void:
 	var point: Vector2 = e["to"]
-	if shield_pop_frames != null:
-		_draw_frame(shield_pop_frames, point, Vector2(228, 278), p, Color.WHITE)
-		return
-	var fade := minf(1.0, p * 8.0) * pow(1.0 - p, 0.75)
-	draw_circle(point, 53.0 + p * 24.0, _tint(c, fade * 0.08))
-	_draw_painted_sprite(shield_texture, point, Vector2(198.0 + p * 34.0, 254.0 + p * 44.0),
-		0.0, _tint(Color.WHITE, fade * 0.85))
+	# A single full-height arc stands just ahead of the fighter. It follows the
+	# fighter's facing direction and fades cleanly instead of bursting into sprites.
+	var facing := 1.0 if point.x < size.x * 0.5 else -1.0
+	var visibility := sin(PI * p)
+	var curve := PackedVector2Array()
+	for i in 49:
+		var vertical := float(i) / 48.0 * 2.0 - 1.0
+		var bulge := 57.0 * (1.0 - vertical * vertical)
+		var outward := 8.0 * sin(PI * p)
+		curve.append(point + Vector2(facing * (118.0 + bulge + outward), vertical * 236.0))
+	var light := c.lightened(0.55)
+	draw_polyline(curve, _tint(c, visibility * 0.13), 19.0, true)
+	draw_polyline(curve, _tint(light, visibility * 0.42), 7.0, true)
+	draw_polyline(curve, _tint(Color.WHITE, visibility * 0.63), 2.2, true)
 
 func _draw_energy(e: Dictionary, p: float, c: Color) -> void:
 	var point: Vector2 = e["to"]
