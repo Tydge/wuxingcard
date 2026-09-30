@@ -13,9 +13,10 @@ func check(condition: bool, message: String) -> void:
 func run() -> void:
 	var manager := BattleManager.new()
 	root.add_child(manager)
-	check(manager.artifacts.size() == 15, "five artifacts in each of three slots")
+	check(manager.artifacts.size() == 45, "five artifacts in each of three slots")
 	var ids: Array[String] = []
 	for id in manager.cards:
+		if int(manager.cards[id].get("level", 0)) != 0: continue
 		for copy in DeckStore.MAX_COPIES:
 			if ids.size() < 20: ids.append(id)
 	var configured := {"id": "artifact_test", "name": "法宝测试", "cards": ids, "artifacts": {"implement": "metal_thunder_ruler", "guard": "earth_rock_armor", "pendant": "earth_origin_jade"}}
@@ -29,7 +30,8 @@ func run() -> void:
 		actor.energy[element] = 0
 		opponent.energy[element] = 0
 	var initial_hp := opponent.hp
-	check(manager.activate_artifact(actor, {"kind": "hero", "side": "enemy"}), "metal implement activates on enemy hero")
+	check(manager.artifact_target_mode(actor) == "none", "metal implement has no target selection")
+	check(manager.activate_artifact(actor), "metal implement automatically hits enemy hero")
 	check(opponent.hp == initial_hp - 5 and not manager.artifact_can_activate(actor), "metal implement deals five and enters cooldown")
 	check(actor.artifact_ready_turn == actor.own_turn_count + 3, "two own turns are skipped before reuse")
 	await manager._start_turn(actor)

@@ -14,6 +14,7 @@ func check(condition: bool, message: String) -> void:
 func sample(amount: int) -> Array[String]:
 	var ids: Array[String] = []
 	for id in manager.cards:
+		if int(manager.cards[id].get("level", 0)) != 0: continue
 		for copy in DeckStore.MAX_COPIES:
 			if ids.size() < amount: ids.append(id)
 	return ids

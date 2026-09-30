@@ -35,7 +35,7 @@ func run() -> void:
     manager = BattleManager.new()
     manager.random_artifacts_enabled = false
     root.add_child(manager)
-    check(manager.cards.size() == 60 and manager.summon_templates.size() == 20, "new pool contains 60 cards and 20 summons")
+    check(manager.cards.size() == 180 and manager.summon_templates.size() == 60, "new pool contains 60 cards and 20 summons")
 
     prepare()
     summon(manager.player, 0, "earth_stele")
@@ -43,9 +43,9 @@ func run() -> void:
     summon(manager.enemy, 1, "earth_tortoise")
     var area: Dictionary = manager.cards["fire_all_targets"]
     check(manager.card_target_mode(area) == "enemy_summons" and not manager.valid_card_target(manager.player, area, {"kind":"hero", "side":"enemy"}), "Samadhi Fire only aims at enemy summons")
-    check(cast("fire_all_targets", 2, {"kind":"summon", "side":"enemy", "slot":0}), "Samadhi Fire casts onto an enemy summon")
+    check(cast("fire_all_targets", 3, {"kind":"summon", "side":"enemy", "slot":0}), "Samadhi Fire casts onto an enemy summon")
     check(manager.enemy.hp == 80 and manager.player.hp == 80 and manager.player.summons[0].hp == 15, "Samadhi Fire leaves both heroes and allied summons alone")
-    check(manager.enemy.summons[0].hp < 15 and manager.enemy.summons[1].hp < 16, "Samadhi Fire hits every enemy summon")
+    check(manager.enemy.summons[0] == null and manager.enemy.summons[1].hp == 1, "Samadhi Fire hits every enemy summon")
 
     prepare()
     check(cast("wood_spirit_vine", 2, {"kind":"hero"}) and manager.enemy.hp == 66, "vine now deals 14")

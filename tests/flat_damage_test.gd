@@ -20,6 +20,7 @@ func prepare() -> void:
 	# Keep the all-board damage regression with a test-only card after Samadhi Fire's retargeting.
 	var all_board: Dictionary = manager.cards["fire_all_targets"].duplicate(true)
 	all_board["id"] = "test_all_board"
+	all_board["cost"] = 2
 	all_board["effects"] = [{"type":"damage", "scope":"all", "amount":12, "element":"fire"}]
 	manager.cards["test_all_board"] = all_board
 	for actor in [manager.player, manager.enemy]:
@@ -124,8 +125,8 @@ func run() -> void:
 	for slot in 3: summon(manager.enemy, slot, "water_spring", 40)
 	card = ready_card("fire_burning_field")
 	manager.play_player_card(0, {"kind":"hero"})
-	check(manager.enemy.hp == 57 and manager.player.status_stacks("strong_attack") == 2, "existing enemy-area spell also consumes one layer")
-	for summoned: Summon in manager.enemy.summons: check(summoned.hp == 17, "existing area spell has equal simultaneous attack bonus")
+	check(manager.enemy.hp == 65 and manager.player.hp == 65 and manager.player.status_stacks("strong_attack") == 2, "global field uses one shared attack layer for both heroes")
+	for summoned: Summon in manager.enemy.summons: check(summoned.hp == 25, "global field has equal simultaneous attack bonus")
 
 	for caster_side in ["player", "enemy"]:
 		prepare()

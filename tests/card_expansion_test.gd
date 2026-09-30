@@ -74,10 +74,10 @@ func run() -> void:
 		manager.enemy.summons[slot].setup(manager.summon_templates[["metal_furnace", "fire_lantern", "water_spring"][slot]])
 	manager.enemy.add_status("shield", 4, 0)
 	manager.player.energy["fire"] = 3
-	check(manager.preview_damage_segments(manager.player, manager.cards["fire_burning_field"], {"kind":"summon","slot":1}) == [10], "area spell preview uses the pointed summon resistance")
+	check(manager.preview_damage_segments(manager.player, manager.cards["fire_burning_field"], {"kind":"summon","slot":1}) == [6], "area spell preview uses the pointed summon resistance")
 	check(cast("fire_burning_field", {"kind":"summon","slot":1}), "area spell accepts any opponent as aim")
-	check(manager.enemy.hp == 64 and manager.enemy.summons[0] == null and manager.enemy.summons[1].hp == 5 and manager.enemy.summons[2] == null, "area spell independently resolves all targets, affinity and hero shield")
-	check(manager.player.hp == 80 and manager.player.summons == [null,null,null], "area spell leaves own side untouched")
+	check(manager.enemy.hp == 72 and manager.enemy.summons[0] == null and manager.enemy.summons[1].hp == 9 and manager.enemy.summons[2].hp == 3, "area spell independently resolves all targets, affinity and hero shield")
+	check(manager.player.hp == 68 and manager.player.summons == [null,null,null], "global field also damages the caster after payment")
 	prepare()
 	check(cast("earth_stone_guard", {"kind":"hero"}) and manager.enemy.hp == 64 and manager.player.status_stacks("shield") == 8, "earth damage grants eight shield layers")
 	prepare()
@@ -106,7 +106,7 @@ func run() -> void:
 			var deck: Array = actor.hand + actor.draw_pile + actor.discard_pile
 			check(manager.valid_random_deck(deck), "random deck size, copy cap and cost guardrails")
 			for id in deck: seen[id] = true
-	check(seen.size() == manager.cards.size(), "random sampling includes every current card")
+	check(seen.size() == ContentCatalog.base_entries(manager.cards).size(), "random sampling includes every current card")
 	var first := manager.player.hand + manager.player.draw_pile
 	manager.start_battle("ember", "random", 399)
 	check(first == manager.player.hand + manager.player.draw_pile, "seeded random deck generation is reproducible")

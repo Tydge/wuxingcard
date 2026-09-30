@@ -12,22 +12,20 @@ var art: TextureRect
 var title: Label
 var category: Label
 var remove_button: Button
+var frame: StyleBoxFlat
 
 func configure(slot_name: String, data: Dictionary) -> void:
 	slot = slot_name
-	entry = data
 	custom_minimum_size = Vector2(330, 94)
 	size = custom_minimum_size
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	var tint := BattleRules.color(str(entry.get("element", "metal"))) if not entry.is_empty() else Color("#8e866e")
-	var frame := StyleBoxFlat.new()
-	frame.bg_color = Color("#102620")
-	frame.border_color = Color(tint, 0.7)
-	frame.set_border_width_all(1)
-	frame.set_corner_radius_all(6)
-	add_theme_stylebox_override("panel", frame)
 	if art == null:
+		frame = StyleBoxFlat.new()
+		frame.bg_color = Color("#102620")
+		frame.set_border_width_all(1)
+		frame.set_corner_radius_all(6)
+		add_theme_stylebox_override("panel", frame)
 		art = TextureRect.new()
 		art.position = Vector2(3, 3)
 		art.size = Vector2(324, 88)
@@ -59,13 +57,18 @@ func configure(slot_name: String, data: Dictionary) -> void:
 		remove_button.add_theme_font_size_override("font_size", 27)
 		remove_button.pressed.connect(func(): remove_requested.emit(slot))
 		add_child(remove_button)
-	var path := "res://assets/artifacts/%s.webp" % str(entry.get("id", ""))
+	category.text = ArtifactLibrary.SLOT_NAMES[slot]
+	set_entry(data)
+
+func set_entry(data: Dictionary) -> void:
+	entry = data
+	var tint := BattleRules.color(str(entry.get("element", "metal"))) if not entry.is_empty() else Color("#8e866e")
+	frame.border_color = Color(tint, 0.7)
+	var path := "res://assets/artifacts/%s.webp" % str(entry.get("art_id", entry.get("id", "")))
 	art.texture = load(path) if ResourceLoader.exists(path) else null
 	art.modulate = Color(0.63, 0.66, 0.63, 0.53) if art.texture != null else Color.WHITE
 	title.text = str(entry.get("name", "拖入法宝"))
-	category.text = ArtifactLibrary.SLOT_NAMES[slot]
 	remove_button.visible = not entry.is_empty()
-	queue_redraw()
 
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	return data is Dictionary and data.get("kind") == "artifact" and data.get("slot") == slot

@@ -17,7 +17,7 @@ func configure(summoned: Summon, mirrored: bool = false) -> void:
 	portrait = TextureRect.new()
 	portrait.position = Vector2(2, 0)
 	portrait.size = Vector2(186, 162)
-	portrait.texture = load("res://assets/summons/standee/%s.webp" % summoned.id)
+	portrait.texture = load("res://assets/summons/standee/%s.webp" % summoned.art_id)
 	# Only mirror the artwork, preserving readable health and stable animation scale.
 	portrait.flip_h = mirrored
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE

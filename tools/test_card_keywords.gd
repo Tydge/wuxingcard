@@ -101,5 +101,9 @@ func run() -> void:
 	for child in ui.get("fx_layer").get_children():
 		if child is DamageNumber: found = found or child.matchup == "抵抗"
 	check(found, "summon damage number shows elemental resistance")
+	ui.queue_free()
+	await process_frame
+	# The last hit queues audio; drain it before shutting down the engine.
+	await create_timer(0.6).timeout
 	print("Card keyword UI: delayed reveal, instant removal, hand/summon/collection and matchup; %d failures" % failures)
-	quit(1 if failures > 0 else 0)
+	call_deferred("quit", 1 if failures > 0 else 0)

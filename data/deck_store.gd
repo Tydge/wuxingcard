@@ -35,9 +35,10 @@ func load_decks() -> void:
 		# The remaining deck can be completed in the editor before battle.
 		for card_id: Variant in entry["cards"]:
 			var known_id := str(card_id)
-			if cards.has(known_id) and int(copies.get(known_id, 0)) < MAX_COPIES:
+			var family := ContentCatalog.base_id(cards.get(known_id, {"id": known_id}))
+			if cards.has(known_id) and int(copies.get(family, 0)) < MAX_COPIES:
 				ids.append(known_id)
-				copies[known_id] = int(copies.get(known_id, 0)) + 1
+				copies[family] = int(copies.get(family, 0)) + 1
 		decks.append({"id": id, "name": str(entry.get("name", "无名卡组")), "cards": ids, "artifacts": ArtifactLibrary.normalize(entry.get("artifacts", {}), artifacts)})
 
 func problem(ids: Array, require_complete: bool = true) -> String:
@@ -45,8 +46,9 @@ func problem(ids: Array, require_complete: bool = true) -> String:
 	var counts := {}
 	for id in ids:
 		if not cards.has(id): return "卡牌已失效"
-		counts[id] = int(counts.get(id, 0)) + 1
-		if counts[id] > MAX_COPIES: return "同名卡牌最多%d张" % MAX_COPIES
+		var family := ContentCatalog.base_id(cards[id])
+		counts[family] = int(counts.get(family, 0)) + 1
+		if counts[family] > MAX_COPIES: return "同名卡牌最多%d张" % MAX_COPIES
 	if require_complete and ids.size() < MIN_CARDS: return "还差%d张" % (MIN_CARDS - ids.size())
 	return ""
 

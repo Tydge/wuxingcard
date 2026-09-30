@@ -2,6 +2,7 @@ class_name Summon
 extends RefCounted
 
 var id := ""
+var art_id := ""
 var card_id := ""
 var display_name := ""
 var element := ""
@@ -14,6 +15,7 @@ var turn_end_effects: Array = []
 
 func setup(data: Dictionary) -> void:
 	id = str(data["id"])
+	art_id = str(data.get("art_id", data["id"]))
 	card_id = str(data.get("card_id", ""))
 	display_name = str(data["name"])
 	element = str(data["element"])
@@ -27,7 +29,7 @@ func setup(data: Dictionary) -> void:
 
 func snapshot() -> Summon:
 	var copy := Summon.new()
-	for property in ["id", "card_id", "display_name", "element", "max_hp", "hp", "art_scale"]:
+	for property in ["id", "art_id", "card_id", "display_name", "element", "max_hp", "hp", "art_scale"]:
 		copy.set(property, get(property))
 	copy.spawn_effects = spawn_effects.duplicate(true)
 	copy.turn_start_effects = turn_start_effects.duplicate(true)

@@ -125,6 +125,7 @@ var back_dialog: Control
 var artifact_aiming := false
 var hovered_artifact_slot := ""
 var artifact_preview_button: Button
+var choice_dialog: ContemplationDialog
 
 func _ready() -> void:
 	if OS.has_feature("android"):
@@ -139,6 +140,8 @@ func _ready() -> void:
 	manager = BattleManager.new()
 	add_child(manager)
 	manager.changed.connect(_refresh)
+	manager.interactive_choices = true
+	manager.choice_requested.connect(_show_contemplation)
 	manager.action_event.connect(_on_action_event)
 	manager.hand_card_removed.connect(_on_hand_card_removed)
 	manager.summon_event.connect(_on_summon_event)
@@ -291,6 +294,7 @@ func _start_test_battle(deck: Dictionary = {}) -> void:
 	_start_battle()
 
 func _start_battle() -> void:
+	_clear_contemplation()
 	touch_hand_collapsed = false
 	_clear_discard_animations()
 	if is_instance_valid(information_panel): information_panel.dismiss()
@@ -465,7 +469,7 @@ func _build_standees() -> void:
 		var owner: Combatant = manager.player if side == "player" else manager.enemy
 		var id := str(owner.artifacts.get("implement", ""))
 		if id.is_empty(): continue
-		var path := "res://assets/artifacts/%s_standee.webp" % id
+		var path := "res://assets/artifacts/%s_standee.webp" % manager.artifacts.get(id, {}).get("art_id", id)
 		if not ResourceLoader.exists(path): continue
 		var weapon := TextureRect.new()
 		weapon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -505,7 +509,7 @@ func _build_artifacts() -> void:
 				icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 				icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 				icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-				icon.texture = load("res://assets/artifacts/%s.webp" % entry["id"])
+				icon.texture = load("res://assets/artifacts/%s.webp" % entry.get("art_id", entry["id"]))
 				control.add_child(icon)
 				icon.position = Vector2(3, 3)
 				icon.size = Vector2(60, 60)
@@ -587,10 +591,33 @@ func _build_artifact_targets() -> void:
 func _activate_player_artifact(selection: Dictionary) -> void:
 	if not manager.artifact_can_activate(manager.player): return
 	var entry := manager.artifact_entry(manager.player, "implement")
-	var target := _target_point("enemy", selection) if not selection.is_empty() else PLAYER_ANCHOR
+	var target := _artifact_cast_target(manager.player, selection)
 	battle_fx.cast({"element": entry["element"], "effects": manager.artifact_effects(manager.player)}, "player", Vector2(80, 500), target)
 	artifact_aiming = false
 	manager.activate_artifact(manager.player, selection)
+
+func _artifact_cast_target(actor: Combatant, selection: Dictionary) -> Vector2:
+	var own_side := "player" if actor == manager.player else "enemy"
+	var other_side := "enemy" if own_side == "player" else "player"
+	if not selection.is_empty(): return _target_point(other_side, selection)
+	for effect: Dictionary in manager.artifact_effects(actor):
+		if effect.get("type") == "damage" and effect.get("target") == "opponent": return _anchor(other_side)
+	return _anchor(own_side)
+
+func _show_contemplation(candidates: Array, full: bool) -> void:
+	_clear_contemplation()
+	_clear_hover_preview()
+	var generation := manager.battle_generation
+	choice_dialog = ContemplationDialog.new()
+	fx_layer.add_child(choice_dialog)
+	choice_dialog.configure(candidates, manager.cards, _card_front, full)
+	choice_dialog.confirmed.connect(func(index: int):
+		_clear_contemplation()
+		if generation == manager.battle_generation: manager.choose_card(index))
+
+func _clear_contemplation() -> void:
+	if is_instance_valid(choice_dialog): choice_dialog.queue_free()
+	choice_dialog = null
 
 func _summon_slot_rect(side: String, slot: int) -> Rect2:
 	var center: Vector2 = SUMMON_CENTERS[slot]
@@ -1258,6 +1285,7 @@ func _update_drag_hints(card: Dictionary, pointer: Vector2) -> void:
 	damage_preview.visible = true
 
 func _input(event: InputEvent) -> void:
+	if not manager.pending_choice.is_empty(): return
 	if PlatformUI.is_touch():
 		# Android may synthesize mouse events after a handled touch. Consume those
 		# too, so dismissing an inspection cannot also click End Turn underneath.
@@ -1291,6 +1319,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _request_back() -> void:
 	if manager == null: return
+	if not manager.pending_choice.is_empty(): return
 	if is_instance_valid(information_panel):
 		information_panel.dismiss()
 		return
@@ -1364,6 +1393,7 @@ func _play_card_from(card_index: int, source: Vector2, selection: Dictionary = {
 		if generation != manager.battle_generation: return
 		player_hidden_index = -1
 		manager.play_player_card(card_index, selection)
+		await manager.wait_for_choice()
 		await get_tree().create_timer(EFFECT_PAUSE_SECONDS).timeout
 	if generation != manager.battle_generation: return
 	player_hidden_index = -1
@@ -1372,7 +1402,7 @@ func _play_card_from(card_index: int, source: Vector2, selection: Dictionary = {
 
 func _build_end_turn() -> void:
 	var end := _button(self, "结束回合", Rect2(1300, 800, 200, 66), func(): _on_end_turn(), Color("#53402d"), GOLD)
-	end.disabled = manager.phase != "player_action" or action_busy
+	end.disabled = manager.phase != "player_action" or action_busy or not manager.pending_choice.is_empty()
 
 func _on_end_turn() -> void:
 	if action_busy or manager.phase != "player_action":
@@ -1402,7 +1432,7 @@ func _run_enemy_turn() -> void:
 		var chosen_index := int(action["index"])
 		if action.get("kind", "") == "artifact":
 			var entry := manager.artifact_entry(manager.enemy, "implement")
-			var target := _target_point("player", action["target"]) if not action["target"].is_empty() else ENEMY_ANCHOR
+			var target := _artifact_cast_target(manager.enemy, action["target"])
 			battle_fx.cast({"element": entry["element"], "effects": manager.artifact_effects(manager.enemy)}, "enemy", Vector2(1520, 500), target)
 			await get_tree().create_timer(0.52).timeout
 			if generation != manager.battle_generation: return

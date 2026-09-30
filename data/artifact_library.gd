@@ -6,14 +6,8 @@ const SLOTS := ["implement", "guard", "pendant"]
 const SLOT_NAMES := {"implement": "法器", "guard": "护身", "pendant": "灵佩"}
 
 static func load_all() -> Dictionary:
-	var result := {}
-	var file := FileAccess.open(PATH, FileAccess.READ)
-	if file == null: return result
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	if parsed is Array:
-		for item in parsed:
-			if item is Dictionary and item.has("id"):
-				result[str(item["id"])] = item
+	var result := ContentCatalog.load_all(PATH)
+	for entry: Dictionary in result.values(): entry["description"] = EffectText.artifact_text(entry)
 	return result
 
 static func normalize(raw: Variant, known: Dictionary) -> Dictionary:
@@ -30,6 +24,6 @@ static func random_loadout(known: Dictionary, rng: RandomNumberGenerator) -> Dic
 	for slot in SLOTS:
 		var pool: Array[String] = []
 		for id in known:
-			if known[id]["slot"] == slot: pool.append(id)
+			if known[id]["slot"] == slot and int(known[id].get("level", 0)) == 0: pool.append(id)
 		if not pool.is_empty(): result[slot] = pool[rng.randi_range(0, pool.size() - 1)]
 	return result

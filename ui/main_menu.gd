@@ -47,6 +47,12 @@ var previous_page_button: Button
 var next_page_button: Button
 var quit_dialog: Control
 var rules_panel: BattleInfoPanel
+var inspect_entry: Dictionary = {}
+var inspect_tabs: UpgradeTabs
+var inspect_action: Button
+var inspect_switch_tween: Tween
+var inspect_previous: Control
+var inspect_destination := Vector2.ZERO
 
 func configure(card_data: Dictionary, factory: Callable, summon_data: Dictionary = {}) -> void:
 	cards = card_data
@@ -207,7 +213,7 @@ func _build_collection() -> void:
 	var filters := ["all"] + BattleRules.ELEMENTS
 	for i in filters.size():
 		var element: String = filters[i]
-		var count := (artifacts.size() if collection_type == "artifacts" else cards.size()) if element == "all" else _element_count(element)
+		var count := ContentCatalog.base_entries(artifacts if collection_type == "artifacts" else cards).size() if element == "all" else _element_count(element)
 		var name := "全部" if element == "all" else BattleRules.element_name(element) + "系"
 		var tint := GOLD if element == "all" else BattleRules.color(element)
 		var button := _button(content, "%s   %d" % [name, count], Rect2(62, 185 + i * 85, 154, 64), _filter.bind(element), tint)
@@ -230,6 +236,7 @@ func _build_collection() -> void:
 func _element_count(element: String) -> int:
 	var count := 0
 	for card in (artifacts.values() if collection_type == "artifacts" else cards.values()):
+		if int(card.get("level", 0)) != 0: continue
 		if card["element"] == element: count += 1
 	return count
 
@@ -241,6 +248,7 @@ func _filter(element: String) -> void:
 func _collection_cards(element: String) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for card in (artifacts.values() if collection_type == "artifacts" else cards.values()):
+		if int(card.get("level", 0)) != 0: continue
 		if collection_type == "artifacts" and selected_artifact_slot != "all" and card["slot"] != selected_artifact_slot: continue
 		if element == "all" or card["element"] == element: result.append(card)
 	result.sort_custom(func(a: Dictionary, b: Dictionary):
@@ -311,11 +319,13 @@ func _card_input(event: InputEvent, card: Dictionary, source: Control) -> void:
 
 func _open_inspector(card: Dictionary, source: Control) -> void:
 	if is_instance_valid(inspector): return
+	inspect_entry = card
 	GameAudio.play_sfx("card_focus", 0.0, 150)
 	inspect_source = source
 	inspect_origin = get_global_transform().affine_inverse() * source.global_position
 	var inspect_width := 480.0 if PlatformUI.is_touch() else INSPECT_WIDTH
-	var inspect_position := Vector2((1600.0 - inspect_width) / 2.0, 114.0 if PlatformUI.is_touch() else 133.0)
+	var inspect_position := Vector2((1600.0 - inspect_width) / 2.0, 40.0 if PlatformUI.is_touch() else 133.0)
+	inspect_destination = inspect_position
 	inspect_origin_scale = source.size.x * source.get_global_transform().get_scale().x / (inspect_width * get_global_transform().get_scale().x)
 	closing_inspector = false
 	inspector = Control.new()
@@ -342,7 +352,8 @@ func _open_inspector(card: Dictionary, source: Control) -> void:
 	source.visible = false
 	var hint := _text(inspector, "轻点空白处收起" if PlatformUI.is_touch() else "点击空白处收起 · Esc 返回", Rect2(500, 775, 600, 40), 18, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
 	hint.modulate.a = 0.0
-	var entries := [] if card.has("slot") else CardKeywords.entries(card, summons)
+	if PlatformUI.is_touch(): hint.position.y = 790
+	var entries := CardKeywords.entries(card, summons)
 	if not entries.is_empty():
 		inspect_keywords = CardKeywordPopup.new()
 		inspector.add_child(inspect_keywords)
@@ -352,17 +363,80 @@ func _open_inspector(card: Dictionary, source: Control) -> void:
 	inspect_tween.tween_property(inspect_card, "scale", Vector2.ONE, 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	inspect_tween.tween_property(shade, "modulate:a", 1.0, 0.3)
 	inspect_tween.tween_property(hint, "modulate:a", 1.0, 0.4)
-	if PlatformUI.is_touch() and not card.has("slot") and view_mode == "decks" and is_instance_valid(workshop) and workshop.view_mode == "editor":
+	inspect_tabs = UpgradeTabs.new()
+	inspector.add_child(inspect_tabs)
+	inspect_tabs.configure(inspect_width, int(card.get("level", 0)))
+	inspect_tabs.position = Vector2(inspect_position.x, 720 if PlatformUI.is_touch() else 710)
+	inspect_tabs.selected.connect(_switch_inspect_level)
+	inspect_action = null
+	if view_mode == "decks" and is_instance_valid(workshop) and workshop.view_mode in ["editor", "artifacts"]:
 		hint.text = ""
-		var add_button := _button(inspector, "＋ 入组", Rect2(650, 810, 300, 72), func(): workshop.call("_add_card", card["id"]))
-		add_button.pressed.connect(func():
-			add_button.disabled = not workshop.call("_can_add", card["id"])
-			add_button.text = "已入组 %d / 2" % workshop.draft.count(card["id"]))
-		add_button.disabled = not workshop.call("_can_add", card["id"])
+		inspect_action = _button(inspector, "", Rect2(650, 810, 300, 64), func():
+			if inspect_entry.has("slot"): workshop._equip_artifact_id(str(inspect_entry["id"]))
+			else: workshop._use_card_level(str(inspect_entry["id"]))
+			_update_inspect_action())
+		_update_inspect_action()
+
+func _update_inspect_action() -> void:
+	if not is_instance_valid(inspect_action): return
+	var id := str(inspect_entry["id"])
+	var name: String = ["原版", "精", "玄"][int(inspect_entry.get("level", 0))]
+	if inspect_entry.has("slot"):
+		var equipped := str(workshop.draft_loadout.get(inspect_entry["slot"], "")) == id
+		inspect_action.text = "已装备 · " + name if equipped else "装备 · " + name
+		inspect_action.disabled = equipped
+	else:
+		var count := ContentCatalog.family_count(workshop.draft, id, cards)
+		if workshop._can_add(id): inspect_action.text = "＋ 入组 · " + name
+		elif workshop._can_use_card_level(id): inspect_action.text = "更换1张为 · " + name
+		else: inspect_action.text = "已入组 %d / %d" % [count, DeckStore.MAX_COPIES] if count > 0 else "卡组已满"
+		inspect_action.disabled = not workshop._can_use_card_level(id)
+
+func _switch_inspect_level(level: int) -> void:
+	if closing_inspector or not is_instance_valid(inspector) or int(inspect_entry.get("level", 0)) == level: return
+	var known := artifacts if inspect_entry.has("slot") else cards
+	var id := ContentCatalog.variant_id(ContentCatalog.base_id(inspect_entry), level)
+	if not known.has(id): return
+	var direction := 1.0 if level > int(inspect_entry.get("level", 0)) else -1.0
+	if inspect_tween != null and inspect_tween.is_running(): inspect_tween.kill()
+	if inspect_switch_tween != null and inspect_switch_tween.is_running(): inspect_switch_tween.kill()
+	if is_instance_valid(inspect_previous): inspect_previous.queue_free()
+	inspect_previous = inspect_card
+	inspect_previous.position = inspect_destination
+	inspect_previous.scale = Vector2.ONE
+	inspect_previous.modulate.a = 1.0
+	inspect_entry = known[id]
+	if inspect_entry.has("slot"):
+		inspect_card = ArtifactView.new()
+		inspect_card.configure(inspect_entry, inspect_previous.size)
+	else: inspect_card = card_factory.call(inspect_entry, inspect_previous.size)
+	inspector.add_child(inspect_card)
+	inspect_card.mouse_filter = Control.MOUSE_FILTER_STOP
+	inspect_card.position = inspect_destination + Vector2(32 * direction, 0)
+	inspect_card.modulate.a = 0.0
+	inspector.get_child(0).modulate.a = 1.0
+	if is_instance_valid(inspect_keywords): inspect_keywords.queue_free()
+	inspect_keywords = null
+	var entries := CardKeywords.entries(inspect_entry, summons)
+	if not entries.is_empty():
+		inspect_keywords = CardKeywordPopup.new()
+		inspector.add_child(inspect_keywords)
+		inspect_keywords.configure(entries, Rect2(inspect_destination, inspect_card.size), size)
+	inspect_switch_tween = inspector.create_tween().set_parallel(true)
+	inspect_switch_tween.tween_property(inspect_previous, "position", inspect_destination - Vector2(32 * direction, 0), 0.26).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	inspect_switch_tween.tween_property(inspect_previous, "modulate:a", 0.0, 0.2)
+	inspect_switch_tween.tween_property(inspect_card, "position", inspect_destination, 0.26).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	inspect_switch_tween.tween_property(inspect_card, "modulate:a", 1.0, 0.24)
+	var outgoing := inspect_previous
+	inspect_switch_tween.chain().tween_callback(func(): if is_instance_valid(outgoing): outgoing.queue_free())
+	_update_inspect_action()
 
 func _close_inspector() -> void:
 	if not is_instance_valid(inspector) or closing_inspector: return
 	closing_inspector = true
+	if inspect_switch_tween != null and inspect_switch_tween.is_running(): inspect_switch_tween.kill()
+	if is_instance_valid(inspect_previous): inspect_previous.queue_free()
+	inspect_previous = null
 	if is_instance_valid(inspect_keywords):
 		inspect_keywords.hide()
 		inspect_keywords.queue_free()
@@ -371,8 +445,7 @@ func _close_inspector() -> void:
 	inspect_tween = inspector.create_tween().set_parallel(true)
 	inspect_tween.tween_property(inspect_card, "position", inspect_origin, 0.32).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 	inspect_tween.tween_property(inspect_card, "scale", Vector2.ONE * inspect_origin_scale, 0.32).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	inspect_tween.tween_property(inspector.get_child(0), "modulate:a", 0.0, 0.32)
-	inspect_tween.tween_property(inspector.get_child(2), "modulate:a", 0.0, 0.2)
+	inspect_tween.tween_property(inspector, "modulate:a", 0.0, 0.32)
 	inspect_tween.chain().tween_callback(func():
 		if is_instance_valid(inspect_source): inspect_source.visible = true
 		inspector.queue_free()

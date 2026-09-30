@@ -1,22 +1,1038 @@
 [
-  {"id":"metal_furnace","card_id":"metal_furnace_card","name":"金灵炉","element":"metal","hp":15,"turn_start":[{"type":"gain_energy","element":"water","amount":1}]},
-  {"id":"wood_seedling","card_id":"wood_seedling_card","name":"青藤苗","element":"wood","hp":15,"turn_start":[{"type":"gain_energy","element":"fire","amount":1}]},
-  {"id":"water_spring","card_id":"water_spring_card","name":"玄水泉","element":"water","hp":15,"turn_start":[{"type":"gain_energy","element":"wood","amount":1}]},
-  {"id":"fire_lantern","card_id":"fire_lantern_card","name":"赤焰灯","element":"fire","hp":15,"turn_start":[{"type":"gain_energy","element":"earth","amount":1}]},
-  {"id":"earth_stele","card_id":"earth_stele_card","name":"坤土碑","element":"earth","hp":15,"turn_start":[{"type":"gain_energy","element":"metal","amount":1}]},
-  {"id":"metal_chime","card_id":"metal_chime_card","name":"玄金铃","element":"metal","hp":12,"turn_start":[{"type":"status","target":"self","status":"charge","stacks":2}]},
-  {"id":"wood_deer","card_id":"wood_deer_card","name":"春藤鹿","element":"wood","hp":13,"turn_end":[{"type":"heal","target":"self","amount":4}]},
-  {"id":"water_conch","card_id":"water_conch_card","name":"听雨螺","element":"water","hp":10,"turn_start":[{"type":"draw","target":"self","amount":1}]},
-  {"id":"fire_raven","card_id":"fire_raven_card","name":"离火鸦","element":"fire","hp":11,"turn_end":[{"type":"damage","target":"opponent","element":"fire","amount":4}]},
-  {"id":"earth_tortoise","card_id":"earth_tortoise_card","name":"镇山龟","element":"earth","hp":16,"turn_end":[{"type":"status","target":"self","status":"tenacity","stacks":1}]},
-  {"id":"metal_falcon","card_id":"metal_falcon_card","name":"金翎隼","element":"metal","hp":12,"art_scale":1.0,"turn_start":[{"type":"damage","target":"lowest_opponent","element":"metal","amount":4}]},
-  {"id":"water_koi","card_id":"water_koi_card","name":"灵汐鲤","element":"water","hp":20,"art_scale":1.08,"turn_start":[{"type":"heal","target":"self","amount":3},{"type":"damage","target":"opponent","element":"water","amount":3}]},
-  {"id":"wood_frog","card_id":"wood_frog_card","name":"碧瘴蛙","element":"wood","hp":6,"art_scale":0.82,"turn_end":[{"type":"status","target":"opponent","status":"poison","stacks":2}]},
-  {"id":"fire_fox","card_id":"fire_fox_card","name":"赤尾狐","element":"fire","hp":10,"art_scale":0.96,"turn_end":[{"type":"status","target":"opponent","status":"burn","stacks":1}]},
-  {"id":"earth_badger","card_id":"earth_badger_card","name":"岩甲獾","element":"earth","hp":16,"art_scale":1.08,"turn_end":[{"type":"status","target":"self","status":"shield","stacks":5}]},
-  {"id":"metal_thunder_marten","card_id":"metal_thunder_marten_card","name":"霆光貂","element":"metal","hp":10,"art_scale":0.85,"on_spawn":[{"type":"damage","target":"opponent","element":"metal","amount":8,"condition":{"type":"energy_at_least","element":"metal","amount":3}}],"turn_start":[{"type":"damage","target":"opponent","element":"metal","amount":3}]},
-  {"id":"water_frost_moth","card_id":"water_frost_moth_card","name":"寒汐蛾","element":"water","hp":16,"art_scale":0.9,"turn_end":[{"type":"status","target":"opponent","status":"weak","stacks":2}]},
-  {"id":"wood_thorn_flower","card_id":"wood_thorn_flower_card","name":"青棘花灵","element":"wood","hp":16,"art_scale":0.95,"turn_start":[{"type":"damage","target":"opponent","element":"wood","amount":4},{"type":"heal_summon","target":"summon_self","amount":4}]},
-  {"id":"fire_ember_lizard","card_id":"fire_ember_lizard_card","name":"焰尾蜥","element":"fire","hp":9,"art_scale":0.8,"on_spawn":[{"type":"damage","target":"self","element":"fire","amount":5}],"turn_end":[{"type":"damage","target":"lowest_opponent","element":"fire","amount":3}]},
-  {"id":"earth_sand_rhino","card_id":"earth_sand_rhino_card","name":"砂背犀","element":"earth","hp":24,"art_scale":1.25,"turn_start":[{"type":"damage","target":"highest_opponent","element":"earth","amount":5}]}
+  {
+    "id": "metal_furnace",
+    "card_id": "metal_furnace_card",
+    "name": "金灵炉",
+    "element": "metal",
+    "hp": 15,
+    "turn_start": [
+      {
+        "type": "gain_energy",
+        "element": "water",
+        "amount": 1
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 18,
+        "turn_start": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "water",
+            "amount": 1
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "water",
+            "amount": 1
+          }
+        ]
+      },
+      {
+        "hp": 18,
+        "turn_start": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "water",
+            "amount": 1
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "water",
+            "amount": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "wood_seedling",
+    "card_id": "wood_seedling_card",
+    "name": "青藤苗",
+    "element": "wood",
+    "hp": 15,
+    "turn_start": [
+      {
+        "type": "gain_energy",
+        "element": "fire",
+        "amount": 1
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 18,
+        "turn_start": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "fire",
+            "amount": 1
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": [
+          {
+            "type": "draw",
+            "target": "self",
+            "amount": 1
+          }
+        ]
+      },
+      {
+        "hp": 21,
+        "turn_start": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "fire",
+            "amount": 1
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": [
+          {
+            "type": "draw",
+            "target": "self",
+            "amount": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "water_spring",
+    "card_id": "water_spring_card",
+    "name": "玄水泉",
+    "element": "water",
+    "hp": 15,
+    "turn_start": [
+      {
+        "type": "gain_energy",
+        "element": "wood",
+        "amount": 1
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 19,
+        "turn_start": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "wood",
+            "amount": 1
+          },
+          {
+            "type": "heal",
+            "target": "self",
+            "amount": 2
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": []
+      },
+      {
+        "hp": 23,
+        "turn_start": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "wood",
+            "amount": 1
+          },
+          {
+            "type": "heal",
+            "target": "self",
+            "amount": 4
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": []
+      }
+    ]
+  },
+  {
+    "id": "fire_lantern",
+    "card_id": "fire_lantern_card",
+    "name": "赤焰灯",
+    "element": "fire",
+    "hp": 15,
+    "turn_start": [
+      {
+        "type": "gain_energy",
+        "element": "earth",
+        "amount": 1
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 18,
+        "turn_start": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "earth",
+            "amount": 1
+          },
+          {
+            "type": "status",
+            "target": "self",
+            "status": "charge",
+            "stacks": 1
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": []
+      },
+      {
+        "hp": 21,
+        "turn_start": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "earth",
+            "amount": 1
+          },
+          {
+            "type": "status",
+            "target": "self",
+            "status": "charge",
+            "stacks": 2
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": []
+      }
+    ]
+  },
+  {
+    "id": "earth_stele",
+    "card_id": "earth_stele_card",
+    "name": "坤土碑",
+    "element": "earth",
+    "hp": 15,
+    "turn_start": [
+      {
+        "type": "gain_energy",
+        "element": "metal",
+        "amount": 1
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 18,
+        "turn_start": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "metal",
+            "amount": 1
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "shield",
+            "stacks": 8
+          }
+        ]
+      },
+      {
+        "hp": 21,
+        "turn_start": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "metal",
+            "amount": 1
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "shield",
+            "stacks": 12
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "metal_chime",
+    "card_id": "metal_chime_card",
+    "name": "玄金铃",
+    "element": "metal",
+    "hp": 12,
+    "turn_start": [
+      {
+        "type": "status",
+        "target": "self",
+        "status": "charge",
+        "stacks": 2
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 15,
+        "turn_start": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "charge",
+            "stacks": 2
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "charge",
+            "stacks": 1
+          }
+        ]
+      },
+      {
+        "hp": 18,
+        "turn_start": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "charge",
+            "stacks": 3
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "charge",
+            "stacks": 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "wood_deer",
+    "card_id": "wood_deer_card",
+    "name": "春藤鹿",
+    "element": "wood",
+    "hp": 13,
+    "turn_end": [
+      {
+        "type": "heal",
+        "target": "self",
+        "amount": 4
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 13,
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "heal",
+            "target": "self",
+            "amount": 4
+          }
+        ],
+        "on_spawn": []
+      },
+      {
+        "hp": 18,
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "heal",
+            "target": "self",
+            "amount": 6
+          }
+        ],
+        "on_spawn": []
+      }
+    ]
+  },
+  {
+    "id": "water_conch",
+    "card_id": "water_conch_card",
+    "name": "听雨螺",
+    "element": "water",
+    "hp": 10,
+    "turn_start": [
+      {
+        "type": "draw",
+        "target": "self",
+        "amount": 1
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 13,
+        "turn_start": [
+          {
+            "type": "draw",
+            "target": "self",
+            "amount": 1
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": []
+      },
+      {
+        "hp": 14,
+        "turn_start": [
+          {
+            "type": "draw",
+            "target": "self",
+            "amount": 1
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": []
+      }
+    ]
+  },
+  {
+    "id": "fire_raven",
+    "card_id": "fire_raven_card",
+    "name": "离火鸦",
+    "element": "fire",
+    "hp": 11,
+    "turn_end": [
+      {
+        "type": "damage",
+        "target": "opponent",
+        "element": "fire",
+        "amount": 4
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 14,
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "damage",
+            "amount": 6,
+            "element": "fire",
+            "target": "opponent"
+          }
+        ],
+        "on_spawn": []
+      },
+      {
+        "hp": 17,
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "damage",
+            "amount": 8,
+            "element": "fire",
+            "target": "opponent"
+          }
+        ],
+        "on_spawn": []
+      }
+    ]
+  },
+  {
+    "id": "earth_tortoise",
+    "card_id": "earth_tortoise_card",
+    "name": "镇山龟",
+    "element": "earth",
+    "hp": 16,
+    "turn_end": [
+      {
+        "type": "status",
+        "target": "self",
+        "status": "tenacity",
+        "stacks": 1
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 20,
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "tenacity",
+            "stacks": 2
+          }
+        ],
+        "on_spawn": []
+      },
+      {
+        "hp": 28,
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "tenacity",
+            "stacks": 2
+          }
+        ],
+        "on_spawn": []
+      }
+    ]
+  },
+  {
+    "id": "metal_falcon",
+    "card_id": "metal_falcon_card",
+    "name": "金翎隼",
+    "element": "metal",
+    "hp": 12,
+    "art_scale": 1.0,
+    "turn_start": [
+      {
+        "type": "damage",
+        "target": "lowest_opponent",
+        "element": "metal",
+        "amount": 4
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 14,
+        "turn_start": [
+          {
+            "type": "damage",
+            "amount": 6,
+            "element": "metal",
+            "target": "lowest_opponent"
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": []
+      },
+      {
+        "hp": 16,
+        "turn_start": [
+          {
+            "type": "damage",
+            "amount": 8,
+            "element": "metal",
+            "target": "lowest_opponent"
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": []
+      }
+    ]
+  },
+  {
+    "id": "water_koi",
+    "card_id": "water_koi_card",
+    "name": "灵汐鲤",
+    "element": "water",
+    "hp": 20,
+    "art_scale": 1.08,
+    "turn_start": [
+      {
+        "type": "heal",
+        "target": "self",
+        "amount": 3
+      },
+      {
+        "type": "damage",
+        "target": "opponent",
+        "element": "water",
+        "amount": 3
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 25,
+        "turn_start": [
+          {
+            "type": "heal",
+            "target": "self",
+            "amount": 4
+          },
+          {
+            "type": "damage",
+            "amount": 4,
+            "element": "water",
+            "target": "opponent"
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": []
+      },
+      {
+        "hp": 30,
+        "turn_start": [
+          {
+            "type": "heal",
+            "target": "self",
+            "amount": 5
+          },
+          {
+            "type": "damage",
+            "amount": 5,
+            "element": "water",
+            "target": "opponent"
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": []
+      }
+    ]
+  },
+  {
+    "id": "wood_frog",
+    "card_id": "wood_frog_card",
+    "name": "碧瘴蛙",
+    "element": "wood",
+    "hp": 6,
+    "art_scale": 0.82,
+    "turn_end": [
+      {
+        "type": "status",
+        "target": "opponent",
+        "status": "poison",
+        "stacks": 2
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 8,
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "poison",
+            "stacks": 3
+          }
+        ],
+        "on_spawn": []
+      },
+      {
+        "hp": 8,
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "poison",
+            "stacks": 3
+          }
+        ],
+        "on_spawn": []
+      }
+    ]
+  },
+  {
+    "id": "fire_fox",
+    "card_id": "fire_fox_card",
+    "name": "赤尾狐",
+    "element": "fire",
+    "hp": 10,
+    "art_scale": 0.96,
+    "turn_end": [
+      {
+        "type": "status",
+        "target": "opponent",
+        "status": "burn",
+        "stacks": 1
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 14,
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "burn",
+            "stacks": 1
+          }
+        ],
+        "on_spawn": []
+      },
+      {
+        "hp": 15,
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "burn",
+            "stacks": 2
+          }
+        ],
+        "on_spawn": []
+      }
+    ]
+  },
+  {
+    "id": "earth_badger",
+    "card_id": "earth_badger_card",
+    "name": "岩甲獾",
+    "element": "earth",
+    "hp": 16,
+    "art_scale": 1.08,
+    "turn_end": [
+      {
+        "type": "status",
+        "target": "self",
+        "status": "shield",
+        "stacks": 5
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 20,
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "shield",
+            "stacks": 7
+          }
+        ],
+        "on_spawn": []
+      },
+      {
+        "hp": 24,
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "shield",
+            "stacks": 9
+          }
+        ],
+        "on_spawn": []
+      }
+    ]
+  },
+  {
+    "id": "metal_thunder_marten",
+    "card_id": "metal_thunder_marten_card",
+    "name": "霆光貂",
+    "element": "metal",
+    "hp": 10,
+    "art_scale": 0.85,
+    "on_spawn": [
+      {
+        "type": "damage",
+        "target": "opponent",
+        "element": "metal",
+        "amount": 8,
+        "condition": {
+          "type": "energy_at_least",
+          "element": "metal",
+          "amount": 3
+        }
+      }
+    ],
+    "turn_start": [
+      {
+        "type": "damage",
+        "target": "opponent",
+        "element": "metal",
+        "amount": 3
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 12,
+        "turn_start": [
+          {
+            "type": "damage",
+            "amount": 4,
+            "element": "metal",
+            "target": "opponent"
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": [
+          {
+            "type": "damage",
+            "amount": 10,
+            "element": "metal",
+            "target": "opponent",
+            "condition": {
+              "type": "energy_at_least",
+              "element": "metal",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "hp": 14,
+        "turn_start": [
+          {
+            "type": "damage",
+            "amount": 5,
+            "element": "metal",
+            "target": "opponent"
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": [
+          {
+            "type": "damage",
+            "amount": 12,
+            "element": "metal",
+            "target": "opponent",
+            "condition": {
+              "type": "energy_at_least",
+              "element": "metal",
+              "amount": 3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "water_frost_moth",
+    "card_id": "water_frost_moth_card",
+    "name": "寒汐蛾",
+    "element": "water",
+    "hp": 16,
+    "art_scale": 0.9,
+    "turn_end": [
+      {
+        "type": "status",
+        "target": "opponent",
+        "status": "weak",
+        "stacks": 2
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 19,
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "weak",
+            "stacks": 2
+          },
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "weak_attack",
+            "stacks": 1
+          }
+        ],
+        "on_spawn": []
+      },
+      {
+        "hp": 23,
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "weak",
+            "stacks": 2
+          },
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "weak_attack",
+            "stacks": 2
+          }
+        ],
+        "on_spawn": []
+      }
+    ]
+  },
+  {
+    "id": "wood_thorn_flower",
+    "card_id": "wood_thorn_flower_card",
+    "name": "青棘花灵",
+    "element": "wood",
+    "hp": 16,
+    "art_scale": 0.95,
+    "turn_start": [
+      {
+        "type": "damage",
+        "target": "opponent",
+        "element": "wood",
+        "amount": 4
+      },
+      {
+        "type": "heal_summon",
+        "target": "summon_self",
+        "amount": 4
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 19,
+        "turn_start": [
+          {
+            "type": "damage",
+            "amount": 5,
+            "element": "wood",
+            "target": "opponent"
+          },
+          {
+            "type": "heal_summon",
+            "target": "summon_self",
+            "amount": 5
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": []
+      },
+      {
+        "hp": 24,
+        "turn_start": [
+          {
+            "type": "damage",
+            "amount": 6,
+            "element": "wood",
+            "target": "opponent"
+          },
+          {
+            "type": "heal_summon",
+            "target": "summon_self",
+            "amount": 6
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": []
+      }
+    ]
+  },
+  {
+    "id": "fire_ember_lizard",
+    "card_id": "fire_ember_lizard_card",
+    "name": "焰尾蜥",
+    "element": "fire",
+    "hp": 9,
+    "art_scale": 0.8,
+    "on_spawn": [
+      {
+        "type": "damage",
+        "target": "self",
+        "element": "fire",
+        "amount": 5
+      }
+    ],
+    "turn_end": [
+      {
+        "type": "damage",
+        "target": "lowest_opponent",
+        "element": "fire",
+        "amount": 3
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 12,
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "damage",
+            "amount": 4,
+            "element": "fire",
+            "target": "lowest_opponent"
+          }
+        ],
+        "on_spawn": [
+          {
+            "type": "damage",
+            "amount": 5,
+            "element": "fire",
+            "target": "self"
+          }
+        ]
+      },
+      {
+        "hp": 12,
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "damage",
+            "amount": 5,
+            "element": "fire",
+            "target": "lowest_opponent"
+          }
+        ],
+        "on_spawn": [
+          {
+            "type": "damage",
+            "amount": 5,
+            "element": "fire",
+            "target": "self"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "earth_sand_rhino",
+    "card_id": "earth_sand_rhino_card",
+    "name": "砂背犀",
+    "element": "earth",
+    "hp": 24,
+    "art_scale": 1.25,
+    "turn_start": [
+      {
+        "type": "damage",
+        "target": "highest_opponent",
+        "element": "earth",
+        "amount": 5
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 28,
+        "turn_start": [
+          {
+            "type": "damage",
+            "amount": 7,
+            "element": "earth",
+            "target": "highest_opponent"
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": []
+      },
+      {
+        "hp": 32,
+        "turn_start": [
+          {
+            "type": "damage",
+            "amount": 9,
+            "element": "earth",
+            "target": "highest_opponent"
+          }
+        ],
+        "turn_end": [],
+        "on_spawn": []
+      }
+    ]
+  }
 ]

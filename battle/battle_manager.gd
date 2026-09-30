@@ -9,6 +9,8 @@ signal action_event(message: String, side: String, kind: String, element: String
 signal hand_card_removed(side: String, card_id: String, index: int, reason: String)
 signal summon_event(side: String, slot: int, kind: String, element: String, amount: int, matchup: String)
 signal summon_triggered(side: String, slot: int, timing: String, effect: Dictionary)
+signal choice_requested(candidates: Array, hand_full: bool)
+signal choice_completed
 
 const CARD_PATH := "res://data/cards.json"
 const BATTLE_PATH := "res://data/battles.json"
@@ -47,21 +49,17 @@ var battle_generation := 0
 # Optional UI coroutine: cast before resolving, then wait for the feedback.
 # Without a presenter, rule simulations resolve immediately.
 var summon_presenter: Callable
+var interactive_choices := false
+var pending_choice: Dictionary = {}
+var choice_scoring := false
 
 func _ready() -> void:
 	load_content()
 
 func load_content() -> void:
-	var card_file := FileAccess.open(CARD_PATH, FileAccess.READ)
-	assert(card_file != null, "Missing cards.json")
-	var card_list: Array = JSON.parse_string(card_file.get_as_text())
-	for card in card_list:
-		cards[card["id"]] = card
-	var summon_file := FileAccess.open(SUMMON_PATH, FileAccess.READ)
-	assert(summon_file != null, "Missing summons.json")
-	var summon_list: Array = JSON.parse_string(summon_file.get_as_text())
-	for summon in summon_list:
-		summon_templates[summon["id"]] = summon
+	cards = ContentCatalog.load_all(CARD_PATH)
+	summon_templates = ContentCatalog.load_all(SUMMON_PATH)
+	for card: Dictionary in cards.values(): card["text"] = EffectText.card_text(card, summon_templates)
 	artifacts = ArtifactLibrary.load_all()
 	var battle_file := FileAccess.open(BATTLE_PATH, FileAccess.READ)
 	assert(battle_file != null, "Missing battles.json")
@@ -87,7 +85,7 @@ func artifact_entry(actor: Combatant, slot: String) -> Dictionary:
 func artifact_can_activate(actor: Combatant) -> bool:
 	if actor != player and actor != enemy: return false
 	var entry := artifact_entry(actor, "implement")
-	return not entry.is_empty() and actor.own_turn_count >= actor.artifact_ready_turn and phase == ("player_action" if actor == player else "enemy_action")
+	return pending_choice.is_empty() and not entry.is_empty() and actor.own_turn_count >= actor.artifact_ready_turn and phase == ("player_action" if actor == player else "enemy_action")
 
 func artifact_target_mode(actor: Combatant) -> String:
 	return str(artifact_entry(actor, "implement").get("target_mode", "none"))
@@ -113,7 +111,7 @@ func valid_artifact_target(actor: Combatant, selection: Dictionary) -> bool:
 func activate_artifact(actor: Combatant, selection: Dictionary = {}) -> bool:
 	if not artifact_can_activate(actor) or not valid_artifact_target(actor, selection): return false
 	var entry := artifact_entry(actor, "implement")
-	actor.artifact_ready_turn = actor.own_turn_count + int(entry.get("cooldown", 2)) + 1
+	actor.artifact_ready_turn = actor.own_turn_count + maxi(1, int(entry.get("cooldown", 3)))
 	_report("%s 发动「%s」" % [actor.display_name, entry["name"]], _side(actor), "artifact", entry["element"])
 	_resolve_artifact_effects(actor, entry, selection)
 	_check_finish()
@@ -122,9 +120,7 @@ func activate_artifact(actor: Combatant, selection: Dictionary = {}) -> bool:
 
 func _resolve_artifact_effects(actor: Combatant, entry: Dictionary, selection: Dictionary = {}) -> void:
 	var opponent := enemy if actor == player else player
-	for effect in entry.get("effects", []):
-		if phase in FINISHED_PHASES: break
-		_resolve_effect(actor, opponent, effect, str(entry["element"]), selection)
+	_resolve_sequence(actor, opponent, entry.get("effects", []), str(entry["element"]), selection)
 
 func _trigger_artifacts(actor: Combatant, event: String, selection: Dictionary = {}) -> void:
 	for slot in ["guard", "pendant"]:
@@ -187,6 +183,8 @@ func status_tooltip(status: Dictionary) -> String:
 func start_battle(enemy_id: String, deck_id: String, seed_value: int = -1, custom_deck: Dictionary = {}) -> void:
 	if not custom_deck.is_empty() and not DeckStore.new(cards).problem(custom_deck.get("cards", [])).is_empty(): return
 	battle_generation += 1
+	pending_choice.clear()
+	choice_completed.emit()
 	var generation := battle_generation
 	selected_enemy_id = enemy_id
 	selected_deck_id = "custom:" + str(custom_deck.get("id", "")) if not custom_deck.is_empty() else deck_id
@@ -220,6 +218,8 @@ func start_battle(enemy_id: String, deck_id: String, seed_value: int = -1, custo
 		draw_card(player)
 		draw_card(enemy)
 	_trigger_battle_start_artifacts(player)
+	await wait_for_choice()
+	if generation != battle_generation: return
 	_trigger_battle_start_artifacts(enemy)
 	await _start_turn(player)
 	if generation == battle_generation:
@@ -232,8 +232,9 @@ func valid_random_deck(deck: Array) -> bool:
 	var low_cost := 0
 	for id in deck:
 		if not cards.has(id): return false
-		counts[id] = int(counts.get(id, 0)) + 1
-		if counts[id] > RANDOM_DECK_COPY_LIMIT: return false
+		var family := ContentCatalog.base_id(cards[id])
+		counts[family] = int(counts.get(family, 0)) + 1
+		if counts[family] > RANDOM_DECK_COPY_LIMIT: return false
 		var cost := int(cards[id]["cost"])
 		total += cost
 		if cost <= 1: low_cost += 1
@@ -242,6 +243,7 @@ func valid_random_deck(deck: Array) -> bool:
 func generate_random_deck() -> Array[String]:
 	var pool: Array[String] = []
 	for id in cards:
+		if int(cards[id].get("level", 0)) != 0: continue
 		for copy in RANDOM_DECK_COPY_LIMIT: pool.append(id)
 	assert(pool.size() >= RANDOM_DECK_SIZE, "Card pool cannot fill a random deck")
 	for attempt in 256:
@@ -507,6 +509,7 @@ func simulation_copy() -> BattleManager:
 	copy.enemy = enemy.snapshot()
 	copy.phase = phase
 	copy.round_number = round_number
+	copy.choice_scoring = choice_scoring
 	copy.rng.seed = rng.seed
 	copy.rng.state = rng.state
 	return copy
@@ -560,7 +563,7 @@ func preview_damage_segments(actor: Combatant, card: Dictionary, selection: Dict
 	return segments
 
 func play_player_card(index: int, selection: Dictionary = {}) -> bool:
-	if phase != "player_action":
+	if phase != "player_action" or not pending_choice.is_empty():
 		return false
 	return _play_card(player, enemy, index, selection)
 
@@ -578,15 +581,106 @@ func _play_card(actor: Combatant, target: Combatant, index: int, selection: Dict
 	_report("%s 使用「%s」" % [actor.display_name, card["name"]], _side(actor), "play", card["element"], int(card["cost"]))
 	_trigger_bleed(actor)
 	if phase not in FINISHED_PHASES: _on_card_played(actor)
-	for effect in card["effects"]:
-		if phase in FINISHED_PHASES:
-			break
-		_resolve_effect(actor, target, effect, card["element"], selection, pre_payment_energy)
-	actor.discard_pile.append(card_id)
-	played_cards += 1
-	_check_finish()
+	_resolve_sequence(actor, target, card["effects"], card["element"], selection, pre_payment_energy, func():
+		actor.discard_pile.append(card_id)
+		played_cards += 1
+		_check_finish()
+		changed.emit())
+	return true
+
+# A choice suspends only the remaining effects; payment/earlier effects cannot
+# be replayed. Simulations take the same path but select without a UI.
+func _resolve_sequence(actor: Combatant, opponent: Combatant, effects: Array, element: String, selection: Dictionary = {}, energy_snapshot: Dictionary = {}, complete: Callable = Callable()) -> void:
+	for i in effects.size():
+		if phase in FINISHED_PHASES: break
+		_resolve_effect(actor, opponent, effects[i], element, selection, energy_snapshot)
+		if not pending_choice.is_empty():
+			pending_choice["continuation"] = {"actor":actor, "opponent":opponent, "effects":effects.slice(i + 1), "element":element, "selection":selection, "energy":energy_snapshot, "complete":complete}
+			return
+	if complete.is_valid(): complete.call()
+
+func wait_for_choice() -> void:
+	var generation := battle_generation
+	while generation == battle_generation and not pending_choice.is_empty(): await choice_completed
+
+func _take_choice_card(actor: Combatant, index: int) -> void:
+	var id: String = actor.draw_pile[index]
+	actor.draw_pile.remove_at(index)
+	_receive_card(actor, id, "观想")
+
+func _receive_card(actor: Combatant, id: String, reason: String) -> void:
+	if actor.hand.size() >= 8:
+		actor.discard_pile.append(id)
+		_report("%s %s：手牌已满，卡牌进入弃牌堆" % [actor.display_name, reason], _side(actor), "draw")
+	else:
+		actor.hand.append(id)
+		_report("%s %s获得1张牌" % [actor.display_name, reason], _side(actor), "draw")
+
+func _contemplate(actor: Combatant, amount: int) -> void:
+	if actor.draw_pile.is_empty(): draw_card(actor); return
+	var candidates: Array = actor.draw_pile.slice(0, mini(amount, actor.draw_pile.size()))
+	if candidates.is_empty(): return
+	if actor == player and interactive_choices and candidates.size() > 1:
+		pending_choice = {"generation":battle_generation, "candidates":candidates}
+		call_deferred("_announce_choice")
+	else:
+		_take_choice_card(actor, _choose_contemplation(actor, candidates))
+
+func _announce_choice() -> void:
+	if pending_choice.is_empty() or int(pending_choice["generation"]) != battle_generation: return
+	choice_requested.emit(pending_choice["candidates"], player.hand.size() >= 8)
+	changed.emit()
+
+func choose_card(index: int) -> bool:
+	if pending_choice.is_empty() or int(pending_choice["generation"]) != battle_generation: return false
+	if index < 0 or index >= pending_choice["candidates"].size(): return false
+	var continuation: Dictionary = pending_choice.get("continuation", {})
+	pending_choice.clear()
+	_take_choice_card(player, index)
+	if not continuation.is_empty():
+		_resolve_sequence(continuation["actor"], continuation["opponent"], continuation["effects"], continuation["element"], continuation["selection"], continuation["energy"], continuation["complete"])
+	choice_completed.emit()
 	changed.emit()
 	return true
+
+func _choose_contemplation(actor: Combatant, candidates: Array) -> int:
+	var best := 0
+	var best_score := -INF
+	for i in candidates.size():
+		var card: Dictionary = cards[candidates[i]]
+		var score := 1.0 - float(card["cost"]) * 0.15
+		for effect in card["effects"]:
+			match str(effect["type"]):
+				"gain_energy", "gain_random_energy", "draw", "contemplate", "generate_card": score += 2.0
+				"heal": score += minf(float(effect["amount"]), float(actor.max_hp - actor.hp)) * 0.25
+				"summon": score += 1.0 if actor.first_free_summon_slot() >= 0 else -2.0
+		if actor.can_pay(card): score += 2.0
+		if actor == enemy and not choice_scoring and actor.can_pay(card):
+			var copy := simulation_copy()
+			copy.choice_scoring = true
+			copy.phase = "enemy_action"
+			for selection in copy._card_candidates(copy.enemy, card):
+				if copy.valid_card_target(copy.enemy, card, selection): score = maxf(score, EnemyPolicy.card_score(copy, card, selection))
+			copy.free()
+		if score > best_score: best_score = score; best = i
+	return best
+
+func _card_candidates(actor: Combatant, card: Dictionary) -> Array[Dictionary]:
+	var opponent := player if actor == enemy else enemy
+	var candidates: Array[Dictionary] = []
+	var mode := card_target_mode(card)
+	if mode == "none": return [{}]
+	if mode == "damage":
+		for side in damage_target_sides(actor, card):
+			var owner := player if side == "player" else enemy
+			candidates.append({"kind":"hero", "side":side})
+			for slot in 3:
+				if owner.summons[slot] != null: candidates.append({"kind":"summon", "side":side, "slot":slot})
+	else:
+		var owner := actor if mode in ["slot", "ally_summon"] else opponent
+		for slot in 3:
+			if (mode == "slot") == (owner.summons[slot] == null): candidates.append({"kind":"slot" if mode == "slot" else "summon", "side":_side(owner), "slot":slot})
+	return candidates
 
 func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, card_element: String, selection: Dictionary = {}, pre_payment_energy: Dictionary = {}) -> void:
 	if not _condition_met(effect, actor, pre_payment_energy): return
@@ -597,6 +691,10 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 			var attack_element := str(effect.get("element", card_element))
 			var resolved_selection := selection
 			if effect.get("target", "") == "self": resolved_selection = {"kind": "hero", "side": _side(actor)}
+			if effect.get("target", "") == "random_opponent":
+				var candidates := _card_candidates(actor, {"effects":[{"type":"damage"}]})
+				if candidates.is_empty(): return
+				resolved_selection = candidates[rng.randi_range(0, candidates.size() - 1)]
 			var plan := _damage_plan(actor, opponent, effect, card_element, resolved_selection)
 			var hits: Array[Dictionary] = []
 			for hit in plan:
@@ -651,6 +749,18 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 				if phase in FINISHED_PHASES:
 					break
 				draw_card(target)
+		"contemplate": _contemplate(target, amount)
+		"generate_card":
+			var pool: Array[String] = []
+			for entry: Dictionary in ContentCatalog.base_entries(cards):
+				if str(effect.get("element", "")) != "" and entry["element"] != effect["element"]: continue
+				var recursive := false
+				for part in entry["effects"]:
+					if part["type"] == "generate_card": recursive = true
+				if not recursive: pool.append(str(entry["id"]))
+			for i in amount:
+				if pool.is_empty(): break
+				_receive_card(target, pool[rng.randi_range(0, pool.size() - 1)], "生牌")
 		"gain_energy":
 			var gained := target.gain_energy(effect["element"], amount)
 			_report("%s 获得 %d %s能量" % [target.display_name, gained, BattleRules.element_name(effect["element"])], _side(target), "energy", effect["element"], gained)
@@ -720,7 +830,7 @@ func _apply_hero_damage(source: Combatant, target: Combatant, breakdown: Diction
 	_absorb_shield(target, shielded)
 	_consume_defense_statuses(target)
 	target.hp = maxi(0, target.hp - dealt)
-	if raw > 0 and float(target.artifact_resistances.get(element, 0.0)) > 0.0:
+	if bool(breakdown.get("resistance_used", false)):
 		_trigger_artifacts(target, "element_damage")
 	if source == player and target != player:
 		player_damage += dealt
@@ -805,7 +915,7 @@ func _trigger_bleed(actor: Combatant) -> void:
 	_lose_life(actor, stacks, "出血")
 
 func end_player_turn() -> void:
-	if phase != "player_action":
+	if phase != "player_action" or not pending_choice.is_empty():
 		return
 	phase = "player_turn_end"
 	var generation := battle_generation
@@ -867,26 +977,7 @@ func _choose_enemy_action() -> Dictionary:
 		var card: Dictionary = cards[enemy.hand[i]]
 		if not enemy.can_pay(card):
 			continue
-		var candidates: Array[Dictionary] = [{}]
-		match card_target_mode(card):
-			"damage":
-				candidates = [{"kind": "hero"}]
-				for slot in player.summons.size():
-					if player.summons[slot] != null:
-						candidates.append({"kind": "summon", "slot": slot})
-			"enemy_summons":
-				candidates = []
-				for slot in player.summons.size():
-					if player.summons[slot] != null: candidates.append({"kind": "summon", "side": "player", "slot": slot})
-			"ally_summon":
-				candidates = []
-				for slot in enemy.summons.size():
-					if enemy.summons[slot] != null: candidates.append({"kind": "summon", "side": "enemy", "slot": slot})
-			"slot":
-				candidates = []
-				for slot in enemy.summons.size():
-					if enemy.summons[slot] == null:
-						candidates.append({"kind": "slot", "slot": slot})
+		var candidates := _card_candidates(enemy, card)
 		for selection in candidates:
 			var score := _enemy_action_score(card, selection)
 			score += rng.randf_range(-3.0, 3.0)

@@ -36,11 +36,12 @@ static func damage_breakdown(target: Combatant, amount: int, element: String, so
 	var weak_stacks := source.status_stacks("weak") if source != null else 0
 	var charge: int = source.status_stacks("charge") if source != null else 0
 	var total_multiplier := maxf(0.0, 1.0 + (weak - same + vulnerable - tenacity + charge - weak_stacks) * 0.1)
+	var resistance_used := target.artifact_durability > 0 and total_multiplier > 0.0 and maxi(0, amount + attack_adjustment(source) + defense_adjustment(target)) > 0 and float(target.artifact_resistances.get(element, 0.0)) > 0.0
 	if target.artifact_durability > 0:
 		total_multiplier = maxf(0.0, total_multiplier - float(target.artifact_resistances.get(element, 0.0)))
 	var fixed_amount := maxi(0, amount + attack_adjustment(source) + defense_adjustment(target))
 	var before_shield: int = roundi(fixed_amount * total_multiplier)
-	return {"base": amount, "same": same, "weak": weak, "multiplier": multiplier,
+	return {"resistance_used": resistance_used, "base": amount, "same": same, "weak": weak, "multiplier": multiplier,
 		"vulnerable": vulnerable, "tenacity": tenacity, "charge": charge,
 		"weak_stacks": weak_stacks, "fixed": fixed_amount, "total_multiplier": total_multiplier, "raw": before_shield,
 		"shield": mini(before_shield, target.status_stacks("shield")),

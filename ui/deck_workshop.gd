@@ -18,6 +18,7 @@ var factory: Callable
 var store: DeckStore
 var brush_font: Font
 var content: Control
+var showcase: Control
 var effects: Control
 var view_mode := "library"
 var selected_id := ""
@@ -112,7 +113,7 @@ func _show_library() -> void:
 	_text(content, "我的卡组", Rect2(225, 73, 270, 36), 21, JADE)
 	_button(content, "返回山门", Rect2(1340, 64, 180, 48), func(): back_requested.emit())
 	_panel(content, Rect2(65, 166, 440, 628), Color("#112c28ed"), Color("#b8955955"))
-	random_button = _button(content, "随机卡组", Rect2(87, 188, 396, 74), func(): selected_id = ""; _show_library(), GOLD)
+	random_button = _button(content, "随机卡组", Rect2(87, 188, 396, 74), _select_deck.bind(""), GOLD)
 	decorate_selection(random_button, selected_id.is_empty())
 	var scroll := ScrollContainer.new()
 	scroll.position = Vector2(87, 280)
@@ -126,7 +127,7 @@ func _show_library() -> void:
 	for entry in store.decks:
 		var caption := str(entry["name"])
 		var valid := store.problem(entry["cards"]).is_empty()
-		var button := _button(column, "", Rect2(0, 0, 378, 78), _open_editor.bind(entry))
+		var button := _button(column, "", Rect2(0, 0, 378, 78), _select_deck.bind(str(entry["id"])))
 		button.custom_minimum_size = Vector2(378, 78)
 		_text(button, caption, Rect2(18, 8, 330, 34), 23, GOLD, true)
 		_text(button, "%d 张%s" % [entry["cards"].size(), "" if valid else " · 草稿"], Rect2(20, 43, 322, 23), 15, JADE)
@@ -138,15 +139,28 @@ func _show_library() -> void:
 	_build_showcase()
 
 func decorate_selection(button: Button, selected: bool) -> void:
-	if selected:
-		button.add_theme_stylebox_override("normal", _style(Color("#324536"), GOLD))
+	button.add_theme_stylebox_override("normal", _style(Color("#324536"), GOLD) if selected else _style(INK, Color(GOLD, 0.45)))
+
+func _select_deck(id: String) -> void:
+	selected_id = id
+	decorate_selection(random_button, id.is_empty())
+	for deck_id in deck_buttons:
+		decorate_selection(deck_buttons[deck_id], deck_id == id)
+	_build_showcase()
 
 func _build_showcase() -> void:
+	if is_instance_valid(showcase):
+		showcase.hide()
+		showcase.queue_free()
+	showcase = Control.new()
+	showcase.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	showcase.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	content.add_child(showcase)
 	var deck := store.find_deck(selected_id)
 	var random := deck.is_empty()
-	_panel(content, Rect2(547, 166, 975, 628), Color("#0c262369"), Color("#b895592a"))
-	_text(content, "随缘成阵" if random else str(deck["name"]), Rect2(593, 199, 880, 72), 43, GOLD, true, HORIZONTAL_ALIGNMENT_CENTER)
-	_text(content, "五行流转 · 25 张" if random else "%d 张%s" % [deck["cards"].size(), " · 草稿" if not store.problem(deck["cards"]).is_empty() else ""], Rect2(637, 277, 796, 35), 20, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
+	_panel(showcase, Rect2(547, 166, 975, 628), Color("#0c262369"), Color("#b895592a"))
+	_text(showcase, "随缘成阵" if random else str(deck["name"]), Rect2(593, 199, 880, 72), 43, GOLD, true, HORIZONTAL_ALIGNMENT_CENTER)
+	_text(showcase, "五行流转 · 25 张" if random else "%d 张%s" % [deck["cards"].size(), " · 草稿" if not store.problem(deck["cards"]).is_empty() else ""], Rect2(637, 277, 796, 35), 20, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
 	var featured: Array[String] = ["metal_chime_card", "water_conch_card", "wood_deer_card"]
 	if not random:
 		featured.clear()
@@ -155,7 +169,7 @@ func _build_showcase() -> void:
 			if featured.size() == 3: break
 	for i in featured.size():
 		var view: Control = factory.call(cards[featured[i]], Vector2(195, 273))
-		content.add_child(view)
+		showcase.add_child(view)
 		view.position = Vector2(755 + i * 178, 387 - (28 if i == 1 else 0))
 		view.pivot_offset = view.size / 2.0
 		view.rotation_degrees = (i - 1) * 8.0
@@ -163,17 +177,17 @@ func _build_showcase() -> void:
 		view.gui_input.connect(func(event: InputEvent):
 			if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed: inspect_requested.emit(cards[featured[i]], view))
 	if not random and featured.is_empty():
-		_text(content, "万法，由此起笔。", Rect2(710, 420, 650, 70), 33, JADE, true, HORIZONTAL_ALIGNMENT_CENTER)
-	play_button = _button(content, "入阵", Rect2(1204, 711, 266, 60), _start_selected, GOLD)
+		_text(showcase, "万法，由此起笔。", Rect2(710, 420, 650, 70), 33, JADE, true, HORIZONTAL_ALIGNMENT_CENTER)
+	play_button = _button(showcase, "入阵", Rect2(1204, 711, 266, 60), _start_selected, GOLD)
 	play_button.add_theme_font_override("font", brush_font)
 	play_button.add_theme_font_size_override("font_size", 30)
 	play_button.disabled = not random and not store.problem(deck["cards"]).is_empty()
 	if not random:
-		_button(content, "编修", Rect2(595, 716, 145, 50), _open_editor.bind(deck))
-		_button(content, "法宝", Rect2(910, 716, 125, 50), _open_artifacts.bind(deck))
-		_button(content, "删除", Rect2(757, 716, 120, 50), _ask_delete.bind(deck), Color("#cd9a80"))
+		_button(showcase, "编修", Rect2(595, 716, 145, 50), _open_editor.bind(deck))
+		_button(showcase, "法宝", Rect2(757, 716, 125, 50), _open_artifacts.bind(deck))
+		_button(showcase, "删除", Rect2(899, 716, 120, 50), _ask_delete.bind(deck), Color("#cd9a80"))
 		if play_button.disabled:
-			_text(content, store.problem(deck["cards"]), Rect2(1020, 723, 163, 35), 18, JADE, false, HORIZONTAL_ALIGNMENT_RIGHT)
+			_text(showcase, store.problem(deck["cards"]), Rect2(1020, 723, 163, 35), 18, JADE, false, HORIZONTAL_ALIGNMENT_RIGHT)
 
 func _start_selected() -> void:
 	var deck := store.find_deck(selected_id)
@@ -271,7 +285,21 @@ func _sorted_unique(ids: Array) -> Array[String]:
 	return unique
 
 func _can_add(id: String) -> bool:
-	return cards.has(id) and draft.size() < DeckStore.MAX_CARDS and draft.count(id) < DeckStore.MAX_COPIES
+	return cards.has(id) and draft.size() < DeckStore.MAX_CARDS and ContentCatalog.family_count(draft, id, cards) < DeckStore.MAX_COPIES
+
+func _can_use_card_level(id: String) -> bool:
+	if _can_add(id): return true
+	for previous in draft:
+		if previous != id and ContentCatalog.base_id(cards[previous]) == ContentCatalog.base_id(cards[id]): return true
+	return false
+
+func _use_card_level(id: String) -> void:
+	if _can_add(id): _add_card(id); return
+	for i in draft.size():
+		if draft[i] != id and ContentCatalog.base_id(cards[draft[i]]) == ContentCatalog.base_id(cards[id]):
+			draft[i] = id
+			_update_editor(id)
+			return
 
 func _add_card(id: String, source: Vector2 = Vector2(-1, -1)) -> void:
 	if not _can_add(id):
@@ -289,7 +317,7 @@ func _remove_card(id: String) -> void:
 
 func _update_editor(highlight: String = "") -> void:
 	for views: Array in page_motion.page_views:
-		for view: DeckLibraryCard in views: view.set_copies(draft.count(view.card["id"]))
+		for view: DeckLibraryCard in views: view.set_copies(ContentCatalog.family_count(draft, view.card["id"], cards))
 	total_label.text = "%d / 30" % draft.size()
 	play_button.disabled = not store.problem(draft).is_empty()
 	var scroll := row_scroll.scroll_vertical
@@ -339,6 +367,7 @@ func _filter(element: String) -> void:
 func _library_cards(element: String) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for card in cards.values():
+		if int(card.get("level", 0)) != 0: continue
 		if element == "all" or card["element"] == element: result.append(card)
 	result.sort_custom(_card_less)
 	return result
@@ -361,7 +390,7 @@ func _library_motion(element: String, data: Array[Dictionary]) -> CardPageMotion
 func _create_library_card(card: Dictionary, index: int, sheet: Control) -> Control:
 	var view := DeckLibraryCard.new()
 	view.configure(card, factory, 180.0 if PlatformUI.is_touch() else CARD_WIDTH)
-	view.set_copies(draft.count(card["id"]))
+	view.set_copies(ContentCatalog.family_count(draft, card["id"], cards))
 	view.position = Vector2(267 + (index % 3) * 300, 190 + (index / 3) * 302) if PlatformUI.is_touch() else Vector2(247 + (index % 6) * 148, 211 + (index / 6) * 277)
 	view.inspect_requested.connect(func(data: Dictionary, source: Control):
 		if not page_turn_busy: inspect_requested.emit(data, source))
@@ -417,6 +446,7 @@ func _open_artifacts(deck: Dictionary) -> void:
 func _artifact_entries() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for entry: Dictionary in artifacts.values():
+		if int(entry.get("level", 0)) != 0: continue
 		if selected_element != "all" and entry["element"] != selected_element: continue
 		if selected_artifact_slot != "all" and entry["slot"] != selected_artifact_slot: continue
 		result.append(entry)
@@ -485,19 +515,19 @@ func _equip_artifact_id(id: String) -> void:
 
 func _equip_artifact(slot: String, id: String) -> void:
 	if not artifacts.has(id) or str(artifacts[id]["slot"]) != slot: return
+	if draft_loadout.get(slot, "") == id: return
 	draft_loadout[slot] = id
 	_refresh_artifact_row(slot)
 
 func _unequip_artifact(slot: String) -> void:
+	if slot not in ArtifactLibrary.SLOTS or str(draft_loadout.get(slot, "")).is_empty(): return
 	draft_loadout[slot] = ""
 	_refresh_artifact_row(slot)
 
 func _refresh_artifact_row(slot: String) -> void:
 	if not is_instance_valid(artifact_rows.get(slot)): return
 	var row: ArtifactLoadoutRow = artifact_rows[slot]
-	row.configure(slot, artifacts.get(str(draft_loadout.get(slot, "")), {}))
-	row.modulate = Color("#fff0c7")
-	row.create_tween().tween_property(row, "modulate", Color.WHITE, 0.24)
+	row.set_entry(artifacts.get(str(draft_loadout.get(slot, "")), {}))
 
 func _save_artifacts() -> void:
 	var saved := store.save_deck(edit_id, edit_name, draft, true, draft_loadout)

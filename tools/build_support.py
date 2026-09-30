@@ -11,7 +11,7 @@ SUITE = [f"res://tests/{name}.gd" for name in [
     "smoke_test", "card_expansion_test", "deck_store_test", "artifact_test",
     "flat_damage_test", "new_card_wave_test", "summon_expansion_test",
     "summon_presentation_test", "settlement_regression_test", "artifact_ui_test",
-    "opening_deal_test", "energy_help_ui_test",
+    "opening_deal_test", "energy_help_ui_test", "upgrade_test", "upgrade_ui_test",
 ]] + ["res://tools/test_card_art.gd", "res://tools/test_summon_art.gd",
       "res://tools/test_card_keywords.gd", "res://tools/test_drag.gd",
       "res://tools/test_summon_drag.gd", "res://tools/test_deck_workshop.gd",

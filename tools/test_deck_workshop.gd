@@ -64,6 +64,11 @@ func find_menu() -> MainMenu:
 		if child is MainMenu: return child
 	return null
 
+func showcase_button(caption: String) -> Button:
+	for child in workshop.showcase.get_children():
+		if child is Button and child.text == caption: return child
+	return null
+
 func run() -> void:
 	output = ProjectSettings.globalize_path("res://work/deck_previews")
 	DirAccess.make_dir_recursive_absolute(output)
@@ -127,8 +132,16 @@ func run() -> void:
 	await create_timer(0.3).timeout
 	await shot("deck_library_draft")
 	var saved_id: String = workshop.selected_id
+	workshop.random_button.pressed.emit()
+	var library_content := workshop.content
+	var saved_button: Button = workshop.deck_buttons[saved_id]
+	var random_showcase := workshop.showcase
 	workshop.deck_buttons[saved_id].pressed.emit()
-	check(workshop.view_mode == "editor" and workshop.draft.size() == 1, "saved deck click reopens its editor")
+	check(workshop.view_mode == "library" and workshop.selected_id == saved_id and workshop.play_button.disabled, "saved draft selection stays in the library and updates its playable state")
+	check(workshop.content == library_content and workshop.deck_buttons[saved_id] == saved_button and workshop.showcase != random_showcase, "selecting a deck replaces only the right showcase and preserves the list")
+	check(showcase_button("删除").position.x > showcase_button("法宝").get_rect().end.x, "delete action sits to the right of artifacts")
+	showcase_button("编修").pressed.emit()
+	check(workshop.view_mode == "editor" and workshop.draft.size() == 1, "explicit edit action opens the selected deck")
 	workshop.filter_buttons["wood"].pressed.emit()
 	check(workshop.filtered_cards.size() == 12 and workshop.draft.size() == 1, "element filtering preserves the current deck")
 	for candidate in workshop.card_nodes:
@@ -198,6 +211,7 @@ func run() -> void:
 	workshop = menu.workshop
 	check(workshop.store.find_deck(saved_id)["cards"] == before, "reopening the library restores the saved deck")
 	workshop.deck_buttons[saved_id].pressed.emit()
+	showcase_button("编修").pressed.emit()
 	for card_id in manager.cards:
 		for copy in DeckStore.MAX_COPIES:
 			if workshop.draft.size() < 30 and workshop.draft.count(card_id) < DeckStore.MAX_COPIES: workshop.call("_add_card", card_id)

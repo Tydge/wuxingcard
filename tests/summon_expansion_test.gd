@@ -33,7 +33,7 @@ func run() -> void:
 	manager.random_artifacts_enabled = false
 	root.add_child(manager)
 	prepare()
-	check(manager.cards.size() == 60 and manager.summon_templates.size() == 20, "expanded pool has 60 cards and 20 summons")
+	check(manager.cards.size() == 180 and manager.summon_templates.size() == 60, "expanded pool has 60 cards and 20 summons")
 	var expected := {"metal_falcon":[2,12], "water_koi":[3,20], "wood_frog":[1,6], "fire_fox":[2,10], "earth_badger":[2,16]}
 	for id in expected:
 		prepare()

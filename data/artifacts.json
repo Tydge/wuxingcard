@@ -4,16 +4,41 @@
     "name": "鸣雷尺",
     "element": "metal",
     "slot": "implement",
-    "description": "造成5点伤害。",
-    "cooldown": 2,
+    "description": "对手受到5点金伤害。",
+    "cooldown": 3,
     "effects": [
       {
         "type": "damage",
         "amount": 5,
-        "element": "metal"
+        "element": "metal",
+        "target": "opponent"
       }
     ],
-    "target_mode": "enemy"
+    "target_mode": "none",
+    "upgrades": [
+      {
+        "cooldown": 3,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 7,
+            "element": "metal",
+            "target": "opponent"
+          }
+        ]
+      },
+      {
+        "cooldown": 2,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 7,
+            "element": "metal",
+            "target": "opponent"
+          }
+        ]
+      }
+    ]
   },
   {
     "id": "water_return_cup",
@@ -21,14 +46,32 @@
     "element": "water",
     "slot": "implement",
     "description": "为自身或我方召唤物恢复5点生命。",
-    "cooldown": 2,
+    "cooldown": 3,
     "effects": [
       {
         "type": "heal_selected",
         "amount": 5
       }
     ],
-    "target_mode": "self_or_ally_summon"
+    "target_mode": "self_or_ally_summon",
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "heal_selected",
+            "amount": 7
+          }
+        ]
+      },
+      {
+        "effects": [
+          {
+            "type": "heal_selected",
+            "amount": 10
+          }
+        ]
+      }
+    ]
   },
   {
     "id": "wood_bamboo_scroll",
@@ -36,7 +79,7 @@
     "element": "wood",
     "slot": "implement",
     "description": "抽一张牌。",
-    "cooldown": 2,
+    "cooldown": 3,
     "effects": [
       {
         "type": "draw",
@@ -44,7 +87,27 @@
         "amount": 1
       }
     ],
-    "target_mode": "none"
+    "target_mode": "none",
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "contemplate",
+            "target": "self",
+            "amount": 2
+          }
+        ]
+      },
+      {
+        "effects": [
+          {
+            "type": "contemplate",
+            "target": "self",
+            "amount": 4
+          }
+        ]
+      }
+    ]
   },
   {
     "id": "fire_sun_mirror",
@@ -52,7 +115,7 @@
     "element": "fire",
     "slot": "implement",
     "description": "获得1点火能量。",
-    "cooldown": 2,
+    "cooldown": 3,
     "effects": [
       {
         "type": "gain_energy",
@@ -61,7 +124,41 @@
         "amount": 1
       }
     ],
-    "target_mode": "none"
+    "target_mode": "none",
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "fire",
+            "amount": 1
+          },
+          {
+            "type": "status",
+            "target": "self",
+            "status": "charge",
+            "stacks": 1
+          }
+        ]
+      },
+      {
+        "effects": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "fire",
+            "amount": 2
+          },
+          {
+            "type": "status",
+            "target": "self",
+            "status": "charge",
+            "stacks": 1
+          }
+        ]
+      }
+    ]
   },
   {
     "id": "earth_mountain_talisman",
@@ -69,7 +166,7 @@
     "element": "earth",
     "slot": "implement",
     "description": "获得8层护盾。",
-    "cooldown": 2,
+    "cooldown": 3,
     "effects": [
       {
         "type": "status",
@@ -78,7 +175,35 @@
         "stacks": 8
       }
     ],
-    "target_mode": "none"
+    "target_mode": "none",
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "shield",
+            "stacks": 12
+          }
+        ]
+      },
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "shield",
+            "stacks": 16
+          },
+          {
+            "type": "status",
+            "target": "self",
+            "status": "tenacity",
+            "stacks": 1
+          }
+        ]
+      }
+    ]
   },
   {
     "id": "metal_silk_robe",
@@ -95,6 +220,30 @@
         "status": "strong_defense",
         "stacks": 1
       }
+    ],
+    "upgrades": [
+      {
+        "durability": 5,
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "strong_defense",
+            "stacks": 1
+          }
+        ]
+      },
+      {
+        "durability": 6,
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "strong_defense",
+            "stacks": 2
+          }
+        ]
+      }
     ]
   },
   {
@@ -108,7 +257,21 @@
     "effects": [],
     "resistances": {
       "fire": 0.2
-    }
+    },
+    "upgrades": [
+      {
+        "durability": 4,
+        "resistances": {
+          "fire": 0.25
+        }
+      },
+      {
+        "durability": 5,
+        "resistances": {
+          "fire": 0.3
+        }
+      }
+    ]
   },
   {
     "id": "wood_vine_robe",
@@ -123,6 +286,28 @@
         "type": "heal",
         "target": "self",
         "amount": 2
+      }
+    ],
+    "upgrades": [
+      {
+        "durability": 4,
+        "effects": [
+          {
+            "type": "heal",
+            "target": "self",
+            "amount": 3
+          }
+        ]
+      },
+      {
+        "durability": 5,
+        "effects": [
+          {
+            "type": "heal",
+            "target": "self",
+            "amount": 4
+          }
+        ]
       }
     ]
   },
@@ -139,6 +324,30 @@
         "type": "damage",
         "amount": 2,
         "element": "fire"
+      }
+    ],
+    "upgrades": [
+      {
+        "durability": 4,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 3,
+            "element": "fire",
+            "target": "opponent"
+          }
+        ]
+      },
+      {
+        "durability": 5,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 4,
+            "element": "fire",
+            "target": "opponent"
+          }
+        ]
       }
     ]
   },
@@ -157,6 +366,30 @@
         "status": "shield",
         "stacks": 5
       }
+    ],
+    "upgrades": [
+      {
+        "durability": 4,
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "shield",
+            "stacks": 7
+          }
+        ]
+      },
+      {
+        "durability": 5,
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "shield",
+            "stacks": 9
+          }
+        ]
+      }
     ]
   },
   {
@@ -173,6 +406,40 @@
         "element": "metal",
         "amount": 1
       }
+    ],
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "metal",
+            "amount": 1
+          },
+          {
+            "type": "status",
+            "target": "self",
+            "status": "strong_attack",
+            "stacks": 2
+          }
+        ]
+      },
+      {
+        "effects": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "metal",
+            "amount": 2
+          },
+          {
+            "type": "status",
+            "target": "self",
+            "status": "strong_attack",
+            "stacks": 2
+          }
+        ]
+      }
     ]
   },
   {
@@ -188,6 +455,31 @@
         "target": "self",
         "amount": 1
       }
+    ],
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "contemplate",
+            "target": "self",
+            "amount": 3
+          }
+        ]
+      },
+      {
+        "effects": [
+          {
+            "type": "draw",
+            "target": "self",
+            "amount": 1
+          },
+          {
+            "type": "contemplate",
+            "target": "self",
+            "amount": 3
+          }
+        ]
+      }
     ]
   },
   {
@@ -202,6 +494,26 @@
         "type": "heal",
         "target": "self",
         "amount": 1
+      }
+    ],
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "heal",
+            "target": "self",
+            "amount": 2
+          }
+        ]
+      },
+      {
+        "effects": [
+          {
+            "type": "heal",
+            "target": "self",
+            "amount": 4
+          }
+        ]
       }
     ]
   },
@@ -219,6 +531,40 @@
         "element": "fire",
         "amount": 1
       }
+    ],
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "fire",
+            "amount": 1
+          },
+          {
+            "type": "status",
+            "target": "self",
+            "status": "charge",
+            "stacks": 1
+          }
+        ]
+      },
+      {
+        "effects": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "fire",
+            "amount": 2
+          },
+          {
+            "type": "status",
+            "target": "self",
+            "status": "charge",
+            "stacks": 1
+          }
+        ]
+      }
     ]
   },
   {
@@ -232,6 +578,26 @@
       {
         "type": "grow_summon",
         "amount": 2
+      }
+    ],
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "grow_summon",
+            "target": "self",
+            "amount": 4
+          }
+        ]
+      },
+      {
+        "effects": [
+          {
+            "type": "grow_summon",
+            "target": "self",
+            "amount": 6
+          }
+        ]
       }
     ]
   }

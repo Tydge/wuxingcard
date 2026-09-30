@@ -42,8 +42,32 @@ func run() -> void:
 	var drag_data := {"kind": "artifact", "slot": "implement", "id": "metal_thunder_ruler"}
 	check(row._can_drop_data(Vector2.ZERO, drag_data), "matching artifact can be dropped into its slot")
 	check(not row._can_drop_data(Vector2.ZERO, {"kind": "artifact", "slot": "guard", "id": "metal_silk_robe"}), "other artifact slots reject the drop")
+	var artifact_content := workshop.content
+	var page_nodes := artifact_content.get_children()
+	var slot_nodes := row.get_children()
+	var slot_frame := row.frame
 	row._drop_data(Vector2.ZERO, drag_data)
 	check(workshop.draft_loadout["implement"] == "metal_thunder_ruler" and workshop.artifact_rows["implement"] == row, "equipping updates the existing row without rebuilding the page")
+	check(workshop.content == artifact_content and artifact_content.get_children() == page_nodes and row.get_children() == slot_nodes and row.frame == slot_frame, "equipping preserves the page, card controls, row children and frame")
+	row.remove_button.pressed.emit()
+	check(workshop.draft_loadout["implement"] == "" and row.entry.is_empty() and not row.remove_button.visible, "remove button clears only its artifact slot")
+	check(workshop.content == artifact_content and artifact_content.get_children() == page_nodes and row.get_children() == slot_nodes and row.frame == slot_frame and row.modulate == Color.WHITE, "removal preserves the page and row without a flash animation")
+	# Exercise the library plus button on another page, as well as drag/drop.
+	workshop.page = 1
+	workshop._build_artifact_editor()
+	artifact_content = workshop.content
+	page_nodes = artifact_content.get_children()
+	var library_card: ArtifactLibraryCard
+	for child in page_nodes:
+		if child is ArtifactLibraryCard:
+			library_card = child
+			break
+	var plus: Button = library_card.get_child(2)
+	plus.pressed.emit()
+	var updated_row: ArtifactLoadoutRow = workshop.artifact_rows[library_card.entry["slot"]]
+	check(updated_row.entry["id"] == library_card.entry["id"] and workshop.page == 1 and workshop.content == artifact_content and artifact_content.get_children() == page_nodes, "plus equips on the current page without replacing any page controls")
+	updated_row.remove_button.pressed.emit()
+	check(workshop.page == 1 and workshop.content == artifact_content and artifact_content.get_children() == page_nodes, "removing an artifact also retains the selected page")
 	var battle: Control = load("res://ui/battle_ui.gd").new()
 	root.add_child(battle)
 	await battle.manager.start_battle("ember", "random", 31337)
@@ -55,5 +79,19 @@ func run() -> void:
 		if child is TextureRect and child != battle.standee_nodes["enemy"] and child.position.x > 1450.0:
 			enemy_weapon = child
 	check(enemy_weapon != null and enemy_weapon.flip_h, "enemy implement standee faces the player")
+	battle.manager._equip_loadout(battle.manager.player, {"implement":"metal_thunder_ruler"})
+	battle.manager._equip_loadout(battle.manager.enemy, {})
+	battle.manager.enemy.hp = battle.manager.enemy.max_hp
+	for element in BattleRules.ELEMENTS:
+		battle.manager.player.energy[element] = 0
+		battle.manager.enemy.energy[element] = 0
+	battle.manager.player.statuses.clear()
+	battle.manager.enemy.statuses.clear()
+	var before_hp: int = battle.manager.enemy.hp
+	check(battle._artifact_cast_target(battle.manager.player, {}) == battle.ENEMY_ANCHOR and battle._artifact_cast_target(battle.manager.enemy, {}) == battle.ENEMY_ANCHOR, "automatic artifact visual targets follow its effects")
+	battle.manager._equip_loadout(battle.manager.enemy, {"implement":"metal_thunder_ruler__2"})
+	check(battle._artifact_cast_target(battle.manager.enemy, {}) == battle.PLAYER_ANCHOR, "enemy ruler visual points at the player")
+	battle._on_artifact_pressed()
+	check(not battle.artifact_aiming and battle.manager.enemy.hp == before_hp - 5, "pressing the ruler immediately damages the opponent without opening aim mode")
 	print("Artifact UI test: collection, editor, and loadout; %d failures" % failures)
 	quit(1 if failures > 0 else 0)

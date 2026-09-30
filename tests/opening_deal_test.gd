@@ -36,5 +36,11 @@ func run() -> void:
 	player.energy["metal"] = 1
 	ui.call("_refresh")
 	check(ui.call("_begin_hand_drag", 0, Vector2(800, 755)), "a payable card can be dragged after the deal")
+	ui.call("_finish_hand_drag", Vector2(800, 755))
+	ui.queue_free()
+	scene = null
+	await process_frame
+	# Let queued rendering/audio work finish after the scene has been freed.
+	await create_timer(0.6).timeout
 	print("Opening deal: %d failures" % failures)
-	quit(1 if failures > 0 else 0)
+	call_deferred("quit", 1 if failures > 0 else 0)

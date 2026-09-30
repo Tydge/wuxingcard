@@ -45,9 +45,11 @@ func configure(card: Dictionary, card_width: float) -> void:
 	var title := _add_label(self, card["name"], Vector2(14, 204) * factor, Vector2(212, 36) * factor, maxi(8, roundi(23 * factor)), Color("#dec596"))
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF
 	title.clip_text = true
+	var description_size := 18
 	var wrapped := _wrap_text(card["text"], 11)
-	var lines := wrapped.count("\n") + 1
-	var description_size := 18 if lines <= 3 else 15 if lines == 4 else 13
+	while description_size > 10 and (wrapped.count("\n") + 1) * description_size * 1.2 > 80:
+		description_size -= 1
+		wrapped = _wrap_text(card["text"], floori(206.0 / description_size))
 	var description := _add_label(self, wrapped, Vector2(17, 243) * factor, Vector2(206, 80) * factor, maxi(7, roundi(description_size * factor)), Color("#f5f1e9"))
 	description.clip_text = true
 	description.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -109,7 +111,7 @@ func _add_label(parent: Node, value: String, at: Vector2, dimensions: Vector2, f
 	return label
 
 func _art_path(card: Dictionary) -> String:
-	var specific := "res://assets/cards/generated/%s.webp" % card["id"]
+	var specific := "res://assets/cards/generated/%s.webp" % card.get("art_id", card["id"])
 	if ResourceLoader.exists(specific):
 		return specific
 	return "res://assets/cards/elements/%s.webp" % card["element"]

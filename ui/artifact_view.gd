@@ -23,7 +23,7 @@ func configure(data: Dictionary, view_size: Vector2, remaining: int = -1) -> voi
 	backing.set_border_width_all(3)
 	backing.set_corner_radius_all(14)
 	face.add_theme_stylebox_override("panel", backing)
-	var picture_path := "res://assets/artifacts/%s.webp" % data["id"]
+	var picture_path := "res://assets/artifacts/%s.webp" % data.get("art_id", data["id"])
 	if ResourceLoader.exists(picture_path):
 		var picture := TextureRect.new()
 		picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
