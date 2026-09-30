@@ -22,6 +22,7 @@ def prepare_project(stage):
     artifacts = json.loads((ROOT / 'data/artifacts.json').read_text())
     characters = json.loads((ROOT / 'data/characters.json').read_text())
     runtime = {f"assets/cards/generated/{c['id']}.webp" for c in cards}
+    runtime.update(f"assets/cards/elements/{element}.webp" for element in ['metal', 'wood', 'water', 'fire', 'earth'])
     runtime.update(f"assets/summons/standee/{s['id']}.webp" for s in summons)
     runtime.update(f"assets/artifacts/{a['id']}.webp" for a in artifacts)
     runtime.update(f"assets/artifacts/{a['id']}_standee.webp" for a in artifacts if a['slot'] == 'implement')

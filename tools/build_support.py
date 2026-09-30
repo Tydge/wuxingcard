@@ -15,7 +15,7 @@ SUITE = [f"res://tests/{name}.gd" for name in [
 ]] + ["res://tools/test_card_art.gd", "res://tools/test_summon_art.gd",
       "res://tools/test_card_keywords.gd", "res://tools/test_drag.gd",
       "res://tools/test_summon_drag.gd", "res://tools/test_deck_workshop.gd",
-      "res://tools/verify_touch_ui.gd"]
+      "res://tools/verify_touch_ui.gd", "res://tools/test_touch_interactions.gd"]
 
 
 def source_manifest():

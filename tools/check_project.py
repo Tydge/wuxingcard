@@ -23,9 +23,9 @@ def main():
         # UI integration checks use a real renderer; the dummy headless texture
         # backend cannot reliably load every imported background/animation.
         graphical = Path(script).stem in ['artifact_ui_test', 'opening_deal_test', 'energy_help_ui_test',
-                                        'upgrade_ui_test', 'test_card_keywords', 'test_drag', 'test_summon_drag', 'test_deck_workshop']
+                                        'upgrade_ui_test', 'test_card_keywords', 'test_drag', 'test_summon_drag', 'test_deck_workshop', 'test_touch_interactions']
         arguments = [args.godot] + ([] if graphical else ['--headless']) + ['--path', str(ROOT), '--script', script]
-        if script.endswith('verify_touch_ui.gd'): arguments += ['--', '--touch-ui']
+        if Path(script).stem in ['verify_touch_ui', 'test_touch_interactions']: arguments += ['--', '--touch-ui']
         try:
             completed = subprocess.run(arguments, cwd=ROOT, text=True, capture_output=True, timeout=120)
             output = completed.stdout + completed.stderr

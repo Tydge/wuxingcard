@@ -123,6 +123,7 @@ var energy_touch_regions: Array[Dictionary] = []
 var information_panel: BattleInfoPanel
 var back_dialog: Control
 var artifact_aiming := false
+var artifact_target_layer: Control
 var hovered_artifact_slot := ""
 var artifact_preview_button: Button
 var choice_dialog: ContemplationDialog
@@ -253,6 +254,8 @@ func _refresh() -> void:
 		return
 	var background := ColorRect.new()
 	background.color = BG
+	# Keep newly rebuilt backgrounds behind persistent actors on mobile renderers.
+	background.z_index = -2
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(background)
 	move_child(background, 0)
@@ -260,6 +263,7 @@ func _refresh() -> void:
 	if texture != null:
 		var art := TextureRect.new()
 		art.texture = texture
+		art.z_index = -1
 		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -455,7 +459,7 @@ func _portrait(parent: Node, actor_id: String, pos: Vector2, sz: Vector2, enemy_
 func _clear_actors() -> void:
 	standee_nodes.clear()
 	summon_views.clear()
-	artifact_aiming = false
+	_cancel_artifact_aim()
 	for child in actor_layer.get_children():
 		child.queue_free()
 		actor_layer.remove_child(child)
@@ -572,9 +576,21 @@ func _on_artifact_pressed() -> void:
 		_activate_player_artifact({})
 	else:
 		artifact_aiming = true
-		_refresh()
+		_build_artifact_targets()
 
 func _build_artifact_targets() -> void:
+	_clear_artifact_targets()
+	if not artifact_aiming: return
+	if not manager.artifact_can_activate(manager.player):
+		artifact_aiming = false
+		return
+	artifact_target_layer = Control.new()
+	artifact_target_layer.size = VIEW_SIZE
+	artifact_target_layer.mouse_filter = Control.MOUSE_FILTER_STOP
+	artifact_target_layer.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			_cancel_artifact_aim())
+	fx_layer.add_child(artifact_target_layer)
 	var mode := manager.artifact_target_mode(manager.player)
 	var side := "player" if mode == "self_or_ally_summon" else "enemy"
 	var owner: Combatant = manager.player if side == "player" else manager.enemy
@@ -584,16 +600,28 @@ func _build_artifact_targets() -> void:
 	for selection in choices:
 		if not manager.valid_artifact_target(manager.player, selection): continue
 		var point := _target_point(side, selection)
-		var marker := _button(self, "◎", Rect2(point - Vector2(31, 31), Vector2(62, 62)), _activate_player_artifact.bind(selection), Color("#233439b9"), GOLD)
+		var marker := _button(artifact_target_layer, "◎", Rect2(point - Vector2(31, 31), Vector2(62, 62)), _activate_player_artifact.bind(selection), Color("#233439b9"), GOLD)
 		marker.add_theme_font_size_override("font_size", 32)
-	_button(self, "取消发动", Rect2(735, 799, 150, 60), func(): artifact_aiming = false; _refresh())
+	_button(artifact_target_layer, "取消发动", Rect2(735, 799, 150, 60), _cancel_artifact_aim)
+
+func _clear_artifact_targets() -> void:
+	var layer := artifact_target_layer
+	artifact_target_layer = null
+	if is_instance_valid(layer):
+		layer.hide()
+		layer.queue_free()
+
+func _cancel_artifact_aim() -> void:
+	artifact_aiming = false
+	_clear_artifact_targets()
 
 func _activate_player_artifact(selection: Dictionary) -> void:
-	if not manager.artifact_can_activate(manager.player): return
+	if not selection.is_empty() and (not artifact_aiming or not is_instance_valid(artifact_target_layer)): return
+	if action_busy or not manager.artifact_can_activate(manager.player) or not manager.valid_artifact_target(manager.player, selection): return
 	var entry := manager.artifact_entry(manager.player, "implement")
 	var target := _artifact_cast_target(manager.player, selection)
 	battle_fx.cast({"element": entry["element"], "effects": manager.artifact_effects(manager.player)}, "player", Vector2(80, 500), target)
-	artifact_aiming = false
+	_cancel_artifact_aim()
 	manager.activate_artifact(manager.player, selection)
 
 func _artifact_cast_target(actor: Combatant, selection: Dictionary) -> Vector2:
@@ -1093,8 +1121,7 @@ func _handle_touch(event: InputEvent) -> void:
 						_activate_player_artifact(target)
 						get_viewport().set_input_as_handled()
 						return
-				artifact_aiming = false
-				_refresh()
+				_cancel_artifact_aim()
 				get_viewport().set_input_as_handled()
 				return
 			var index := _touch_hand_at(point)
@@ -1115,6 +1142,7 @@ func _handle_touch(event: InputEvent) -> void:
 				# Mouse-enter can open an artifact preview before the touch press arrives.
 				# Keep it open when that same press lands on the artifact control.
 				if _touch_hits_artifact(point): return
+				if is_instance_valid(artifact_preview_button) and Rect2(artifact_preview_button.position, artifact_preview_button.size).has_point(point): return
 				if not Rect2(hover_preview.position, hover_preview.size).has_point(point): _clear_hover_preview()
 				get_viewport().set_input_as_handled()
 				return
@@ -1326,6 +1354,9 @@ func _request_back() -> void:
 	if manager.phase == "menu":
 		for child in get_children():
 			if child is MainMenu: child.go_back()
+		return
+	if artifact_aiming:
+		_cancel_artifact_aim()
 		return
 	if touch_inspecting:
 		_clear_hover_preview()

@@ -41,7 +41,8 @@ func configure(data: Array[Dictionary], amount: int, create_view: Callable) -> v
 	# Decode upcoming illustrations on loader threads. Hold completed resources
 	# so configure() can reuse them without decoding a texture on the UI thread.
 	for entry in entries:
-		var path := "res://assets/cards/generated/%s.webp" % entry["id"]
+		var folder := "artifacts" if entry.has("slot") else "cards/generated"
+		var path := "res://assets/%s/%s.webp" % [folder, entry.get("art_id", entry["id"])]
 		if not ResourceLoader.exists(path): path = "res://assets/cards/elements/%s.webp" % entry["element"]
 		art_paths.append(path)
 		if art_resources.has(path): continue

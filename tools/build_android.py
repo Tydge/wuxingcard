@@ -47,8 +47,9 @@ def main():
     if version <= 0:
         raise SystemExit('Android version code must be positive.')
     preset = stage / 'export_presets.cfg'
+    version_name = json.loads((ROOT / 'data/version.json').read_text())['version']
     preset.write_text(preset.read_text().replace('version/code=1', f'version/code={version}')
-                      .replace('version/name="0.1"', f'version/name="0.2.0.{version}"'))
+                      .replace('version/name="0.1"', f'version/name="{version_name}"'))
 
     def run(*arguments):
         subprocess.run([args.godot, '--headless', '--path', str(stage), *map(str, arguments)],
