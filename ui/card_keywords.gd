@@ -38,6 +38,10 @@ static func entries(card: Dictionary, summons: Dictionary) -> Array[Dictionary]:
 		effects.append_array(summon.get("on_spawn", []))
 		effects.append_array(summon.get("turn_start", []))
 		effects.append_array(summon.get("turn_end", []))
+		if not summon.get("on_heal", []).is_empty():
+			result.append({"title":"恢复生命", "text":"双方角色与召唤物实际恢复生命才触发；满血治疗不触发，多只各自触发。"})
+		if int(summon.get("enemy_cost_aura", 0)) > 0:
+			result.append({"title":"费用光环", "text":"多只可叠加，0费牌也增加费用；此召唤物死亡后解除。"})
 	for effect in effects:
 		if effect.get("type") == "contemplate" and not seen.has("contemplate"):
 			seen["contemplate"] = true

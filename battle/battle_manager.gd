@@ -2,6 +2,7 @@ class_name BattleManager
 extends Node
 
 signal damage_segment_resolved(hits: Array)
+signal random_hit_targeted(side: String, element: String, selection: Dictionary)
 signal changed
 signal action_event(message: String, side: String, kind: String, element: String, amount: int)
 # Emitted before removal so the presenter can retain the exact hand card,
@@ -135,6 +136,7 @@ func _resolve_artifact_effects(actor: Combatant, entry: Dictionary, selection: D
 	_resolve_sequence(actor, opponent, entry.get("effects", []), str(entry["element"]), selection)
 
 func _trigger_artifacts(actor: Combatant, event: String, selection: Dictionary = {}) -> void:
+	if actor.hp <= 0 or phase in FINISHED_PHASES: return
 	for slot in ["guard", "pendant"]:
 		var entry := artifact_entry(actor, slot)
 		if entry.get("trigger", "") != event: continue
@@ -153,6 +155,94 @@ func _use_guard(actor: Combatant, name: String, element: String) -> bool:
 	_report("%s 的%s触发 · 耐久%d" % [actor.display_name, name, actor.artifact_durability], _side(actor), "artifact", element)
 	return true
 
+func display_card(actor: Combatant, card: Dictionary) -> Dictionary:
+	var shown := card.duplicate(true)
+	shown["printed_cost"] = int(card["cost"])
+	shown["cost"] = actor.card_cost(card)
+	var changed_numbers := {}
+	var source := actor.snapshot()
+	var neutral := Combatant.new()
+	neutral.setup("preview", "", [], RandomNumberGenerator.new())
+	for effect: Dictionary in shown.get("effects", []):
+		if effect.get("type") != "damage": continue
+		var original := int(effect["amount"])
+		var base := original
+		if effect.has("shield_multiplier"):
+			base = mini(int(effect.get("base_cap", 50)), floori(actor.status_stacks("shield") * float(effect["shield_multiplier"])))
+		var modified: int = BattleRules.damage_breakdown(neutral, base, str(effect.get("element", card["element"])), source)["raw"]
+		if effect.has("shield_multiplier"): effect["display_amount"] = modified
+		else: effect["amount"] = modified
+		if modified != (base if effect.has("shield_multiplier") else original):
+			effect["display_color"] = "#79df8a" if modified > base else "#ff817a"
+			changed_numbers[str(modified)] = effect["display_color"]
+		_consume_attack_statuses(source)
+	shown["rich_text"] = EffectText.card_text(shown, summon_templates)
+	for effect: Dictionary in shown.get("effects", []): effect.erase("display_color")
+	shown["text"] = EffectText.card_text(shown, summon_templates)
+	for effect: Dictionary in card.get("effects", []):
+		if effect.get("type") == "summon":
+			shown["summon_hp"] = int(summon_templates[effect["summon"]]["hp"])
+			shown["printed_summon_hp"] = shown["summon_hp"]
+	if shown.has("summon_hp"):
+		var entry := artifact_entry(actor, "pendant")
+		if entry.get("trigger") == "summon":
+			for effect: Dictionary in entry.get("effects", []):
+				if effect.get("type") == "grow_summon": shown["summon_hp"] += int(effect["amount"])
+	shown["number_colors"] = changed_numbers
+	return shown
+
+func _sync_cost_auras() -> void:
+	for actor: Combatant in [player, enemy]:
+		actor.card_cost_increase = 0
+		var opponent: Combatant = enemy if actor == player else player
+		for summoned: Summon in opponent.summons:
+			if summoned != null and summoned.hp > 0: actor.card_cost_increase += summoned.enemy_cost_aura
+
+func _on_healed(owner: Combatant, actual: int) -> void:
+	if actual <= 0 or owner.hp <= 0 or phase in FINISHED_PHASES: return
+	if phase.begins_with(_side(owner) + "_") and not owner.artifact_flags.get("ally_heal", false):
+		owner.artifact_flags["ally_heal"] = true
+		_trigger_artifacts(owner, "first_ally_heal_own_turn")
+	# Snapshot the listeners before any draw/fatigue reactions. Later listeners
+	# must still be alive and mounted in the same slot when their turn arrives.
+	var listeners: Array[Dictionary] = []
+	for actor: Combatant in [player, enemy]:
+		for slot in actor.summons.size():
+			var summoned: Summon = actor.summons[slot]
+			if summoned != null and summoned.hp > 0 and not summoned.heal_effects.is_empty():
+				listeners.append({"owner":actor, "slot":slot, "summon":summoned})
+	for listener in listeners:
+		if phase in FINISHED_PHASES: break
+		var actor: Combatant = listener["owner"]
+		var summoned: Summon = listener["summon"]
+		if actor.hp <= 0 or actor.summons[int(listener["slot"])] != summoned or summoned.hp <= 0: continue
+		for effect: Dictionary in summoned.heal_effects:
+			if phase in FINISHED_PHASES: break
+			summon_triggered.emit(_side(actor), int(listener["slot"]), "on_heal", effect)
+			_resolve_effect(actor, enemy if actor == player else player, effect, summoned.element)
+
+func summon_requires_target(card: Dictionary) -> bool:
+	for effect: Dictionary in card.get("effects", []):
+		if effect.get("type") != "summon": continue
+		for entrance: Dictionary in summon_templates.get(effect["summon"], {}).get("on_spawn", []):
+			if entrance.get("target") == "selected_opponent": return true
+	return false
+
+func _living_targets(owner: Combatant) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if owner.hp > 0: result.append({"kind":"hero", "side":_side(owner)})
+	for slot in owner.summons.size():
+		var summoned: Summon = owner.summons[slot]
+		if summoned != null and summoned.hp > 0: result.append({"kind":"summon", "side":_side(owner), "slot":slot})
+	return result
+
+func _valid_enemy_selection(actor: Combatant, selection: Dictionary) -> bool:
+	var opponent: Combatant = enemy if actor == player else player
+	for candidate in _living_targets(opponent):
+		if candidate["kind"] == selection.get("kind") and selection.get("side", _side(opponent)) == _side(opponent):
+			if candidate["kind"] == "hero" or int(candidate["slot"]) == int(selection.get("slot", -1)): return true
+	return false
+
 func _on_card_played(actor: Combatant) -> void:
 	if actor.artifact_flags.get("card", false): return
 	actor.artifact_flags["card"] = true
@@ -167,6 +257,9 @@ func _on_energy_gained(actor: Combatant) -> void:
 func _on_health_lost(actor: Combatant, amount: int) -> void:
 	if amount <= 0 or actor.hp <= 0: return
 	_trigger_artifacts(actor, "health_lost")
+	if not actor.artifact_flags.get("enemy_health", false) and phase.begins_with("enemy_" if actor == player else "player_"):
+		actor.artifact_flags["enemy_health"] = true
+		_trigger_artifacts(actor, "first_health_lost_enemy_turn")
 	if not actor.artifact_flags.get("health", false) and phase.begins_with("player_" if actor == player else "enemy_"):
 		actor.artifact_flags["health"] = true
 		_trigger_artifacts(actor, "first_health_lost_own_turn")
@@ -362,6 +455,7 @@ func _start_turn(actor: Combatant) -> void:
 	actor.artifact_flags = {"card": false, "energy": false, "health": false}
 	var opposing := enemy if actor == player else player
 	opposing.artifact_flags["enemy_turn_hit"] = false
+	opposing.artifact_flags["enemy_health"] = false
 	round_number = maxi(player.own_turn_count, enemy.own_turn_count)
 	if actor == player:
 		phase = "player_turn_start"
@@ -408,6 +502,10 @@ func _trigger_summons(actor: Combatant, timing: String = "turn_start") -> void:
 				resolved["selection"] = lowest_life_target(opponent)
 			elif resolved["target"] == "highest_opponent":
 				resolved["selection"] = highest_life_target(opponent)
+			elif resolved["target"] == "random_opponent":
+				var candidates := _living_targets(opponent)
+				if candidates.is_empty(): continue
+				resolved["selection"] = candidates[rng.randi_range(0, candidates.size() - 1)]
 			elif resolved["target"] == "summon_self":
 				resolved["selection"] = {"kind": "summon", "side": _side(actor), "slot": slot}
 			summon_triggered.emit(_side(actor), slot, timing, resolved)
@@ -461,6 +559,7 @@ func highest_life_target(owner: Combatant) -> Dictionary:
 func _condition_met(effect: Dictionary, actor: Combatant, energy_snapshot: Dictionary = {}) -> bool:
 	var condition: Dictionary = effect.get("condition", {})
 	if condition.is_empty(): return true
+	if condition.get("type", "") == "hand_at_most": return actor.hand.size() <= int(condition.get("amount", 0))
 	if condition.get("type", "") == "energy_at_least":
 		var energy: Dictionary = energy_snapshot if not energy_snapshot.is_empty() else actor.energy
 		return int(energy.get(condition.get("element", ""), 0)) >= int(condition.get("amount", 0))
@@ -472,7 +571,7 @@ func card_condition_met(actor: Combatant, card: Dictionary) -> bool:
 		if effect.get("type", "") == "summon":
 			var template: Dictionary = summon_templates.get(effect.get("summon", ""), {})
 			var after_payment := actor.energy.duplicate()
-			after_payment[card["element"]] = int(after_payment[card["element"]]) - int(card["cost"])
+			after_payment[card["element"]] = int(after_payment[card["element"]]) - actor.card_cost(card)
 			for entrance in template.get("on_spawn", []):
 				if entrance.has("condition") and _condition_met(entrance, actor, after_payment): return true
 		elif effect.has("condition") and _condition_met(effect, actor):
@@ -487,7 +586,7 @@ func card_target_mode(card: Dictionary) -> String:
 			return "ally_summon"
 		if effect["type"] == "damage":
 			if effect.get("scope", "") == "all_enemy_summons": return "enemy_summons"
-			if effect.get("target", "") == "opponent" and effect.get("scope", "single") == "single": continue
+			if effect.get("target", "") in ["opponent", "random_opponent", "lowest_opponent", "highest_opponent"] and effect.get("scope", "single") == "single": continue
 			return "damage"
 	return "none"
 
@@ -498,7 +597,7 @@ func valid_card_target(actor: Combatant, card: Dictionary, selection: Dictionary
 	var kind := str(selection.get("kind", ""))
 	var slot := int(selection.get("slot", -1))
 	if mode == "slot":
-		return kind == "slot" and slot >= 0 and slot < actor.summons.size() and actor.summons[slot] == null
+		return kind == "slot" and slot >= 0 and slot < actor.summons.size() and actor.summons[slot] == null and (not summon_requires_target(card) or _valid_enemy_selection(actor, selection.get("entrance_target", {})))
 	if mode in ["ally_summon", "enemy_summons"]:
 		var owner: Combatant = actor if mode == "ally_summon" else enemy if actor == player else player
 		return kind == "summon" and slot >= 0 and slot < owner.summons.size() and owner.summons[slot] != null and str(selection.get("side", _side(owner))) == _side(owner)
@@ -531,6 +630,8 @@ func _damage_plan(actor: Combatant, opponent: Combatant, effect: Dictionary, car
 		if selection.get("kind", "hero") != "summon" or (int(selection.get("slot", -1)) >= 0 and int(selection["slot"]) < owner.summons.size() and owner.summons[int(selection["slot"])] != null):
 			targets.append({"owner": owner, "kind": selection.get("kind", "hero"), "slot": int(selection.get("slot", -1))})
 	var amount := int(effect["amount"])
+	if effect.has("shield_multiplier"):
+		amount = mini(int(effect.get("base_cap", 50)), floori(actor.status_stacks("shield") * float(effect["shield_multiplier"])))
 	var element := str(effect.get("element", card_element))
 	for hit in targets:
 		var owner: Combatant = hit["owner"]
@@ -623,10 +724,13 @@ func _play_card(actor: Combatant, target: Combatant, index: int, selection: Dict
 	hand_card_removed.emit(_side(actor), card_id, index, "play")
 	actor.hand.remove_at(index)
 	var pre_payment_energy := actor.energy.duplicate()
-	actor.lose_energy(card["element"], int(card["cost"]))
-	_report("%s 使用「%s」" % [actor.display_name, card["name"]], _side(actor), "play", card["element"], int(card["cost"]))
+	var paid_cost := actor.card_cost(card)
+	actor.lose_energy(card["element"], paid_cost)
+	_report("%s 使用「%s」" % [actor.display_name, card["name"]], _side(actor), "play", card["element"], paid_cost)
 	_trigger_bleed(actor)
-	if phase not in FINISHED_PHASES: _on_card_played(actor)
+	if phase not in FINISHED_PHASES:
+		_on_card_played(actor)
+		if paid_cost == 0: _trigger_artifacts(actor, "zero_cost_card")
 	_resolve_sequence(actor, target, card["effects"], card["element"], selection, pre_payment_energy, func():
 		actor.discard_pile.append(card_id)
 		played_cards += 1
@@ -697,7 +801,7 @@ func _choose_contemplation(actor: Combatant, candidates: Array) -> int:
 	var best_score := -INF
 	for i in candidates.size():
 		var card: Dictionary = cards[candidates[i]]
-		var score := 1.0 - float(card["cost"]) * 0.15
+		var score := 1.0 - float(actor.card_cost(card)) * 0.15
 		for effect in card["effects"]:
 			match str(effect["type"]):
 				"gain_energy", "gain_random_energy", "draw", "contemplate", "generate_card": score += 2.0
@@ -719,6 +823,11 @@ func _card_candidates(actor: Combatant, card: Dictionary) -> Array[Dictionary]:
 	var candidates: Array[Dictionary] = []
 	var mode := card_target_mode(card)
 	if mode == "none": return [{}]
+	if mode == "slot" and summon_requires_target(card):
+		for slot in actor.summons.size():
+			if actor.summons[slot] != null: continue
+			for aim in _living_targets(opponent): candidates.append({"kind":"slot", "slot":slot, "entrance_target":aim})
+		return candidates
 	if mode == "damage":
 		for side in damage_target_sides(actor, card):
 			var owner := player if side == "player" else enemy
@@ -742,10 +851,19 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 			if effect.get("target", "") == "self": resolved_selection = {"kind": "hero", "side": _side(actor)}
 			elif effect.get("target", "") == "opponent": resolved_selection = {"kind": "hero", "side": _side(opponent)}
 			if effect.get("target", "") == "random_opponent":
-				var candidates := _card_candidates(actor, {"effects":[{"type":"damage"}]})
-				if candidates.is_empty(): return
-				resolved_selection = candidates[rng.randi_range(0, candidates.size() - 1)]
+				# A card's selected first hit must never pin a later random hit.
+				# Only a summon presenter's preselected effect owns its exact aim.
+				if effect.has("selection"): resolved_selection = effect["selection"]
+				else:
+					var candidates := _living_targets(opponent)
+					if candidates.is_empty(): return
+					resolved_selection = candidates[rng.randi_range(0, candidates.size() - 1)]
+					if not _valid_enemy_selection(actor, resolved_selection): return
+					random_hit_targeted.emit(_side(actor), attack_element, resolved_selection)
 			var plan := _damage_plan(actor, opponent, effect, card_element, resolved_selection)
+			# Consume only the attack states used by this segment, before reactions
+			# can add states intended for the next attack. Area hits share the plan.
+			if not plan.is_empty(): _consume_attack_statuses(actor)
 			var hits: Array[Dictionary] = []
 			for hit in plan:
 				var dealt: int
@@ -755,7 +873,6 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 					dealt = _apply_summon_hit(actor, hit["owner"], int(hit["slot"]), int(hit["raw"]), attack_element)
 				hits.append({"side": _side(hit["owner"]), "kind": hit["kind"], "slot": int(hit.get("slot", -1)), "amount": dealt})
 			damage_segment_resolved.emit(hits)
-			if not plan.is_empty(): _consume_attack_statuses(actor)
 			_check_finish()
 		"summon":
 			var slot := int(selection["slot"])
@@ -763,6 +880,7 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 			var summoned := Summon.new()
 			summoned.setup(template)
 			actor.summons[slot] = summoned
+			_sync_cost_auras()
 			_trigger_artifacts(actor, "summon", {"kind": "summon", "side": _side(actor), "slot": slot})
 			_report("%s 在槽位 %d 召唤%s" % [actor.display_name, slot + 1, summoned.display_name], _side(actor), "summon", summoned.element, 1)
 			summon_event.emit(_side(actor), slot, "spawn", summoned.element, 1, "")
@@ -772,6 +890,7 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 				var resolved: Dictionary = entrance.duplicate(true)
 				if resolved.get("target", "") == "lowest_opponent": resolved["selection"] = lowest_life_target(opponent)
 				elif resolved.get("target", "") == "highest_opponent": resolved["selection"] = highest_life_target(opponent)
+				elif resolved.get("target") == "selected_opponent": resolved["selection"] = selection.get("entrance_target", {})
 				summon_triggered.emit(_side(actor), slot, "on_spawn", resolved)
 				_resolve_effect(actor, opponent, resolved, summoned.element, resolved.get("selection", {}))
 		"heal_selected":
@@ -780,20 +899,39 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 			resolved["target"] = "self"
 			_resolve_effect(actor, opponent, resolved, card_element, selection)
 		"heal":
-			var actual := mini(amount, target.max_hp - target.hp)
+			if target.hp <= 0: return
+			var actual := maxi(0, mini(amount, target.max_hp - target.hp))
 			target.hp += actual
 			_report("%s 恢复 %d 生命" % [target.display_name, actual], _side(target), "heal", card_element, actual)
+			_on_healed(target, actual)
 		"heal_summon", "grow_summon":
 			var selected_side := str(selection.get("side", _side(actor)))
 			var owner := player if selected_side == "player" else enemy
 			var selected_slot := int(selection.get("slot", -1))
 			if selected_slot < 0 or selected_slot >= owner.summons.size() or owner.summons[selected_slot] == null: return
 			var selected: Summon = owner.summons[selected_slot]
+			if selected.hp <= 0: return
 			if effect["type"] == "grow_summon": selected.max_hp += amount
 			var healed := mini(amount, selected.max_hp - selected.hp)
 			selected.hp += healed
 			_report("%s %s %d 点生命" % [selected.display_name, "增加" if effect["type"] == "grow_summon" else "恢复", healed], _side(owner), "summon_heal", card_element, healed)
 			summon_event.emit(_side(owner), selected_slot, "heal", card_element, healed, "")
+			if effect["type"] == "heal_summon": _on_healed(owner, healed)
+		"lose_qi":
+			var lost := mini(target.qi, amount)
+			target.qi -= lost
+			_report("%s 失去%d点真气" % [target.display_name, lost], _side(target), "qi_loss", "", lost)
+		"shield_heal":
+			var shield := actor.status_stacks("shield")
+			actor.remove_status("shield")
+			_resolve_effect(actor, opponent, {"type":"heal", "target":"self", "amount":mini(shield, amount)}, card_element)
+		"heal_lowest_ally":
+			var aim := lowest_life_target(actor)
+			_resolve_effect(actor, opponent, {"type":"heal_selected", "amount":amount}, card_element, aim)
+		"grow_all_summons":
+			for slot in actor.summons.size():
+				if actor.summons[slot] != null and actor.summons[slot].hp > 0:
+					_resolve_effect(actor, opponent, {"type":"grow_summon", "amount":amount}, card_element, {"kind":"summon", "side":_side(actor), "slot":slot})
 		"draw":
 			for i in amount:
 				if phase in FINISHED_PHASES:
@@ -868,8 +1006,8 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 
 func apply_damage(source: Combatant, target: Combatant, base_amount: int, element: String) -> int:
 	var breakdown := BattleRules.damage_breakdown(target, base_amount, element, source)
-	var dealt := _apply_hero_damage(source, target, breakdown, element)
 	_consume_attack_statuses(source)
+	var dealt := _apply_hero_damage(source, target, breakdown, element)
 	_check_finish()
 	return dealt
 
@@ -904,12 +1042,15 @@ func apply_summon_damage(source: Combatant, owner: Combatant, slot: int, base_am
 	if slot < 0 or slot >= owner.summons.size() or owner.summons[slot] == null:
 		return 0
 	var summoned: Summon = owner.summons[slot]
-	var dealt := _apply_summon_hit(source, owner, slot, BattleRules.summon_damage(base_amount, source, summoned.element, element), element)
+	var raw := BattleRules.summon_damage(base_amount, source, summoned.element, element)
 	_consume_attack_statuses(source)
+	var dealt := _apply_summon_hit(source, owner, slot, raw, element)
 	return dealt
 
 func _apply_summon_hit(source: Combatant, owner: Combatant, slot: int, raw: int, element: String) -> int:
+	if slot < 0 or slot >= owner.summons.size() or owner.summons[slot] == null: return 0
 	var summoned: Summon = owner.summons[slot]
+	if summoned.hp <= 0: return 0
 	var dealt := mini(summoned.hp, raw)
 	summoned.hp -= dealt
 	if source == player and owner != player:
@@ -918,8 +1059,15 @@ func _apply_summon_hit(source: Combatant, owner: Combatant, slot: int, raw: int,
 	var note := " · " + matchup if matchup != "" else ""
 	_report("%s 受到 %d 点%s伤害%s" % [summoned.display_name, dealt, BattleRules.element_name(element), note], _side(owner), "summon_damage", element, dealt)
 	summon_event.emit(_side(owner), slot, "damage", element, dealt, matchup)
-	if summoned.hp <= 0:
+	var destroyed := summoned.hp <= 0
+	if destroyed:
 		owner.summons[slot] = null
+		_sync_cost_auras()
+	if dealt > 0 and owner.hp > 0 and phase not in FINISHED_PHASES: _trigger_artifacts(owner, "ally_summon_hit")
+	if destroyed:
+		_trigger_artifacts(owner, "ally_summon_death")
+		var opponent: Combatant = enemy if owner == player else player
+		if opponent.hp > 0: _trigger_artifacts(opponent, "enemy_summon_death")
 		_report("%s 被摧毁，槽位 %d 空出" % [summoned.display_name, slot + 1], _side(owner), "summon_destroy", element)
 		summon_event.emit(_side(owner), slot, "destroy", element, 0, "")
 	return dealt
@@ -941,12 +1089,15 @@ func _end_turn(actor: Combatant) -> void:
 		actor.hp += healed
 		if healed > 0:
 			_report("%s 再生，恢复 %d 生命" % [actor.display_name, healed], _side(actor), "heal", "wood", healed)
+			_on_healed(actor, healed)
 		actor.decay_status("regen")
 	actor.decay_status("weak")
 	actor.decay_status("vulnerable")
 	actor.decay_status("charge")
 	actor.decay_status("tenacity")
 	actor.tick_status_durations()
+	_trigger_artifacts(actor, "turn_end")
+	if phase in FINISHED_PHASES: return
 	await _trigger_summons(actor, "turn_end")
 	if generation != battle_generation or phase in ["menu", "victory", "defeat", "tie"]:
 		return
@@ -1030,7 +1181,7 @@ func _choose_enemy_action() -> Dictionary:
 	var best_score := 3.0
 	for i in enemy.hand.size():
 		var card: Dictionary = cards[enemy.hand[i]]
-		var needed := maxi(0, int(card["cost"]) - int(enemy.energy[card["element"]]))
+		var needed := maxi(0, enemy.card_cost(card) - int(enemy.energy[card["element"]]))
 		if not enemy.can_pay(card) and (needed <= 0 or needed > enemy.qi or enemy.status_stacks("lock", card["element"]) > 0): continue
 		var candidates := _card_candidates(enemy, card)
 		for selection in candidates:

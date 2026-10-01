@@ -72,10 +72,20 @@ func test() -> void:
 	var legacy := EndlessRun.new(manager.cards, manager.artifacts, manager.enemies, run.path)
 	check(legacy.load_run() and not legacy.notice.is_empty(), "legacy live battle migrates with an explanation")
 	check(legacy.state["owned_cards"] == assets and legacy.opponent() == foe and legacy.state["battle"]["commands"].is_empty() and legacy.state["battle"]["choices"].is_empty(), "migration preserves assets and same opponent while restarting only the old battle")
-	check(FileAccess.file_exists(run.path + ".pre-qi") and JSON.parse_string(FileAccess.get_file_as_string(run.path + ".pre-qi"))["run"]["battle"]["commands"].size() == 1, "legacy action journal is backed up before migration")
+	check(FileAccess.file_exists(run.path + ".rules-v1") and JSON.parse_string(FileAccess.get_file_as_string(run.path + ".rules-v1"))["run"]["battle"]["commands"].size() == 1, "legacy action journal is backed up before migration")
 	var reopened := EndlessRun.new(manager.cards, manager.artifacts, manager.enemies, run.path)
 	check(reopened.load_run() and reopened.notice.is_empty() and reopened.state["rules_version"] == EndlessRun.RULES_VERSION, "migration is saved and runs only once")
-	DirAccess.remove_absolute(run.path + ".pre-qi")
+	# Version 2 journals can diverge when the content pool changes generated cards.
+	run.state = reopened.state.duplicate(true)
+	run.state["rules_version"] = 2
+	run.state["battle"]["commands"] = [{"kind":"end_turn"}]
+	run._commit(run.state.duplicate(true))
+	var expanded := EndlessRun.new(manager.cards, manager.artifacts, manager.enemies, run.path)
+	check(expanded.load_run() and expanded.state["battle"]["commands"].is_empty() and expanded.state["owned_cards"] == assets and expanded.opponent() == foe, "expansion migration preserves physical assets and the same opponent")
+	check(FileAccess.file_exists(run.path + ".rules-v2"), "version 2 has its own recoverable journal backup")
+	DirAccess.remove_absolute(run.path + ".rules-v2")
+
+	DirAccess.remove_absolute(run.path + ".rules-v1")
 	DirAccess.remove_absolute(run.path)
 	manager.queue_free()
 	await process_frame

@@ -2708,5 +2708,441 @@
         ]
       }
     ]
+  },
+  {
+    "id": "metal_four_thunders",
+    "name": "四象鸣雷",
+    "element": "metal",
+    "cost": 4,
+    "text": "",
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 10,
+        "element": "metal",
+        "target": "random_opponent"
+      },
+      {
+        "type": "damage",
+        "amount": 10,
+        "element": "metal",
+        "target": "random_opponent"
+      },
+      {
+        "type": "damage",
+        "amount": 10,
+        "element": "metal",
+        "target": "random_opponent"
+      },
+      {
+        "type": "damage",
+        "amount": 10,
+        "element": "metal",
+        "target": "random_opponent"
+      }
+    ],
+    "upgrades": [
+      {
+        "cost": 4,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 12,
+            "element": "metal",
+            "target": "random_opponent"
+          },
+          {
+            "type": "damage",
+            "amount": 12,
+            "element": "metal",
+            "target": "random_opponent"
+          },
+          {
+            "type": "damage",
+            "amount": 12,
+            "element": "metal",
+            "target": "random_opponent"
+          },
+          {
+            "type": "damage",
+            "amount": 12,
+            "element": "metal",
+            "target": "random_opponent"
+          }
+        ]
+      },
+      {
+        "cost": 4,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 14,
+            "element": "metal",
+            "target": "random_opponent"
+          },
+          {
+            "type": "damage",
+            "amount": 14,
+            "element": "metal",
+            "target": "random_opponent"
+          },
+          {
+            "type": "damage",
+            "amount": 14,
+            "element": "metal",
+            "target": "random_opponent"
+          },
+          {
+            "type": "damage",
+            "amount": 14,
+            "element": "metal",
+            "target": "random_opponent"
+          }
+        ]
+      }
+    ],
+    "art_prompt": "Exactly four independent golden lightning bolts striking four scattered ancient stone targets in a moonlit mountain courtyard"
+  },
+  {
+    "id": "metal_rift_mantis_card",
+    "name": "裂锋螳",
+    "element": "metal",
+    "cost": 4,
+    "text": "",
+    "effects": [
+      {
+        "type": "summon",
+        "summon": "metal_rift_mantis"
+      }
+    ],
+    "upgrades": [
+      {
+        "cost": 4,
+        "effects": [
+          {
+            "type": "summon",
+            "summon": "metal_rift_mantis__1"
+          }
+        ]
+      },
+      {
+        "cost": 4,
+        "effects": [
+          {
+            "type": "summon",
+            "summon": "metal_rift_mantis__2"
+          }
+        ]
+      }
+    ],
+    "art_prompt": "A living elegant Chinese spirit praying mantis with silver and gold blade-shaped forearms and jade eyes, poised to slash, full body, insect anatomy and ornate natural armor"
+  },
+  {
+    "id": "water_branch_tide",
+    "name": "沧浪生枝",
+    "element": "water",
+    "cost": 4,
+    "text": "",
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 32,
+        "element": "water"
+      },
+      {
+        "type": "gain_energy",
+        "target": "self",
+        "amount": 1,
+        "element": "wood"
+      }
+    ],
+    "upgrades": [
+      {
+        "cost": 4,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 36,
+            "element": "water"
+          },
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "amount": 1,
+            "element": "wood"
+          }
+        ]
+      },
+      {
+        "cost": 4,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 36,
+            "element": "water"
+          },
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "amount": 2,
+            "element": "wood"
+          }
+        ]
+      }
+    ],
+    "art_prompt": "A single sweeping crescent of deep blue water nourishing a luminous living green branch above an ancient mountain stream, one powerful water-blade attack"
+  },
+  {
+    "id": "water_breath_newt_card",
+    "name": "噬息玄鲵",
+    "element": "water",
+    "cost": 5,
+    "text": "",
+    "effects": [
+      {
+        "type": "summon",
+        "summon": "water_breath_newt"
+      }
+    ],
+    "upgrades": [
+      {
+        "cost": 5,
+        "effects": [
+          {
+            "type": "summon",
+            "summon": "water_breath_newt__1"
+          }
+        ]
+      },
+      {
+        "cost": 5,
+        "effects": [
+          {
+            "type": "summon",
+            "summon": "water_breath_newt__2"
+          }
+        ]
+      }
+    ],
+    "art_prompt": "An ancient azure-black Chinese giant salamander spirit with translucent flowing fins, inhaling a thin silver breath mist, luminous blue eyes, graceful wide mouth, full body"
+  },
+  {
+    "id": "wood_five_banyan_card",
+    "name": "五蕴灵榕",
+    "element": "wood",
+    "cost": 4,
+    "text": "",
+    "effects": [
+      {
+        "type": "summon",
+        "summon": "wood_five_banyan"
+      }
+    ],
+    "upgrades": [
+      {
+        "cost": 4,
+        "effects": [
+          {
+            "type": "summon",
+            "summon": "wood_five_banyan__1"
+          }
+        ]
+      },
+      {
+        "cost": 4,
+        "effects": [
+          {
+            "type": "summon",
+            "summon": "wood_five_banyan__2"
+          }
+        ]
+      }
+    ],
+    "art_prompt": "A living miniature sacred banyan tree spirit, intricate twisting jade roots forming feet, emerald crown and five subtle colored luminous seeds, ancient gentle face in its trunk, full body"
+  },
+  {
+    "id": "wood_dew_bloom_card",
+    "name": "含露花灵",
+    "element": "wood",
+    "cost": 4,
+    "text": "",
+    "effects": [
+      {
+        "type": "summon",
+        "summon": "wood_dew_bloom"
+      }
+    ],
+    "upgrades": [
+      {
+        "cost": 4,
+        "effects": [
+          {
+            "type": "summon",
+            "summon": "wood_dew_bloom__1"
+          }
+        ]
+      },
+      {
+        "cost": 3,
+        "effects": [
+          {
+            "type": "summon",
+            "summon": "wood_dew_bloom__2"
+          }
+        ]
+      }
+    ],
+    "art_prompt": "A graceful sentient jade-green bellflower spirit with pearl-like dew, curling leaves forming a delicate body and feet, luminous soft emerald petals, botanical creature, full body"
+  },
+  {
+    "id": "fire_sky_burn",
+    "name": "焚天诀",
+    "element": "fire",
+    "cost": 5,
+    "text": "",
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 20,
+        "element": "fire",
+        "scope": "all_opponents"
+      }
+    ],
+    "upgrades": [
+      {
+        "cost": 5,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 25,
+            "element": "fire",
+            "scope": "all_opponents"
+          }
+        ]
+      },
+      {
+        "cost": 5,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 30,
+            "element": "fire",
+            "scope": "all_opponents"
+          }
+        ]
+      }
+    ],
+    "art_prompt": "A vast red and amber firestorm curling across several ancient stone effigies in an abandoned Chinese mountain courtyard, powerful continuous wave of fire, cinematic dark red sky"
+  },
+  {
+    "id": "fire_crimson_clam_card",
+    "name": "赤霞蜃",
+    "element": "fire",
+    "cost": 4,
+    "text": "",
+    "effects": [
+      {
+        "type": "summon",
+        "summon": "fire_crimson_clam"
+      }
+    ],
+    "upgrades": [
+      {
+        "cost": 4,
+        "effects": [
+          {
+            "type": "summon",
+            "summon": "fire_crimson_clam__1"
+          }
+        ]
+      },
+      {
+        "cost": 4,
+        "effects": [
+          {
+            "type": "summon",
+            "summon": "fire_crimson_clam__2"
+          }
+        ]
+      }
+    ],
+    "art_prompt": "A mythical crimson giant clam-dragon spirit with lacquer-red ornate shell and small dragon head, glowing ember pearl within and fiery coral whiskers, emits vermilion mist, full body"
+  },
+  {
+    "id": "earth_stacked_peak",
+    "name": "叠岳击",
+    "element": "earth",
+    "cost": 3,
+    "text": "",
+    "effects": [
+      {
+        "type": "damage",
+        "element": "earth",
+        "amount": 0,
+        "shield_multiplier": 1,
+        "base_cap": 50
+      }
+    ],
+    "upgrades": [
+      {
+        "cost": 3,
+        "effects": [
+          {
+            "type": "damage",
+            "element": "earth",
+            "amount": 0,
+            "shield_multiplier": 1.25,
+            "base_cap": 50
+          }
+        ]
+      },
+      {
+        "cost": 3,
+        "effects": [
+          {
+            "type": "damage",
+            "element": "earth",
+            "amount": 0,
+            "shield_multiplier": 1.5,
+            "base_cap": 50
+          }
+        ]
+      }
+    ],
+    "art_prompt": "A massive layered rock fist formed from overlapping golden-brown protective stone slabs, striking a single mountain pillar, earthen magic shield becoming a powerful impact"
+  },
+  {
+    "id": "earth_law_lion_card",
+    "name": "镇法石猊",
+    "element": "earth",
+    "cost": 4,
+    "text": "",
+    "effects": [
+      {
+        "type": "summon",
+        "summon": "earth_law_lion"
+      }
+    ],
+    "upgrades": [
+      {
+        "cost": 4,
+        "effects": [
+          {
+            "type": "summon",
+            "summon": "earth_law_lion__1"
+          }
+        ]
+      },
+      {
+        "cost": 4,
+        "effects": [
+          {
+            "type": "summon",
+            "summon": "earth_law_lion__2"
+          }
+        ]
+      }
+    ],
+    "art_prompt": "A sentient Chinese guardian lion carved from weathered ochre stone with amber eyes, cloud-scroll mane and heavy paws, a floating restraint seal above its back, full body"
   }
 ]

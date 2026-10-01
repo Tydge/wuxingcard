@@ -13,7 +13,7 @@ func check(condition: bool, message: String) -> void:
 func run() -> void:
 	var manager := BattleManager.new()
 	root.add_child(manager)
-	check(manager.artifacts.size() == 45, "five artifacts in each of three slots")
+	check(manager.artifacts.size() == 90, "ten artifacts in each of three slots, with three grades")
 	var ids: Array[String] = []
 	for id in manager.cards:
 		if int(manager.cards[id].get("level", 0)) != 0: continue

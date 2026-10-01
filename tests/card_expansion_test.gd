@@ -98,17 +98,21 @@ func run() -> void:
 	manager.enemy.summons[0] = Summon.new()
 	manager.enemy.summons[0].setup(manager.summon_templates["metal_furnace"])
 	check(cast("fire_burning_field", {"kind":"hero"}) and manager.phase == "victory" and manager.enemy.summons[0] == null, "lethal area damage still resolves the summons")
+	var quick := "--quick" in OS.get_cmdline_user_args()
+	var sample_count := 12 if quick else 400
+	var battle_count := 2 if quick else 30
 	var seen := {}
-	for seed_value in 400:
+	for seed_value in sample_count:
 		manager.start_battle("ember", "random", seed_value)
 		for actor in [manager.player, manager.enemy]:
 			check(actor.max_hp == 80 and actor.hp == 80, "test mode starts both heroes at 80 / 80")
 			var deck: Array = actor.hand + actor.draw_pile + actor.discard_pile
 			check(manager.valid_random_deck(deck), "random deck size, copy cap and cost guardrails")
 			for id in deck: seen[id] = true
-	check(seen.size() == ContentCatalog.base_entries(manager.cards).size(), "random sampling includes every current card")
+	if not quick:
+		check(seen.size() == ContentCatalog.base_entries(manager.cards).size(), "random sampling includes every current card")
 	var first := manager.player.hand + manager.player.draw_pile
-	manager.start_battle("ember", "random", 399)
+	manager.start_battle("ember", "random", sample_count - 1)
 	check(first == manager.player.hand + manager.player.draw_pile, "seeded random deck generation is reproducible")
 	var too_expensive: Array[String] = []
 	for id in manager.cards:
@@ -116,7 +120,7 @@ func run() -> void:
 		for copy in 3:
 			if too_expensive.size() < 25: too_expensive.append(id)
 	check(not manager.valid_random_deck(too_expensive), "high-cost decks are rejected")
-	for seed_value in 30:
+	for seed_value in battle_count:
 		manager.start_battle("ember", "random", seed_value + 700)
 		var steps := 0
 		while manager.phase not in BattleManager.FINISHED_PHASES and steps < 1000:
@@ -139,5 +143,5 @@ func run() -> void:
 			for actor in [manager.player,manager.enemy]:
 				check(actor.hp >= 0 and actor.hp <= 80, "random battle preserves eighty-point HP bounds")
 		check(steps < 1000, "random battle completes: %d" % seed_value)
-	print("Card expansion test: ten spells, area damage, energy events, 800 random decks and 30 complete random battles; %d failures" % failures)
+	print("Card expansion test: spells, area damage, energy events, %d random decks and %d complete random battles; %d failures" % [sample_count * 2, battle_count, failures])
 	quit(1 if failures > 0 else 0)

@@ -35,7 +35,7 @@ func run() -> void:
     manager = BattleManager.new()
     manager.random_artifacts_enabled = false
     root.add_child(manager)
-    check(manager.cards.size() == 180 and manager.summon_templates.size() == 60, "new pool contains 60 cards and 20 summons")
+    check(manager.cards.size() == 210 and manager.summon_templates.size() == 78, "new pool contains 70 cards and 26 summons")
 
     prepare()
     summon(manager.player, 0, "earth_stele")

@@ -50,7 +50,7 @@ func run_tests() -> void:
 	var victories := 0
 	for enemy_id in ["ember", "tide", "harmony"]:
 		for deck_id in ["balanced", "flame", "tide"]:
-			for seed_value in range(10):
+			for seed_value in range(1 if "--quick" in OS.get_cmdline_user_args() else 10):
 				manager.start_battle(enemy_id, deck_id, seed_value + 100)
 				var steps := 0
 				while manager.phase not in BattleManager.FINISHED_PHASES and steps < 1000:

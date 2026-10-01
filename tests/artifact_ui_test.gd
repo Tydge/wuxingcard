@@ -22,7 +22,7 @@ func run() -> void:
 	menu.collection_type = "artifacts"
 	menu.selected_artifact_slot = "guard"
 	menu._build_collection()
-	check(menu.filtered_cards.size() == 5, "collection filters guard artifacts")
+	check(menu.filtered_cards.size() == 10, "collection filters guard artifacts")
 	var compact := ArtifactView.new()
 	compact.configure(manager.artifacts["metal_silk_robe"], Vector2(156, 218))
 	root.add_child(compact)
@@ -37,7 +37,7 @@ func run() -> void:
 	var workshop: DeckWorkshop = menu.workshop
 	workshop._open_editor({})
 	workshop._open_artifacts({})
-	check(workshop.view_mode == "artifacts" and workshop._artifact_entries().size() == 15, "deck workshop opens artifact loadout")
+	check(workshop.view_mode == "artifacts" and workshop._artifact_entries().size() == 30, "deck workshop opens artifact loadout")
 	var row: ArtifactLoadoutRow = workshop.artifact_rows["implement"]
 	var drag_data := {"kind": "artifact", "slot": "implement", "id": "metal_thunder_ruler"}
 	check(row._can_drop_data(Vector2.ZERO, drag_data), "matching artifact can be dropped into its slot")

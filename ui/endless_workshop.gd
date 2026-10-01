@@ -41,7 +41,22 @@ func _editor_heading() -> void:
 	else:
 		_button(content, "卡牌", Rect2(355, 63, 132, 58), func(): _build_editor()).disabled = view_mode == "editor"
 		_button(content, "法宝", Rect2(503, 63, 132, 58), func(): selected_element = "all"; _build_artifact_editor()).disabled = view_mode == "artifacts"
-		_text(content, "灵钱 %d" % int(run.state["gold"]), Rect2(700, 73, 400, 36), 24, GOLD)
+		var wallet := HBoxContainer.new()
+		wallet.name = "SpiritMoney"
+		wallet.position = Vector2(700, 73)
+		wallet.size = Vector2(400, 36)
+		wallet.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		wallet.tooltip_text = "灵钱"
+		wallet.add_theme_constant_override("separation", 8)
+		content.add_child(wallet)
+		var coin := TextureRect.new()
+		coin.texture = preload("res://assets/ui/spirit_coin.svg")
+		coin.custom_minimum_size = Vector2(28, 28)
+		coin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		coin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		coin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		wallet.add_child(coin)
+		_text(wallet, str(int(run.state["gold"])), Rect2(0, 0, 0, 36), 24, GOLD)
 	_button(content, "返回山门" if initial else "收起行囊", Rect2(1340, 64, 180, 58), func(): back_requested.emit())
 
 func _editor_identity() -> void:

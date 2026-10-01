@@ -36,7 +36,7 @@ func run() -> void:
 	manager = BattleManager.new()
 	manager.random_artifacts_enabled = false
 	root.add_child(manager)
-	check(manager.cards.size() == 180 and manager.summon_templates.size() == 60 and manager.artifacts.size() == 45, "all 75 families contain three distinct versions")
+	check(manager.cards.size() == 210 and manager.summon_templates.size() == 78 and manager.artifacts.size() == 90, "all 100 families contain three distinct versions")
 	check(manager.cards["water_spring_card"]["text"] == "回合开始：召唤者获得1点木能量。", "spring description names the actual energy recipient")
 	check(manager.cards["water_spring_card__1"]["text"] == "回合开始：召唤者获得1点木能量，恢复2点生命。", "spring upgrades share concise caster wording")
 	check(manager.cards["water_spring_card__2"]["text"] == "回合开始：召唤者获得1点木能量，恢复4点生命。", "spring second upgrade uses the same format")
@@ -156,7 +156,7 @@ func run() -> void:
 	check(not saved.has("error") and store.find_deck("upgrades")["cards"] == saved["cards"] and store.find_deck("upgrades")["artifacts"]["implement"] == "metal_thunder_ruler__2", "grades persist for cards and artifacts")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(store.path))
 	# Exercise upgrades together with every artifact slot and the actual enemy AI.
-	for seed_value in 12:
+	for seed_value in (2 if "--quick" in OS.get_cmdline_user_args() else 12):
 		manager.interactive_choices = false
 		manager.start_battle("ember", "random", 3000 + seed_value)
 		for actor in [manager.player, manager.enemy]:
@@ -184,5 +184,5 @@ func run() -> void:
 		check(manager.phase in BattleManager.FINISHED_PHASES and manager.pending_choice.is_empty(), "complete upgraded battle with AI and artifacts: " + str(seed_value))
 	manager.queue_free()
 	await process_frame
-	print("Upgrade rules: all 180 cards and 45 artifacts, choices, bleeding, generation, cooldown, durability and persistence; %d failures" % failures)
+	print("Upgrade rules: all 210 cards and 90 artifacts, choices, bleeding, generation, cooldown, durability and persistence; %d failures" % failures)
 	quit(1 if failures else 0)

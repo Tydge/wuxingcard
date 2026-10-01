@@ -158,7 +158,7 @@ func run_test() -> void:
 	check(screen.view == "shop" and screen.shop_buttons.size() == 7, "shop presents five cards and two relics")
 	await shot("shop")
 	await press(screen.item_views[0])
-	check(screen.modal != null and screen.action_button.text == "购买   ·   30 灵钱", "shop inspection displays the real purchase cost")
+	check(screen.modal != null and screen.action_button.get_meta("currency_amount", -1) == 30 and screen.action_button.icon != null and not screen.action_button.text.contains("灵钱"), "shop inspection displays the real purchase cost")
 	await press(screen.action_button)
 	check(ui.endless.state["owned_cards"].size() == 16 and ui.endless.state["deck"].size() == 15 and ui.endless.state["gold"] == 70, "purchase goes to warehouse once without changing the deck")
 	check(screen.shop_buttons[0].disabled, "purchased offer visibly sells out")

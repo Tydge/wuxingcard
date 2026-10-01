@@ -12,6 +12,7 @@ var max_hp := 100
 var hp := 100
 var energy: Dictionary = {}
 var qi := 3
+var card_cost_increase := 0
 var draw_pile: Array[String] = []
 var initial_deck: Array[String] = []
 var hand: Array[String] = []
@@ -32,6 +33,7 @@ func setup(new_id: String, new_name: String, deck: Array, random: RandomNumberGe
 	hp = max_hp
 	fatigue_level = 0
 	qi = 3
+	card_cost_increase = 0
 	artifacts = {"implement": "", "guard": "", "pendant": ""}
 	artifact_resistances.clear()
 	artifact_durability = 0
@@ -113,16 +115,19 @@ func tick_status_durations() -> void:
 		if int(statuses[i]["stacks"]) <= 0 or (statuses[i]["id"] not in NO_DURATION_STATUSES and int(statuses[i]["turns"]) <= 0):
 			statuses.remove_at(i)
 
+func card_cost(card: Dictionary) -> int:
+	return maxi(0, int(card["cost"]) + card_cost_increase)
+
 func can_pay(card: Dictionary) -> bool:
 	var element: String = card["element"]
-	if int(energy[element]) < int(card["cost"]) or status_stacks("lock", element) > 0:
+	if int(energy[element]) < card_cost(card) or status_stacks("lock", element) > 0:
 		return false
 	for effect in card["effects"]:
 		if effect["type"] == "summon" and first_free_summon_slot() < 0:
 			return false
 		if effect["type"] == "convert_energy" and effect.get("target", "self") == "self":
 			var from_element: String = effect["from"]
-			var paid_from := int(card["cost"]) if from_element == element else 0
+			var paid_from := card_cost(card) if from_element == element else 0
 			if int(energy[from_element]) - paid_from < int(effect["amount"]):
 				return false
 	return true
@@ -147,7 +152,7 @@ func lose_energy(element: String, amount: int) -> int:
 
 func snapshot() -> Combatant:
 	var copy := Combatant.new()
-	for property in ["id", "display_name", "max_hp", "hp", "qi", "fatigue_level", "artifact_durability", "artifact_ready_turn", "own_turn_count"]:
+	for property in ["id", "display_name", "max_hp", "hp", "qi", "card_cost_increase", "fatigue_level", "artifact_durability", "artifact_ready_turn", "own_turn_count"]:
 		copy.set(property, get(property))
 	for property in ["energy", "artifacts", "artifact_resistances", "artifact_flags"]:
 		copy.set(property, get(property).duplicate(true))

@@ -11,7 +11,10 @@ static func describe(effects: Array, context: String = "hero") -> String:
 		var count := 1
 		while i + count < effects.size() and effects[i + count] == effect: count += 1
 		var sentence := single(effect, context).trim_suffix("。")
-		if count > 1: sentence += {2:"两次", 3:"三次"}.get(count, "%d次" % count)
+		if count > 1:
+			if effect.get("type") == "damage" and effect.get("target") == "random_opponent":
+				sentence = "对随机敌方目标造成%s点%s伤害%d次（每次独立）" % [_damage_number(effect), BattleRules.element_name(str(effect["element"])), count]
+			else: sentence += {2:"两次", 3:"三次"}.get(count, "%d次" % count)
 		# Compact parallel effects without changing their order or trigger count.
 		if count == 1 and not effect.has("condition"):
 			var kind := str(effect["type"])
@@ -102,18 +105,23 @@ static func single(effect: Dictionary, context: String) -> String:
 	var text := ""
 	match str(effect["type"]):
 		"damage":
+			if effect.has("shield_multiplier"):
+				var value := float(effect["shield_multiplier"])
+				var multiplier := str(int(value)) if is_equal_approx(value, float(int(value))) else str(value)
+				return "造成%s点%s伤害（护盾×%s，基础最多%d点）。" % [_damage_number(effect), element, multiplier, int(effect.get("base_cap", 50))] if effect.has("display_amount") else "造成护盾×%s的%s伤害，基础最多%d点。" % [multiplier, element, int(effect.get("base_cap", 50))]
 			match str(effect.get("scope", "single")):
-				"all": text = "场上所有目标受到%d点%s伤害。" % [amount, element]
-				"all_opponents": text = "对手及其所有召唤物受到%d点%s伤害。" % [amount, element]
-				"all_enemy_summons": text = "敌方所有召唤物受到%d点%s伤害。" % [amount, element]
+				"all": text = "场上所有目标受到%s点%s伤害。" % [_damage_number(effect), element]
+				"all_opponents": text = "对手及其所有召唤物受到%s点%s伤害。" % [_damage_number(effect), element]
+				"all_enemy_summons": text = "敌方所有召唤物受到%s点%s伤害。" % [_damage_number(effect), element]
 				_:
 					match target:
-						"lowest_opponent": text = "生命值最低的敌方目标受到%d点%s伤害。" % [amount, element]
-						"highest_opponent": text = "生命值最高的敌方目标受到%d点%s伤害。" % [amount, element]
-						"random_opponent": text = "随机1个敌方目标受到%d点%s伤害。" % [amount, element]
-						"self": text = "%s受到%d点%s伤害。" % [own, amount, element]
+						"lowest_opponent": text = "生命值最低的敌方目标受到%s点%s伤害。" % [_damage_number(effect), element]
+						"highest_opponent": text = "生命值最高的敌方目标受到%s点%s伤害。" % [_damage_number(effect), element]
+						"random_opponent": text = "随机敌方目标受到%s点%s伤害。" % [_damage_number(effect), element]
+						"selected_opponent": text = "目标受到%s点%s伤害。" % [_damage_number(effect), element]
+						"self": text = "%s受到%s点%s伤害。" % [own, _damage_number(effect), element]
 						_:
-							text = "对手受到%d点%s伤害。" % [amount, element] if context in ["summon", "artifact"] or effect.get("target") == "opponent" else "造成%d点%s伤害。" % [amount, element]
+							text = "对手受到%s点%s伤害。" % [_damage_number(effect), element] if context in ["summon", "artifact"] or effect.get("target") == "opponent" else "造成%s点%s伤害。" % [_damage_number(effect), element]
 		"status": text = who + "获得" + _status_amount(effect) + "。"
 		"remove_status": text = "解除%s%s。" % [who, CardKeywords.NAMES.get(effect["status"], effect["status"])]
 		"heal": text = "%s恢复%d点生命。" % [who, amount]
@@ -127,10 +135,15 @@ static func single(effect: Dictionary, context: String) -> String:
 		"contemplate": text = "%s观想%d。" % [who, amount]
 		"generate_card": text = "%s随机获得%d张%s牌。" % [who, amount, element + "系" if element != "" else ""]
 		"discard": text = "%s随机弃%d张手牌。" % [who, amount]
+		"lose_qi": text = "%s失去%d点真气。" % [who, amount]
+		"shield_heal": text = "失去自身全部护盾，恢复等量生命，最多%d点。" % amount
+		"heal_lowest_ally": text = "为生命最低的友方目标恢复%d点生命。" % amount
+		"grow_all_summons": text = "我方所有召唤物增加%d点生命。" % amount
 		"break_shield": text = "%s失去%d层护盾。" % [who, amount]
 	if effect.has("condition"):
 		var condition: Dictionary = effect["condition"]
-		if condition.get("type", "") == "energy_at_least":
+		if condition.get("type") == "hand_at_most": text = "手牌≤%d张时，%s" % [int(condition["amount"]), text]
+		elif condition.get("type", "") == "energy_at_least":
 			text = "%s能量≥%d时，%s" % [BattleRules.element_name(condition["element"]), int(condition["amount"]), text]
 	return text
 
@@ -148,12 +161,18 @@ static func card_text(card: Dictionary, summons: Dictionary) -> String:
 				for entrance: Dictionary in effects:
 					if not entrance.has("target"): entrance["target"] = "opponent"
 			parts.append(label + "：" + describe(effects, "summon"))
+		if not template.get("on_heal", []).is_empty(): parts.append("场上目标恢复生命时，" + describe(template["on_heal"], "summon"))
+		if int(template.get("enemy_cost_aura", 0)) > 0: parts.append("光环：敌方所有卡牌费用+%d。" % int(template["enemy_cost_aura"]))
 		return "".join(parts)
 	return describe(card.get("effects", []))
 
 static func artifact_text(entry: Dictionary) -> String:
 	var trigger := str(entry.get("trigger", ""))
-	var prefix: String = {"first_card_own_turn":"每个己方回合首次打出牌时，", "health_lost":"每次失去生命后，", "damage_received":"受到伤害时，", "first_energy_own_turn":"每个己方回合首次获得能量时，", "first_hit_enemy_turn":"每个敌方回合首次受到伤害后，", "battle_start":"开局：", "first_health_lost_own_turn":"每个己方回合首次失去生命时，", "summon":"每次召唤时，"}.get(trigger, "")
+	var prefix: String = {"first_card_own_turn":"每个己方回合首次打出牌时，", "health_lost":"每次失去生命后，", "damage_received":"受到伤害时，", "first_energy_own_turn":"每个己方回合首次获得能量时，", "first_hit_enemy_turn":"每个敌方回合首次受到伤害后，", "battle_start":"开局：", "first_health_lost_own_turn":"每个己方回合首次失去生命时，", "summon":"每次召唤时，", "enemy_summon_death":"敌方召唤物死亡时，", "ally_summon_death":"我方召唤物死亡时，", "ally_summon_hit":"我方召唤物受到伤害时，", "first_ally_heal_own_turn":"每个己方回合首次有友方目标恢复生命时，", "zero_cost_card":"打出0费牌时，", "turn_end":"己方回合结束时，", "first_health_lost_enemy_turn":"每个敌方回合首次失去生命时，"}.get(trigger, "")
 	if trigger == "element_damage":
 		return "受到火伤害时，该次伤害-%d%%。" % roundi(float(entry.get("resistances", {}).get("fire", 0.0)) * 100)
 	return prefix + describe(entry.get("effects", []), "artifact")
+
+static func _damage_number(effect: Dictionary) -> String:
+	var value := str(int(effect.get("display_amount", effect.get("amount", 0))))
+	return "[color=%s]%s[/color]" % [effect["display_color"], value] if effect.has("display_color") else value

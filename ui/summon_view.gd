@@ -19,7 +19,7 @@ func configure(summoned: Summon, mirrored: bool = false) -> void:
 	portrait.size = Vector2(186, 162)
 	portrait.texture = load("res://assets/summons/standee/%s.webp" % summoned.art_id)
 	# Only mirror the artwork, preserving readable health and stable animation scale.
-	portrait.flip_h = mirrored
+	portrait.flip_h = mirrored != summoned.art_flip_h
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -46,6 +46,7 @@ func configure(summoned: Summon, mirrored: bool = false) -> void:
 	hp_badge.add_theme_stylebox_override("panel", badge_style)
 	add_child(hp_badge)
 	hp_label = _label(hp_badge, "%d / %d" % [summoned.hp, summoned.max_hp], Vector2.ZERO, hp_badge.size, 15, Color.WHITE)
+	refresh_health()
 
 func set_health_foreground(value: bool) -> void:
 	if is_instance_valid(hp_badge):
@@ -55,6 +56,7 @@ func set_health_foreground(value: bool) -> void:
 func refresh_health() -> void:
 	if is_instance_valid(hp_label):
 		hp_label.text = "%d / %d" % [summon_ref.hp, summon_ref.max_hp]
+		hp_label.add_theme_color_override("font_color", Color("#ff817a") if summon_ref.hp < summon_ref.max_hp else Color("#79df8a") if summon_ref.max_hp > summon_ref.printed_hp else Color.WHITE)
 
 func play_trigger() -> void:
 	if trigger_tween != null and trigger_tween.is_running():

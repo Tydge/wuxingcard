@@ -27,4 +27,7 @@ func configure(card: Dictionary, card_width: float) -> void:
 	badge_style.set_corner_radius_all(maxi(10, roundi(27 * factor)))
 	badge.add_theme_stylebox_override("panel", badge_style)
 	add_child(badge)
-	_add_label(badge, str(int(card.get("summon_hp", 15))), Vector2.ZERO, badge.size, maxi(10, roundi(25 * factor)), Color.WHITE)
+	var hp := int(card.get("summon_hp", 15))
+	var printed := int(card.get("printed_summon_hp", hp))
+	var tint := Color("#79df8a") if hp > printed else Color("#ff817a") if hp < printed else Color.WHITE
+	_add_label(badge, str(hp), Vector2.ZERO, badge.size, maxi(10, roundi(25 * factor)), tint)

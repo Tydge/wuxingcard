@@ -6,17 +6,9 @@ from pathlib import Path
 import subprocess
 import sys
 
+from test_catalog import FULL_SUITE as SUITE, test_arguments
+
 ROOT = Path(__file__).resolve().parents[1]
-SUITE = [f"res://tests/{name}.gd" for name in [
-    "smoke_test", "card_expansion_test", "deck_store_test", "artifact_test",
-    "flat_damage_test", "new_card_wave_test", "card_balance_test", "summon_expansion_test",
-    "summon_presentation_test", "settlement_regression_test", "artifact_ui_test",
-    "qi_cycle_test", "qi_hold_ui_test", "qi_hold_touch_test", "opening_flow_test", "opening_deal_test", "energy_help_ui_test", "upgrade_test", "upgrade_ui_test",
-    "endless_run_test", "endless_recovery_test", "endless_ui_test", "endless_touch_test",
-]] + ["res://tools/test_card_art.gd", "res://tools/test_summon_art.gd",
-      "res://tools/test_card_keywords.gd", "res://tools/test_drag.gd",
-      "res://tools/test_summon_drag.gd", "res://tools/test_deck_workshop.gd",
-      "res://tools/verify_touch_ui.gd", "res://tools/test_touch_interactions.gd"]
 
 
 def source_manifest():
@@ -40,19 +32,55 @@ def provenance(snapshot):
             "version": json.loads((ROOT / "data/version.json").read_text())["version"]}
 
 
+def check_manifest(snapshot=None):
+    """Hash executable content and verification tools, independently of prose/licensing."""
+    snapshot = snapshot or source_manifest()
+    directories = {"assets", "audio", "battle", "data", "tests", "tools", "ui"}
+    entries = [entry for entry in snapshot["files"]
+               if (Path(entry["path"]).parts[0] in directories
+                   or entry["path"] in {"project.godot", "export_presets.cfg"})
+               and Path(entry["path"]).suffix != ".md"
+               and "licenses" not in Path(entry["path"]).parts
+               and not Path(entry["path"]).name.endswith("-LICENSE.txt")]
+    fingerprint = hashlib.sha256(json.dumps(entries, sort_keys=True).encode()).hexdigest()
+    return {"fingerprint": fingerprint, "files": entries}
+
+
+def validate_checks(report, fingerprint, engine):
+    """Partial, quick, failing, or differently configured runs never satisfy release gates."""
+    if not isinstance(report, dict):
+        return False
+    results = report.get("results", [])
+    if not isinstance(results, list) or not all(isinstance(item, dict) for item in results):
+        return False
+    return (report.get("schema_version") == 2
+            and report.get("profile") == "full"
+            and report.get("complete") is True
+            and report.get("source_unchanged") is True
+            and report.get("check_sha256") == fingerprint
+            and report.get("engine") == engine
+            and report.get("suite") == SUITE
+            and [item.get("script") for item in results] == SUITE
+            and all(item.get("exit_code") == 0
+                    and item.get("arguments") == test_arguments(item["script"], "full")
+                    for item in results))
+
+
 def ensure_checks(godot, report_path=None):
     snapshot = source_manifest()
+    fingerprint = check_manifest(snapshot)["fingerprint"]
+    engine = subprocess.check_output([godot, "--version"], text=True).strip()
+    path = Path(report_path) if report_path else ROOT / "work/checks/full/latest.json"
+    if path.is_file():
+        try:
+            report = json.loads(path.read_text())
+        except (ValueError, OSError):
+            report = {}
+        if validate_checks(report, fingerprint, engine):
+            print(f"Reusing full regression: {path}", flush=True)
+            return snapshot, report
     if report_path:
-        report = json.loads(Path(report_path).read_text())
-        engine = subprocess.check_output([godot, "--version"], text=True).strip()
-        if (report.get("source_sha256") != snapshot["fingerprint"]
-                or report.get("engine") != engine
-                or report.get("suite") != SUITE
-                or len(report.get("results", [])) != len(SUITE)
-                or any(item.get("exit_code") != 0 for item in report["results"])):
-            raise RuntimeError("Checks report does not match the complete current source and engine; run check_project.py again.")
-        return snapshot, report
-    path = ROOT / "work/checks/latest.json"
-    subprocess.run([sys.executable, str(ROOT / "tools/check_project.py"), "--godot", godot,
-                    "--output", str(path)], check=True)
+        raise RuntimeError("A passing full report for the current runtime, tests and engine is required; run check_project.py --suite full.")
+    subprocess.run([sys.executable, str(ROOT / "tools/check_project.py"), "--suite", "full",
+                    "--godot", godot, "--output", str(path)], check=True)
     return ensure_checks(godot, path)

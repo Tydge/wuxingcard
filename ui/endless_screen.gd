@@ -9,6 +9,7 @@ const JADE := Color("#a9c9bb")
 const WHITE := Color("#f5f1e9")
 const MUTED := Color("#9aaabc")
 const RED := Color("#f48177")
+const COIN = preload("res://assets/ui/spirit_coin.svg")
 
 var run: EndlessRun
 var factory: Callable
@@ -95,7 +96,7 @@ func _text(parent: Node, value: String, rect: Rect2, font_size: int = 22, color:
 
 func _button(parent: Node, value: String, rect: Rect2, callback: Callable) -> Button:
 	var node := Button.new()
-	node.text = value
+	_price_caption(node, value)
 	node.position = rect.position
 	node.size = rect.size
 	node.add_theme_font_size_override("font_size", 23)
@@ -109,6 +110,41 @@ func _button(parent: Node, value: String, rect: Rect2, callback: Callable) -> Bu
 	node.pressed.connect(callback)
 	parent.add_child(node)
 	return node
+
+func _price_caption(node: Button, value: String) -> void:
+	node.text = value
+	if not value.contains("灵钱"): return
+	var pattern := RegEx.new()
+	pattern.compile("([0-9]+)\\s*灵钱")
+	var found := pattern.search(value)
+	if found != null: node.set_meta("currency_amount", int(found.get_string(1)))
+	node.text = value.replace("灵钱", "").strip_edges()
+	node.icon = COIN
+	node.icon_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	node.add_theme_constant_override("icon_max_width", 28)
+	node.tooltip_text = value
+
+func _money(parent: Node, amount: int, rect: Rect2, font_size: int = 24, color: Color = GOLD, prefix: String = "") -> Control:
+	var row := HBoxContainer.new()
+	row.name = "SpiritMoney"
+	row.position = rect.position
+	row.size = rect.size
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.tooltip_text = "灵钱"
+	row.set_meta("currency_amount", amount)
+	row.add_theme_constant_override("separation", 8)
+	if prefix == "": row.alignment = BoxContainer.ALIGNMENT_CENTER
+	parent.add_child(row)
+	if prefix != "": _text(row, prefix, Rect2(0, 0, 0, rect.size.y), font_size, color)
+	var icon := TextureRect.new()
+	icon.texture = COIN
+	icon.custom_minimum_size = Vector2(font_size + 4, font_size + 4)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(icon)
+	_text(row, str(amount), Rect2(0, 0, 0, rect.size.y), font_size, color)
+	return row
 
 func _navigate(destination: String) -> void:
 	_close_modal(false)
@@ -143,7 +179,7 @@ func build() -> void:
 	var title: String = {"setup": "初入无尽", "rest": "云间小憩", "shop": "云游集市", "inventory": "随身仓库", "summary": "此行已尽", "scout": "下一位对手"}.get(view, "无尽")
 	_text(content, title, Rect2(60, 35, 570, 70), 48, GOLD, true)
 	if view != "setup" and view != "summary":
-		_text(content, "第%d关   ·   生命 %d/%d   ·   灵钱 %d" % [run.stage(), int(run.state["max_hp"]), int(run.state["max_hp"]), int(run.state["gold"])], Rect2(60, 111, 1100, 36), 24, JADE)
+		_money(content, int(run.state["gold"]), Rect2(60, 111, 1100, 36), 24, JADE, "第%d关   ·   生命 %d/%d   ·" % [run.stage(), int(run.state["max_hp"]), int(run.state["max_hp"])])
 	else:
 		_text(content, "15张原版牌 · 80生命 · 无法宝" if view == "setup" else "最高连胜 %d" % run.best, Rect2(60, 111, 1100, 36), 24, JADE)
 	_button(content, "返回山门" if view in ["setup", "rest", "summary"] else "返回卡组" if run.state["phase"] == "setup" else "收起摊位" if view == "shop" else "返回休整", Rect2(1340, 53, 200, 58), func():
@@ -173,7 +209,7 @@ func _begin() -> void:
 	else: _feedback(false)
 
 func _build_rest() -> void:
-	_text(content, "第%d关获胜  ·  +%d灵钱" % [int(run.state["wins"]), int(run.state["last_reward"])], Rect2(65, 168, 740, 55), 30, GOLD, true)
+	_money(content, int(run.state["last_reward"]), Rect2(65, 168, 740, 55), 30, GOLD, "第%d关获胜   ·   +" % int(run.state["wins"]))
 	_character(content, "player", Rect2(706, 285, 220, 355))
 	var foe := run.opponent()
 	var foe_name := ""
@@ -184,7 +220,7 @@ func _build_rest() -> void:
 	hotspots["inventory"] = _hotspot("整理行囊", Rect2(402, 519, 325, 230), _navigate.bind("inventory"))
 	hp_hotspot = _hotspot("养息 · 生命+10", Rect2(998, 465, 260, 265), _improve_hp, "%d灵钱" % run.hp_price())
 	hotspots["hp"] = hp_hotspot
-	_text(content, "%d灵钱" % run.hp_price(), Rect2(1000, 753, 260, 38), 23, GOLD if int(run.state["gold"]) >= run.hp_price() else MUTED, false, HORIZONTAL_ALIGNMENT_CENTER)
+	_money(content, run.hp_price(), Rect2(1000, 753, 260, 38), 23, GOLD if int(run.state["gold"]) >= run.hp_price() else MUTED)
 	hotspots["scout"] = _hotspot(foe_name + " · 探看", Rect2(1255, 220, 250, 365), _navigate.bind("scout"))
 	_text(content, "第%d关 · 生命%d" % [run.stage(), run.enemy_hp()], Rect2(1250, 613, 265, 38), 23, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
 	next_button = _button(content, "启程  →", Rect2(1280, 750, 245, 72), _begin)
@@ -286,7 +322,8 @@ func _build_summary() -> void:
 	_panel(content, Rect2(460, 235, 680, 540))
 	_text(content, "止步第%d关" % run.stage(), Rect2(495, 277, 610, 80), 48, GOLD, true, HORIZONTAL_ALIGNMENT_CENTER)
 	_text(content, "双方倒下，此行止步" if run.state["reason"] == "tie" else "胜败皆历练，再赴长路", Rect2(495, 380, 610, 45), 27, JADE, true, HORIZONTAL_ALIGNMENT_CENTER)
-	_text(content, "连胜 %d关   ·   获得 %d 灵钱" % [int(run.state["wins"]), int(run.state["earned"])], Rect2(495, 465, 610, 50), 27, WHITE, false, HORIZONTAL_ALIGNMENT_CENTER)
+	var earnings := _money(content, int(run.state["earned"]), Rect2(495, 465, 610, 50), 27, WHITE, "连胜 %d关   ·   获得" % int(run.state["wins"]))
+	earnings.set("alignment", BoxContainer.ALIGNMENT_CENTER)
 	_text(content, "最高连胜 %d" % run.best, Rect2(495, 535, 610, 40), 23, MUTED, false, HORIZONTAL_ALIGNMENT_CENTER)
 	_button(content, "再赴无尽", Rect2(620, 647, 360, 72), func():
 		if run.new_run(): _navigate("setup")
@@ -456,7 +493,7 @@ func _preview_level(level: int) -> void:
 	inspect_tween.tween_property(inspect_card, "modulate:a", 1.0, 0.24)
 	_inspect_keywords(preview_entry, at, width)
 	var price := run.upgrade_price(inspection_kind, selected_uid)
-	upgrade_button.text = "淬炼1张 · %d灵钱" % price if level == int(owned_entry["level"]) else "确认淬炼为%s · %d灵钱" % [["原版", "精", "玄"][level], price]
+	_price_caption(upgrade_button, "淬炼1张 · %d灵钱" % price if level == int(owned_entry["level"]) else "确认淬炼为%s · %d灵钱" % [["原版", "精", "玄"][level], price])
 
 func go_back() -> void:
 	if is_instance_valid(modal): _close_modal()

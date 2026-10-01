@@ -87,6 +87,8 @@ var menu_custom_deck: Dictionary = {}
 var enemy_animating := false
 var action_busy := false
 var hand_cards: Array[Control] = []
+var summon_target_layer: Control
+var pending_summon_selection := {}
 var enemy_backs: Array[Control] = []
 var discard_cards: Array[Control] = []
 var hover_preview: Control
@@ -159,6 +161,7 @@ func _ready() -> void:
 	manager.hand_card_removed.connect(_on_hand_card_removed)
 	manager.summon_event.connect(_on_summon_event)
 	manager.summon_triggered.connect(_on_summon_triggered)
+	manager.random_hit_targeted.connect(_on_random_hit_targeted)
 	artifact_layer = Control.new()
 	artifact_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	artifact_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -239,6 +242,8 @@ func _fit_mobile_surface() -> void:
 	scale = Vector2.ONE * fitted.size.x / VIEW_SIZE.x
 
 func _refresh() -> void:
+	if not pending_summon_selection.is_empty() and (int(pending_summon_selection["generation"]) != manager.battle_generation or manager.phase != "player_action"):
+		_cancel_summon_target(false)
 	if not is_inside_tree() or endless_restoring:
 		return
 	if endless_active and manager.phase in BattleManager.FINISHED_PHASES and endless.state.get("phase", "") == "battle":
@@ -817,7 +822,8 @@ func _activate_player_artifact(selection: Dictionary) -> void:
 	if not _endless_record({"kind": "artifact", "target": selection}): return
 	var entry := manager.artifact_entry(manager.player, "implement")
 	var target := _artifact_cast_target(manager.player, selection)
-	battle_fx.cast({"element": entry["element"], "effects": manager.artifact_effects(manager.player)}, "player", Vector2(80, 500), target)
+	if not manager.artifact_effects(manager.player).all(func(effect): return effect.get("target") == "random_opponent"):
+		battle_fx.cast({"element": entry["element"], "effects": manager.artifact_effects(manager.player)}, "player", Vector2(80, 500), target)
 	_cancel_artifact_aim()
 	manager.activate_artifact(manager.player, selection)
 
@@ -826,7 +832,7 @@ func _artifact_cast_target(actor: Combatant, selection: Dictionary) -> Vector2:
 	var other_side := "enemy" if own_side == "player" else "player"
 	if not selection.is_empty(): return _target_point(other_side, selection)
 	for effect: Dictionary in manager.artifact_effects(actor):
-		if effect.get("type") == "damage" and effect.get("target") == "opponent": return _anchor(other_side)
+		if effect.get("target") == "opponent": return _anchor(other_side)
 	return _anchor(own_side)
 
 func _show_contemplation(candidates: Array, full: bool) -> void:
@@ -936,7 +942,7 @@ func _build_hand() -> void:
 	var card_size := HAND_CARD_SIZE
 	for i in count:
 		var card: Dictionary = manager.cards[manager.player.hand[i]]
-		var view := _card_front(card, card_size)
+		var view := _card_front(manager.display_card(manager.player, card), card_size)
 		var target_position := _hand_card_position(i, count)
 		var old_count := count - pending_player_draws
 		view.position = _hand_card_position(i, old_count) if pending_player_draws > 0 and i < old_count else target_position
@@ -983,7 +989,7 @@ func _card_front(card: Dictionary, card_size: Vector2) -> Panel:
 			var summon_data: Dictionary = manager.summon_templates[effect["summon"]]
 			var summon_card: Panel = SUMMON_CARD_VIEW_SCENE.instantiate()
 			var display_card := card.duplicate()
-			display_card["summon_hp"] = int(summon_data["hp"])
+			display_card["summon_hp"] = int(card.get("summon_hp", summon_data["hp"]))
 			summon_card.call("configure", display_card, card_size.x)
 			return summon_card
 	var view: Panel = CARD_VIEW_SCENE.instantiate()
@@ -1059,7 +1065,7 @@ func _show_hover_preview(index: int) -> void:
 	if index < 0 or index >= manager.player.hand.size():
 		return
 	var card: Dictionary = manager.cards[manager.player.hand[index]]
-	hover_preview = _card_front(card, Vector2(270, 378))
+	hover_preview = _card_front(manager.display_card(manager.player, card), Vector2(270, 378))
 	hover_preview.position = Vector2(clampf(_hand_card_center(index, manager.player.hand.size()).x - 135.0, 430.0, 1030.0), 265.0)
 	fx_layer.add_child(hover_preview)
 	hover_preview.modulate.a = 0.0
@@ -1082,7 +1088,9 @@ func _show_summon_preview(side: String, slot: int) -> bool:
 	_clear_hover_preview()
 	hovered_summon_side = side
 	hovered_summon_slot = slot
-	var card: Dictionary = manager.cards[summoned.card_id]
+	var card: Dictionary = manager.cards[summoned.card_id].duplicate(true)
+	card["summon_hp"] = summoned.max_hp
+	card["printed_summon_hp"] = summoned.printed_hp
 	hover_preview = _card_front(card, Vector2(270, 378))
 	var slot_rect := _summon_slot_rect(side, slot)
 	var preview_x := slot_rect.end.x + 18.0 if side == "player" else slot_rect.position.x - 288.0
@@ -1153,7 +1161,7 @@ func _begin_hand_drag(index: int, pointer: Vector2) -> bool:
 		for view in summon_views.values():
 			if is_instance_valid(view): view.set_health_foreground(true)
 	if index < hand_cards.size(): hand_cards[index].visible = false
-	drag_card = _card_front(card, HAND_CARD_SIZE)
+	drag_card = _card_front(manager.display_card(manager.player, card), HAND_CARD_SIZE)
 	drag_card.position = pointer - drag_offset
 	_show_drag_hints(card)
 	fx_layer.add_child(drag_card)
@@ -1174,7 +1182,8 @@ func _finish_hand_drag(release: Vector2) -> void:
 	_clear_drag_hints()
 	var moved := PlatformUI.is_touch() or release.distance_to(pointer_down) > 45
 	var released_in_hand := PlatformUI.is_touch() and release.y >= 690 and release.x >= 490 and release.x <= 1260
-	if moved and not released_in_hand and manager.valid_card_target(manager.player, card, selection) and selection.get("kind", "") != "invalid":
+	var valid_slot: bool = manager.summon_requires_target(card) and selection.get("kind") == "slot" and int(selection.get("slot", -1)) >= 0 and int(selection["slot"]) < manager.player.summons.size() and manager.player.summons[int(selection["slot"])] == null
+	if moved and not released_in_hand and (manager.valid_card_target(manager.player, card, selection) or valid_slot) and selection.get("kind", "") != "invalid":
 		_play_card_from(index, release, selection)
 	else:
 		_refresh()
@@ -1223,7 +1232,7 @@ func _show_touch_card(index: int) -> void:
 	var card: Dictionary = manager.cards[manager.player.hand[index]]
 	var center := _hand_card_center(index, manager.player.hand.size())
 	var target := _touch_preview_target(index)
-	hover_preview = _card_front(card, Vector2(340, 476))
+	hover_preview = _card_front(manager.display_card(manager.player, card), Vector2(340, 476))
 	hover_preview.pivot_offset = Vector2(170, 238)
 	hover_preview.position = Vector2(center.x - 170.0, center.y - 238.0)
 	hover_preview.scale = Vector2.ONE * (HAND_CARD_SIZE.x / 340.0)
@@ -1270,7 +1279,7 @@ func _place_touch_preview() -> void:
 		if touch_hand_index >= manager.player.hand.size():
 			_clear_hover_preview()
 			return
-		card_data = manager.cards[manager.player.hand[touch_hand_index]]
+		card_data = manager.display_card(manager.player, manager.cards[manager.player.hand[touch_hand_index]])
 	else:
 		if hovered_summon_side not in ["player", "enemy"]:
 			_clear_hover_preview()
@@ -1332,6 +1341,15 @@ func _handle_touch(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 				return
 			if is_instance_valid(back_dialog): return
+			if not pending_summon_selection.is_empty():
+				for aim in manager._living_targets(manager.enemy):
+					if point.distance_to(_target_point("enemy", aim)) < 80.0:
+						_confirm_summon_target(aim)
+						get_viewport().set_input_as_handled()
+						return
+				_cancel_summon_target()
+				get_viewport().set_input_as_handled()
+				return
 			if artifact_aiming:
 				var mode := manager.artifact_target_mode(manager.player)
 				var side := "player" if mode == "self_or_ally_summon" else "enemy"
@@ -1587,6 +1605,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _request_back() -> void:
 	if manager == null: return
+	if not pending_summon_selection.is_empty():
+		_cancel_summon_target()
+		return
 	if not manager.pending_choice.is_empty(): return
 	if is_instance_valid(information_panel):
 		information_panel.dismiss()
@@ -1653,10 +1674,60 @@ func _target_point(side: String, selection: Dictionary) -> Vector2:
 		return _summon_point(side, int(selection["slot"]))
 	return _anchor(side)
 
+func _begin_summon_target(card_index: int, source: Vector2, selection: Dictionary) -> void:
+	_cancel_summon_target(false)
+	pending_summon_selection = {"index":card_index, "id":manager.player.hand[card_index], "source":source, "selection":selection.duplicate(true), "generation":manager.battle_generation}
+	action_busy = true
+	_clear_hover_preview()
+	_refresh()
+	summon_target_layer = Control.new()
+	summon_target_layer.name = "SummonEntranceTarget"
+	summon_target_layer.size = VIEW_SIZE
+	summon_target_layer.mouse_filter = Control.MOUSE_FILTER_STOP
+	fx_layer.add_child(summon_target_layer)
+	summon_target_layer.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed: _cancel_summon_target())
+	_panel(summon_target_layer, Rect2(595, 595, 410, 60), PANEL_DARK, GOLD)
+	_label(summon_target_layer, "选择出场伤害目标", Vector2(595, 595), Vector2(410, 60), 28, GOLD, HORIZONTAL_ALIGNMENT_CENTER)
+	for aim in manager._living_targets(manager.enemy):
+		var point := _target_point("enemy", aim)
+		_button(summon_target_layer, "选取", Rect2(point - Vector2(40, 40), Vector2(80, 80)), _confirm_summon_target.bind(aim), Color("#233439d9"), GOLD)
+	_button(summon_target_layer, "取消召唤", Rect2(710, 790, 180, 65), _cancel_summon_target)
+
+func _cancel_summon_target(refresh: bool = true) -> void:
+	var active := not pending_summon_selection.is_empty()
+	pending_summon_selection.clear()
+	if is_instance_valid(summon_target_layer):
+		summon_target_layer.hide()
+		summon_target_layer.queue_free()
+	summon_target_layer = null
+	if active:
+		action_busy = false
+		if refresh: _refresh()
+
+func _confirm_summon_target(aim: Dictionary) -> void:
+	if pending_summon_selection.is_empty() or not is_instance_valid(summon_target_layer): return
+	var pending := pending_summon_selection.duplicate(true)
+	if int(pending["generation"]) != manager.battle_generation or manager.phase != "player_action" or not manager._valid_enemy_selection(manager.player, aim):
+		_cancel_summon_target()
+		return
+	var index := int(pending["index"])
+	if index >= manager.player.hand.size() or manager.player.hand[index] != pending["id"]:
+		_cancel_summon_target()
+		return
+	var selection: Dictionary = pending["selection"]
+	selection["entrance_target"] = aim.duplicate(true)
+	_cancel_summon_target(false)
+	_play_card_from(index, pending["source"], selection)
+
 func _play_card_from(card_index: int, source: Vector2, selection: Dictionary = {}) -> void:
 	if manager.phase != "player_action" or card_index < 0 or card_index >= manager.player.hand.size() or action_busy:
 		return
 	var card: Dictionary = manager.cards[manager.player.hand[card_index]]
+	if manager.summon_requires_target(card) and not selection.has("entrance_target"):
+		var slot := int(selection.get("slot", -1))
+		if selection.get("kind") == "slot" and slot >= 0 and slot < manager.player.summons.size() and manager.player.summons[slot] == null and manager.player.can_pay(card): _begin_summon_target(card_index, source, selection)
+		return
 	if not manager.player.can_pay(card) or not manager.valid_card_target(manager.player, card, selection):
 		_refresh()
 		return
@@ -1725,7 +1796,8 @@ func _run_enemy_turn() -> void:
 		if action.get("kind", "") == "artifact":
 			var entry := manager.artifact_entry(manager.enemy, "implement")
 			var target := _artifact_cast_target(manager.enemy, action["target"])
-			battle_fx.cast({"element": entry["element"], "effects": manager.artifact_effects(manager.enemy)}, "enemy", Vector2(1520, 500), target)
+			if not manager.artifact_effects(manager.enemy).all(func(effect): return effect.get("target") == "random_opponent"):
+				battle_fx.cast({"element": entry["element"], "effects": manager.artifact_effects(manager.enemy)}, "enemy", Vector2(1520, 500), target)
 			await get_tree().create_timer(0.52).timeout
 			if generation != manager.battle_generation: return
 			await manager.enemy_step(-1, action["target"], "artifact")
@@ -1761,6 +1833,9 @@ func _run_enemy_turn() -> void:
 
 func _cast_card(card: Dictionary, side: String, destination: Vector2) -> float:
 	GameAudio.play_cast(str(card.get("element", "")))
+	if card["effects"].all(func(effect): return effect.get("target") == "random_opponent"):
+		# Actual random aims arrive from the resolver; never draw four false hero hits.
+		return 0.05
 	for effect in card["effects"]:
 		if effect.get("scope", "single") not in ["all_opponents", "all", "all_enemy_summons"]: continue
 		var actor := manager.player if side == "player" else manager.enemy
@@ -1795,7 +1870,7 @@ func _present_card(card: Dictionary, side: String, source: Vector2) -> void:
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	dim.modulate.a = 0.0
 	fx_layer.add_child(dim)
-	var stage := _card_front(card, Vector2(270, 378))
+	var stage := _card_front(manager.display_card(manager.player if side == "player" else manager.enemy, card), Vector2(270, 378))
 	fx_layer.add_child(stage)
 	stage.pivot_offset = stage.size / 2.0
 	stage.position = source - stage.size / 2.0
@@ -2032,7 +2107,7 @@ func _on_summon_event(side: String, slot: int, kind: String, element: String, am
 
 func _on_summon_triggered(side: String, slot: int, timing: String, effect: Dictionary) -> void:
 	if endless_restoring: return
-	if timing != "on_spawn": return
+	if timing not in ["on_spawn", "on_heal"]: return
 	var owner := manager.player if side == "player" else manager.enemy
 	if slot < 0 or slot >= owner.summons.size(): return
 	var summoned: Summon = owner.summons[slot]
@@ -2050,6 +2125,9 @@ func _present_summon_effect(side: String, slot: int, summoned: Summon, effect: D
 		GameAudio.play_cast(element, true)
 		var target_side := side if effect.get("target", "self") == "self" else ("enemy" if side == "player" else "player")
 		var destination := _anchor(target_side)
+		if effect.get("scope", "") in ["all_opponents", "all_enemy_summons"]:
+			target_side = "enemy" if side == "player" else "player"
+			destination = _anchor(target_side)
 		var selection: Dictionary = effect.get("selection", {})
 		if selection.get("kind", "") == "summon":
 			destination = _summon_point(selection.get("side", target_side), int(selection["slot"]))
@@ -2063,7 +2141,14 @@ func _present_summon_effect(side: String, slot: int, summoned: Summon, effect: D
 		for key in ["fx_id", "fx_speed", "fx_scale", "fx_intensity"]:
 			if effect.has(key):
 				cast_data[key] = effect[key]
-		await get_tree().create_timer(battle_fx.cast(cast_data, side, source, destination)).timeout
+		var seconds := 0.0
+		if effect.get("scope", "") == "all_enemy_summons":
+			var opponent := manager.enemy if side == "player" else manager.player
+			for target_slot in opponent.summons.size():
+				if opponent.summons[target_slot] != null:
+					seconds = maxf(seconds, battle_fx.cast(cast_data, side, source, _summon_point(target_side, target_slot)))
+		else: seconds = battle_fx.cast(cast_data, side, source, destination)
+		await get_tree().create_timer(maxf(seconds, 0.05)).timeout
 	else:
 		await get_tree().create_timer(SUMMON_FEEDBACK_SECONDS).timeout
 		# A draw trigger also waits for all its cards to reach the hand.
@@ -2174,3 +2259,8 @@ func _open_information(caption: String, text: String, exportable: bool = false) 
 		var report := manager.export_battle_report()
 		information_panel.message.text = "保存失败，请重试" if report.is_empty() else "已保存到本机战报目录")
 	fx_layer.add_child(information_panel)
+
+func _on_random_hit_targeted(side: String, element: String, selection: Dictionary) -> void:
+	if endless_restoring: return
+	var target_side := "enemy" if side == "player" else "player"
+	battle_fx.cast({"element":element, "effects":[{"type":"damage", "element":element}], "fx_scale":0.8}, side, _anchor(side), _target_point(target_side, selection))

@@ -40,7 +40,7 @@ func run() -> void:
 	menu = find_menu()
 	menu.deck_store_path = "res://work/upgrade_ui_decks.json"
 	menu._show_collection()
-	check(menu.filtered_cards.size() == 60, "collection groups the 180 versions into 60 families")
+	check(menu.filtered_cards.size() == 70, "collection groups the 210 versions into 70 families")
 	menu._open_inspector(ui.manager.cards["metal_forge"], menu.card_nodes[0])
 	await create_timer(0.46).timeout
 	await switch_level(1)
@@ -68,7 +68,7 @@ func run() -> void:
 	await close()
 	menu.collection_type = "artifacts"
 	menu._build_collection()
-	check(menu.filtered_cards.size() == 15, "artifact collection groups 45 versions into 15 families")
+	check(menu.filtered_cards.size() == 30, "artifact collection groups 90 versions into 30 families")
 	menu._open_inspector(menu.artifacts["metal_thunder_ruler"], menu.card_nodes[0])
 	await create_timer(0.46).timeout
 	await switch_level(2)

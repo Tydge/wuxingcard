@@ -40,7 +40,10 @@ func configure(card: Dictionary, card_width: float) -> void:
 	footer.size = Vector2(220, 124) * factor
 	footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(footer)
-	_add_label(self, str(int(card["cost"])), Vector2(9, 3) * factor, Vector2(37, 28) * factor, maxi(8, roundi(25 * factor)), Color("#f5f1e9"))
+	var printed_cost := int(card.get("printed_cost", card["cost"]))
+	var cost_color := Color("#79df8a") if int(card["cost"]) < printed_cost else Color("#ff817a") if int(card["cost"]) > printed_cost else Color("#f5f1e9")
+	var cost_label := _add_label(self, str(int(card["cost"])), Vector2(9, 3) * factor, Vector2(37, 28) * factor, maxi(8, roundi(25 * factor)), cost_color)
+	cost_label.name = "Cost"
 	_add_label(self, BattleRules.element_name(element), Vector2(194, 3) * factor, Vector2(35, 28) * factor, maxi(8, roundi(24 * factor)), element_color)
 	var title := _add_label(self, card["name"], Vector2(14, 204) * factor, Vector2(212, 36) * factor, maxi(8, roundi(23 * factor)), Color("#dec596"))
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -50,9 +53,17 @@ func configure(card: Dictionary, card_width: float) -> void:
 	while description_size > 10 and (wrapped.count("\n") + 1) * description_size * 1.2 > 80:
 		description_size -= 1
 		wrapped = _wrap_text(card["text"], floori(206.0 / description_size))
-	var description := _add_label(self, wrapped, Vector2(17, 243) * factor, Vector2(206, 80) * factor, maxi(7, roundi(description_size * factor)), Color("#f5f1e9"))
-	description.clip_text = true
-	description.autowrap_mode = TextServer.AUTOWRAP_OFF
+	var description := RichTextLabel.new()
+	description.name = "Description"
+	description.position = Vector2(17, 243) * factor
+	description.size = Vector2(206, 80) * factor
+	description.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	description.scroll_active = false
+	description.bbcode_enabled = true
+	description.add_theme_font_size_override("normal_font_size", maxi(7, roundi(description_size * factor)))
+	description.add_theme_color_override("default_color", Color("#f5f1e9"))
+	description.text = "[center]" + _wrap_rich_text(str(card.get("rich_text", card["text"])), floori(206.0 / description_size)) + "[/center]"
+	add_child(description)
 
 func _ready() -> void:
 	# configure() runs before the card is mounted, so at that point the card has no
@@ -142,3 +153,24 @@ func _wrap_text(value: String, max_chars: int) -> String:
 		remaining = remaining.substr(count)
 	lines.append(remaining)
 	return "\n".join(lines)
+
+func _wrap_rich_text(value: String, max_chars: int) -> String:
+	# Count visible characters only; a color tag must never split a number.
+	var result := ""
+	var visible := 0
+	var cursor := 0
+	while cursor < value.length():
+		if value[cursor] == "[":
+			var closing := value.find("]", cursor)
+			if closing >= 0:
+				result += value.substr(cursor, closing - cursor + 1)
+				cursor = closing + 1
+				continue
+		var character := value[cursor]
+		if visible >= max_chars and not "，。；、".contains(character):
+			result += "\n"
+			visible = 0
+		result += character
+		visible += 1
+		cursor += 1
+	return result

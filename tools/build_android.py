@@ -22,7 +22,7 @@ def main():
     parser.add_argument('--java', default='/Library/Java/JavaVirtualMachines/jdk-17.0.1.jdk/Contents/Home')
     parser.add_argument('--signing', type=Path, default=Path.home() / '.config/wuxingcard/android-signing.json')
     parser.add_argument('--version-code', type=int)
-    parser.add_argument('--checks-report', type=Path, help='Reuse a passing check_project.py report for this exact source')
+    parser.add_argument('--checks-report', type=Path, help='Reuse a passing --suite full report for the same runtime, tests and engine')
     args = parser.parse_args()
     source_snapshot, checks = ensure_checks(args.godot, args.checks_report)
     if not args.signing.is_file():

@@ -64,7 +64,7 @@ def prepare_project(stage):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--godot', default='/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot')
-    parser.add_argument('--checks-report', type=Path, help='Reuse a passing check_project.py report for this exact source')
+    parser.add_argument('--checks-report', type=Path, help='Reuse a passing --suite full report for the same runtime, tests and engine')
     args = parser.parse_args()
     source_snapshot, checks = ensure_checks(args.godot, args.checks_report)
     built = datetime.now().astimezone()

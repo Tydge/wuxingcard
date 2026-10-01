@@ -57,4 +57,4 @@
 - `tests/endless_run_test.gd`覆盖所有交易、构筑限制、固定侦察、生命、平局、磁盘存档、失败回滚及270份敌人构筑。
 - `tests/endless_recovery_test.gd`覆盖双方先手、磁盘恢复、开局及主动法宝的未完成／已完成观想、动画前中断。
 - `tests/endless_ui_test.gd`与`tests/endless_touch_test.gd`用真实窗口与输入走完整流程，检查初始无法宝、购买不自动装备、付费升级、非法牌组阻止继续与平局结算。截图保存至`work/endless/`。
-- 以上检查全部纳入`python3 tools/check_project.py`。
+- 以上检查纳入`python3 tools/check_project.py --suite full`。日常规则调整使用`--group endless`，界面调整使用`--group ui-endless`，按[测试规范](testing.md)选择范围。

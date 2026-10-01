@@ -8,7 +8,7 @@ const ARTIFACT_PRICE := 80
 const CARD_UPGRADE := [40, 70]
 const ARTIFACT_UPGRADE := [60, 100]
 const INITIAL_CARDS := 15
-const RULES_VERSION := 2
+const RULES_VERSION := 3
 
 var path: String
 var cards: Dictionary
@@ -36,7 +36,7 @@ func load_run() -> bool:
 	if not state.is_empty() and int(state.get("rules_version", 1)) < RULES_VERSION:
 		var previous := state.duplicate(true)
 		if state.get("phase", "") == "battle":
-			var backup := FileAccess.open(path + ".pre-qi", FileAccess.WRITE)
+			var backup := FileAccess.open(path + ".rules-v%d" % int(state.get("rules_version", 1)), FileAccess.WRITE)
 			if backup == null:
 				error = "旧对局备份失败，原存档已保留"
 				return false

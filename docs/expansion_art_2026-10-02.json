@@ -1,0 +1,507 @@
+[
+  {
+    "id": "metal_four_thunders",
+    "dest": "assets/cards/generated/metal_four_thunders.webp",
+    "transparent": false,
+    "subject": "Exactly four independent golden lightning bolts striking four scattered ancient stone targets in a moonlit mountain courtyard",
+    "kind": "card",
+    "prompt": "Four independent golden lightning strikes in a moonlit mountain courtyard, dark Chinese xianxia fantasy, full-bleed 4:3 illustration.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-e1523eb1-217e-406a-a523-293c39378a62.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false,
+    "prompt_record": "retained summary"
+  },
+  {
+    "id": "metal_rift_mantis_card",
+    "dest": "assets/cards/generated/metal_rift_mantis_card.webp",
+    "transparent": false,
+    "subject": "A living elegant Chinese spirit praying mantis with silver and gold blade-shaped forearms and jade eyes, poised to slash, full body, insect anatomy and ornate natural armor",
+    "kind": "creature-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: A living elegant Chinese spirit praying mantis with silver and gold blade-shaped forearms and jade eyes, poised to slash, full body, insect anatomy and ornate natural armor. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-cab6e09f-f4ce-4b57-b06d-663811c71e23.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "metal_rift_mantis",
+    "dest": "assets/summons/standee/metal_rift_mantis.webp",
+    "transparent": true,
+    "subject": "A living elegant Chinese spirit praying mantis with silver and gold blade-shaped forearms and jade eyes, poised to slash, full body, insect anatomy and ornate natural armor",
+    "kind": "creature-standee",
+    "prompt": "Use case: stylized-concept. Asset type: transparent full-body game standee. Subject: A living elegant Chinese spirit praying mantis with silver and gold blade-shaped forearms and jade eyes, poised to slash, full body, insect anatomy and ornate natural armor. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. Exactly one isolated subject, entire silhouette with generous clear margins, centered, facing slightly left, no scenery or ground, genuine transparent background. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-d4fa63a2-8f62-44e4-b4f6-9046b2e348c5.png",
+    "size": [
+      768,
+      768
+    ],
+    "alpha": true
+  },
+  {
+    "id": "water_branch_tide",
+    "dest": "assets/cards/generated/water_branch_tide.webp",
+    "transparent": false,
+    "subject": "A single sweeping crescent of deep blue water nourishing a luminous living green branch above an ancient mountain stream, one powerful water-blade attack",
+    "kind": "card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: A single sweeping crescent of deep blue water nourishing a luminous living green branch above an ancient mountain stream, one powerful water-blade attack. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-920d629c-37c7-4adc-b7f7-a9e4e765a97f.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "water_breath_newt_card",
+    "dest": "assets/cards/generated/water_breath_newt_card.webp",
+    "transparent": false,
+    "subject": "An ancient azure-black Chinese giant salamander spirit with translucent flowing fins, inhaling a thin silver breath mist, luminous blue eyes, graceful wide mouth, full body",
+    "kind": "creature-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: An ancient azure-black Chinese giant salamander spirit with translucent flowing fins, inhaling a thin silver breath mist, luminous blue eyes, graceful wide mouth, full body. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-6f24e946-923a-4530-9332-3e49c18a97ba.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "water_breath_newt",
+    "dest": "assets/summons/standee/water_breath_newt.webp",
+    "transparent": true,
+    "subject": "An ancient azure-black Chinese giant salamander spirit with translucent flowing fins, inhaling a thin silver breath mist, luminous blue eyes, graceful wide mouth, full body",
+    "kind": "creature-standee",
+    "prompt": "Use case: stylized-concept. Asset type: transparent full-body game standee. Subject: An ancient azure-black Chinese giant salamander spirit with translucent flowing fins, inhaling a thin silver breath mist, luminous blue eyes, graceful wide mouth, full body. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. Exactly one isolated subject, entire silhouette with generous clear margins, centered, facing slightly left, no scenery or ground, genuine transparent background. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-e4e8b9b0-361a-4c4b-8595-20631841e676.png",
+    "size": [
+      768,
+      768
+    ],
+    "alpha": true
+  },
+  {
+    "id": "wood_five_banyan_card",
+    "dest": "assets/cards/generated/wood_five_banyan_card.webp",
+    "transparent": false,
+    "subject": "A living miniature sacred banyan tree spirit, intricate twisting jade roots forming feet, emerald crown and five subtle colored luminous seeds, ancient gentle face in its trunk, full body",
+    "kind": "creature-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: A living miniature sacred banyan tree spirit, intricate twisting jade roots forming feet, emerald crown and five subtle colored luminous seeds, ancient gentle face in its trunk, full body. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-b9abfad9-6a79-4c6d-ad49-81db2841a5a9.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "wood_five_banyan",
+    "dest": "assets/summons/standee/wood_five_banyan.webp",
+    "transparent": true,
+    "subject": "A living miniature sacred banyan tree spirit, intricate twisting jade roots forming feet, emerald crown and five subtle colored luminous seeds, ancient gentle face in its trunk, full body",
+    "kind": "creature-standee",
+    "prompt": "Use case: stylized-concept. Asset type: transparent full-body game standee. Subject: A living miniature sacred banyan tree spirit, intricate twisting jade roots forming feet, emerald crown and five subtle colored luminous seeds, ancient gentle face in its trunk, full body. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. Exactly one isolated subject, entire silhouette with generous clear margins, centered, facing slightly left, no scenery or ground, genuine transparent background. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-0e009ca2-ff49-4c50-a10a-f961b9b5c806.png",
+    "size": [
+      768,
+      768
+    ],
+    "alpha": true
+  },
+  {
+    "id": "wood_dew_bloom_card",
+    "dest": "assets/cards/generated/wood_dew_bloom_card.webp",
+    "transparent": false,
+    "subject": "A graceful sentient jade-green bellflower spirit with pearl-like dew, curling leaves forming a delicate body and feet, luminous soft emerald petals, botanical creature, full body",
+    "kind": "creature-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: A graceful sentient jade-green bellflower spirit with pearl-like dew, curling leaves forming a delicate body and feet, luminous soft emerald petals, botanical creature, full body. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-62646014-c266-411b-a1d1-50dc77cef90b.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "wood_dew_bloom",
+    "dest": "assets/summons/standee/wood_dew_bloom.webp",
+    "transparent": true,
+    "subject": "A graceful sentient jade-green bellflower spirit with pearl-like dew, curling leaves forming a delicate body and feet, luminous soft emerald petals, botanical creature, full body",
+    "kind": "creature-standee",
+    "prompt": "Use case: stylized-concept. Asset type: transparent full-body game standee. Subject: A graceful sentient jade-green bellflower spirit with pearl-like dew, curling leaves forming a delicate body and feet, luminous soft emerald petals, botanical creature, full body. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. Exactly one isolated subject, entire silhouette with generous clear margins, centered, facing slightly left, no scenery or ground, genuine transparent background. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-39163ebc-2d53-4d77-9a06-1c1a20aad5a3.png",
+    "size": [
+      768,
+      768
+    ],
+    "alpha": true
+  },
+  {
+    "id": "fire_sky_burn",
+    "dest": "assets/cards/generated/fire_sky_burn.webp",
+    "transparent": false,
+    "subject": "A vast red and amber firestorm curling across several ancient stone effigies in an abandoned Chinese mountain courtyard, powerful continuous wave of fire, cinematic dark red sky",
+    "kind": "card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: A vast red and amber firestorm curling across several ancient stone effigies in an abandoned Chinese mountain courtyard, powerful continuous wave of fire, cinematic dark red sky. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-8f1c913e-c8cb-4e44-b10a-45fba4b765cb.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "fire_crimson_clam_card",
+    "dest": "assets/cards/generated/fire_crimson_clam_card.webp",
+    "transparent": false,
+    "subject": "A mythical crimson giant clam-dragon spirit with lacquer-red ornate shell and small dragon head, glowing ember pearl within and fiery coral whiskers, emits vermilion mist, full body",
+    "kind": "creature-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: A mythical crimson giant clam-dragon spirit with lacquer-red ornate shell and small dragon head, glowing ember pearl within and fiery coral whiskers, emits vermilion mist, full body. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-c4f4c6ee-ec1b-4ff1-a3c4-f41963cee5d0.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "fire_crimson_clam",
+    "dest": "assets/summons/standee/fire_crimson_clam.webp",
+    "transparent": true,
+    "subject": "A mythical crimson giant clam-dragon spirit with lacquer-red ornate shell and small dragon head, glowing ember pearl within and fiery coral whiskers, emits vermilion mist, full body",
+    "kind": "creature-standee",
+    "prompt": "Use case: stylized-concept. Asset type: transparent full-body game standee. Subject: A mythical crimson giant clam-dragon spirit with lacquer-red ornate shell and small dragon head, glowing ember pearl within and fiery coral whiskers, emits vermilion mist, full body. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. Exactly one isolated subject, entire silhouette with generous clear margins, centered, facing slightly left, no scenery or ground, genuine transparent background. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-32be9ffb-c8d0-44ac-8e87-5fd6ab34afd7.png",
+    "size": [
+      768,
+      768
+    ],
+    "alpha": true
+  },
+  {
+    "id": "earth_stacked_peak",
+    "dest": "assets/cards/generated/earth_stacked_peak.webp",
+    "transparent": false,
+    "subject": "A massive layered rock fist formed from overlapping golden-brown protective stone slabs, striking a single mountain pillar, earthen magic shield becoming a powerful impact",
+    "kind": "card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: A massive layered rock fist formed from overlapping golden-brown protective stone slabs, striking a single mountain pillar, earthen magic shield becoming a powerful impact. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-e62cd1ca-a1a8-4130-8147-f3495a5f4625.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "earth_law_lion_card",
+    "dest": "assets/cards/generated/earth_law_lion_card.webp",
+    "transparent": false,
+    "subject": "A sentient Chinese guardian lion carved from weathered ochre stone with amber eyes, cloud-scroll mane and heavy paws, a floating restraint seal above its back, full body",
+    "kind": "creature-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: A sentient Chinese guardian lion carved from weathered ochre stone with amber eyes, cloud-scroll mane and heavy paws, a floating restraint seal above its back, full body. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-e84df473-89ba-4366-812d-1cb9c517f37c.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "earth_law_lion",
+    "dest": "assets/summons/standee/earth_law_lion.webp",
+    "transparent": true,
+    "subject": "A sentient Chinese guardian lion carved from weathered ochre stone with amber eyes, cloud-scroll mane and heavy paws, a floating restraint seal above its back, full body",
+    "kind": "creature-standee",
+    "prompt": "Use case: stylized-concept. Asset type: transparent full-body game standee. Subject: A sentient Chinese guardian lion carved from weathered ochre stone with amber eyes, cloud-scroll mane and heavy paws, a floating restraint seal above its back, full body. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. Exactly one isolated subject, entire silhouette with generous clear margins, centered, facing slightly left, no scenery or ground, genuine transparent background. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-7cadc127-9f83-4026-aad9-b3900225b53e.png",
+    "size": [
+      768,
+      768
+    ],
+    "alpha": true
+  },
+  {
+    "id": "metal_rift_axe",
+    "dest": "assets/artifacts/metal_rift_axe.webp",
+    "transparent": false,
+    "subject": "One elegant ancient Chinese gold and silver crescent battle axe with split blade, detailed forged metal and black silk grip",
+    "kind": "artifact-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: One elegant ancient Chinese gold and silver crescent battle axe with split blade, detailed forged metal and black silk grip. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-e4491e9e-2c42-4e87-9109-d9cde5e96d87.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "metal_rift_axe_standee",
+    "dest": "assets/artifacts/metal_rift_axe_standee.webp",
+    "transparent": true,
+    "subject": "One elegant ancient Chinese gold and silver crescent battle axe with split blade, detailed forged metal and black silk grip",
+    "kind": "artifact-standee",
+    "prompt": "Use case: stylized-concept. Asset type: transparent full-body game standee. Subject: One elegant ancient Chinese gold and silver crescent battle axe with split blade, detailed forged metal and black silk grip. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. Exactly one isolated subject, entire silhouette with generous clear margins, centered, facing slightly left, no scenery or ground, genuine transparent background. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-216cc2aa-a73b-4b2f-b35f-f96657b32621.png",
+    "size": [
+      768,
+      768
+    ],
+    "alpha": true
+  },
+  {
+    "id": "metal_tempered_robe",
+    "dest": "assets/artifacts/metal_tempered_robe.webp",
+    "transparent": false,
+    "subject": "An empty ceremonial Chinese robe woven from dark silver thread with fine gold metal scales at shoulders, hanging gracefully, no wearer",
+    "kind": "artifact-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: An empty ceremonial Chinese robe woven from dark silver thread with fine gold metal scales at shoulders, hanging gracefully, no wearer. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-ae9de3e4-ecf9-4ff2-9e0c-1f53122b56db.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "metal_roaming_pendant",
+    "dest": "assets/artifacts/metal_roaming_pendant.webp",
+    "transparent": false,
+    "subject": "A small elegant golden razor-leaf pendant with three trailing silver tassels and a black silk cord",
+    "kind": "artifact-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: A small elegant golden razor-leaf pendant with three trailing silver tassels and a black silk cord. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-1d1e9337-c9e9-40db-92ca-fa15912f1aa1.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "water_shift_pot",
+    "dest": "assets/artifacts/water_shift_pot.webp",
+    "transparent": false,
+    "subject": "A single ancient translucent deep-blue jade water ewer with delicate wave engravings, long spout and silver handle",
+    "kind": "artifact-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: A single ancient translucent deep-blue jade water ewer with delicate wave engravings, long spout and silver handle. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-ef505c01-8c97-4315-9a9b-701d79becb1d.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "water_shift_pot_standee",
+    "dest": "assets/artifacts/water_shift_pot_standee.webp",
+    "transparent": true,
+    "subject": "A single ancient translucent deep-blue jade water ewer with delicate wave engravings, long spout and silver handle",
+    "kind": "artifact-standee",
+    "prompt": "Use case: stylized-concept. Asset type: transparent full-body game standee. Subject: A single ancient translucent deep-blue jade water ewer with delicate wave engravings, long spout and silver handle. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. Exactly one isolated subject, entire silhouette with generous clear margins, centered, facing slightly left, no scenery or ground, genuine transparent background. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-3078e155-9880-4f11-94ce-e48d77ffed3c.png",
+    "size": [
+      768,
+      768
+    ],
+    "alpha": true
+  },
+  {
+    "id": "water_mirror_robe",
+    "dest": "assets/artifacts/water_mirror_robe.webp",
+    "transparent": false,
+    "subject": "An empty long Chinese ceremonial robe of dark indigo silk with reflective silver wave borders and a calm lake sheen, no wearer",
+    "kind": "artifact-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: An empty long Chinese ceremonial robe of dark indigo silk with reflective silver wave borders and a calm lake sheen, no wearer. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-7608152c-6593-4cc2-8843-ca2f2f8a5eb2.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "water_return_pearl",
+    "dest": "assets/artifacts/water_return_pearl.webp",
+    "transparent": false,
+    "subject": "A translucent blue tidal pearl held inside a delicate silver crescent pendant, luminous water swirl within, silk cord",
+    "kind": "artifact-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: A translucent blue tidal pearl held inside a delicate silver crescent pendant, luminous water swirl within, silk cord. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-1e9c93e3-ce16-4fde-82e1-ae5b710de9d0.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "wood_dew_branch",
+    "dest": "assets/artifacts/wood_dew_branch.webp",
+    "transparent": false,
+    "subject": "A single elegant living green willow branch wand with pale jade handle, dew droplets and tiny budding leaves",
+    "kind": "artifact-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: A single elegant living green willow branch wand with pale jade handle, dew droplets and tiny budding leaves. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-3ed4582c-0faf-41f6-9d30-345d71f7a156.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "wood_dew_branch_standee",
+    "dest": "assets/artifacts/wood_dew_branch_standee.webp",
+    "transparent": true,
+    "subject": "A single elegant living green willow branch wand with pale jade handle, dew droplets and tiny budding leaves",
+    "kind": "artifact-standee",
+    "prompt": "Use case: stylized-concept. Asset type: transparent full-body game standee. Subject: A single elegant living green willow branch wand with pale jade handle, dew droplets and tiny budding leaves. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. Exactly one isolated subject, entire silhouette with generous clear margins, centered, facing slightly left, no scenery or ground, genuine transparent background. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-644d3666-a644-4736-9d32-e526c7481dd7.png",
+    "size": [
+      768,
+      768
+    ],
+    "alpha": true
+  },
+  {
+    "id": "wood_nesting_robe",
+    "dest": "assets/artifacts/wood_nesting_robe.webp",
+    "transparent": false,
+    "subject": "An empty jade-green Chinese robe woven with soft moss and delicate living branches along its hem and shoulders, no wearer",
+    "kind": "artifact-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: An empty jade-green Chinese robe woven with soft moss and delicate living branches along its hem and shoulders, no wearer. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-2faad60f-89fa-443d-8157-0a649ebf3a53.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "wood_flower_knot",
+    "dest": "assets/artifacts/wood_flower_knot.webp",
+    "transparent": false,
+    "subject": "A small Chinese jade pendant in the shape of interwoven flower petals with a pale-green silk knot and five tiny colored dew beads",
+    "kind": "artifact-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: A small Chinese jade pendant in the shape of interwoven flower petals with a pale-green silk knot and five tiny colored dew beads. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-2f92022f-38be-4e2b-9ef5-12dcba19761e.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "fire_wild_banner",
+    "dest": "assets/artifacts/fire_wild_banner.webp",
+    "transparent": false,
+    "subject": "One narrow ancient Chinese crimson banner on a blackened gold staff, curling flame pattern woven into silk, ember glow at its hem",
+    "kind": "artifact-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: One narrow ancient Chinese crimson banner on a blackened gold staff, curling flame pattern woven into silk, ember glow at its hem. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-99f265c6-8174-41d1-be02-07615a0af83f.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "fire_wild_banner_standee",
+    "dest": "assets/artifacts/fire_wild_banner_standee.webp",
+    "transparent": true,
+    "subject": "One narrow ancient Chinese crimson banner on a blackened gold staff, curling flame pattern woven into silk, ember glow at its hem",
+    "kind": "artifact-standee",
+    "prompt": "Use case: stylized-concept. Asset type: transparent full-body game standee. Subject: One narrow ancient Chinese crimson banner on a blackened gold staff, curling flame pattern woven into silk, ember glow at its hem. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. Exactly one isolated subject, entire silhouette with generous clear margins, centered, facing slightly left, no scenery or ground, genuine transparent background. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-0fed4829-0c18-4d45-8de2-39d3496b7b91.png",
+    "size": [
+      768,
+      768
+    ],
+    "alpha": true
+  },
+  {
+    "id": "fire_scale_robe",
+    "dest": "assets/artifacts/fire_scale_robe.webp",
+    "transparent": false,
+    "subject": "An empty vermilion and black Chinese robe with lacquered dragon-scale shoulders and ember-red silk lining, no wearer",
+    "kind": "artifact-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: An empty vermilion and black Chinese robe with lacquered dragon-scale shoulders and ember-red silk lining, no wearer. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-b7fbc4af-c882-4e46-b971-cba5e737a106.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "fire_kindling_pendant",
+    "dest": "assets/artifacts/fire_kindling_pendant.webp",
+    "transparent": false,
+    "subject": "A small pendant of glowing amber ember enclosed in charred dark wood and a thin gold ring, crimson silk cord",
+    "kind": "artifact-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: A small pendant of glowing amber ember enclosed in charred dark wood and a thin gold ring, crimson silk cord. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-b3a3b4d6-da92-4d5f-8607-33975ed113ad.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "earth_settle_seal",
+    "dest": "assets/artifacts/earth_settle_seal.webp",
+    "transparent": false,
+    "subject": "One squat ancient ochre jade square seal with a small layered mountain handle, weathered stone grain and bronze corners",
+    "kind": "artifact-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: One squat ancient ochre jade square seal with a small layered mountain handle, weathered stone grain and bronze corners. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-44ab4539-4dd6-46da-b9fb-7080594308b1.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "earth_settle_seal_standee",
+    "dest": "assets/artifacts/earth_settle_seal_standee.webp",
+    "transparent": true,
+    "subject": "One squat ancient ochre jade square seal with a small layered mountain handle, weathered stone grain and bronze corners",
+    "kind": "artifact-standee",
+    "prompt": "Use case: stylized-concept. Asset type: transparent full-body game standee. Subject: One squat ancient ochre jade square seal with a small layered mountain handle, weathered stone grain and bronze corners. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. Exactly one isolated subject, entire silhouette with generous clear margins, centered, facing slightly left, no scenery or ground, genuine transparent background. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-f311bcb8-8e72-491b-b097-35f9ad523414.png",
+    "size": [
+      768,
+      768
+    ],
+    "alpha": true
+  },
+  {
+    "id": "earth_thick_robe",
+    "dest": "assets/artifacts/earth_thick_robe.webp",
+    "transparent": false,
+    "subject": "An empty heavy ochre Chinese robe with layered earthen fabric and brown stone-like shoulder guards, dignified simple silhouette, no wearer",
+    "kind": "artifact-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: An empty heavy ochre Chinese robe with layered earthen fabric and brown stone-like shoulder guards, dignified simple silhouette, no wearer. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-c5ac0703-f02c-466a-8007-1b552e1c5988.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  },
+  {
+    "id": "earth_return_jade",
+    "dest": "assets/artifacts/earth_return_jade.webp",
+    "transparent": false,
+    "subject": "A small pair of interlocking honey-brown jade rings enclosing a grain of luminous earth, short dark silk tassel",
+    "kind": "artifact-card",
+    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: A small pair of interlocking honey-brown jade rings enclosing a grain of luminous earth, short dark silk tassel. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-fbc360a1-80c0-4039-9620-f9de9b14f9f6.png",
+    "size": [
+      1024,
+      768
+    ],
+    "alpha": false
+  }
+]

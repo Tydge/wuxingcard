@@ -1034,5 +1034,287 @@
         "on_spawn": []
       }
     ]
+  },
+  {
+    "id": "metal_rift_mantis",
+    "card_id": "metal_rift_mantis_card",
+    "name": "裂锋螳",
+    "element": "metal",
+    "hp": 18,
+    "on_spawn": [
+      {
+        "type": "damage",
+        "amount": 10,
+        "element": "metal",
+        "target": "selected_opponent"
+      }
+    ],
+    "turn_start": [
+      {
+        "type": "status",
+        "target": "opponent",
+        "status": "bleed",
+        "stacks": 3
+      }
+    ],
+    "turn_end": [],
+    "upgrades": [
+      {
+        "hp": 21,
+        "on_spawn": [
+          {
+            "type": "damage",
+            "amount": 14,
+            "element": "metal",
+            "target": "selected_opponent"
+          }
+        ],
+        "turn_start": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "bleed",
+            "stacks": 3
+          }
+        ]
+      },
+      {
+        "hp": 24,
+        "on_spawn": [
+          {
+            "type": "damage",
+            "amount": 16,
+            "element": "metal",
+            "target": "selected_opponent"
+          }
+        ],
+        "turn_start": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "bleed",
+            "stacks": 4
+          }
+        ]
+      }
+    ],
+    "art_flip_h": true
+  },
+  {
+    "id": "water_breath_newt",
+    "card_id": "water_breath_newt_card",
+    "name": "噬息玄鲵",
+    "element": "water",
+    "hp": 25,
+    "on_spawn": [
+      {
+        "type": "lose_qi",
+        "amount": 1,
+        "target": "opponent"
+      }
+    ],
+    "turn_start": [
+      {
+        "type": "damage",
+        "amount": 5,
+        "element": "water",
+        "target": "random_opponent"
+      }
+    ],
+    "turn_end": [],
+    "upgrades": [
+      {
+        "hp": 30,
+        "on_spawn": [
+          {
+            "type": "lose_qi",
+            "amount": 1,
+            "target": "opponent"
+          }
+        ],
+        "turn_start": [
+          {
+            "type": "damage",
+            "amount": 6,
+            "element": "water",
+            "target": "random_opponent"
+          }
+        ]
+      },
+      {
+        "hp": 32,
+        "on_spawn": [
+          {
+            "type": "lose_qi",
+            "amount": 2,
+            "target": "opponent"
+          }
+        ],
+        "turn_start": [
+          {
+            "type": "damage",
+            "amount": 7,
+            "element": "water",
+            "target": "random_opponent"
+          }
+        ]
+      }
+    ],
+    "art_flip_h": true
+  },
+  {
+    "id": "wood_five_banyan",
+    "card_id": "wood_five_banyan_card",
+    "name": "五蕴灵榕",
+    "element": "wood",
+    "hp": 26,
+    "on_spawn": [],
+    "turn_start": [
+      {
+        "type": "gain_random_energy",
+        "target": "self",
+        "amount": 2
+      }
+    ],
+    "turn_end": [],
+    "upgrades": [
+      {
+        "hp": 32,
+        "on_spawn": [],
+        "turn_start": [
+          {
+            "type": "gain_random_energy",
+            "target": "self",
+            "amount": 2
+          }
+        ]
+      },
+      {
+        "hp": 34,
+        "on_spawn": [],
+        "turn_start": [
+          {
+            "type": "gain_random_energy",
+            "target": "self",
+            "amount": 3
+          }
+        ]
+      }
+    ],
+    "art_flip_h": true
+  },
+  {
+    "id": "wood_dew_bloom",
+    "card_id": "wood_dew_bloom_card",
+    "name": "含露花灵",
+    "element": "wood",
+    "hp": 25,
+    "on_spawn": [],
+    "turn_start": [],
+    "turn_end": [],
+    "on_heal": [
+      {
+        "type": "draw",
+        "amount": 1,
+        "target": "self"
+      }
+    ],
+    "upgrades": [
+      {
+        "hp": 28,
+        "on_spawn": [],
+        "turn_start": [],
+        "on_heal": [
+          {
+            "type": "draw",
+            "amount": 1,
+            "target": "self"
+          }
+        ]
+      },
+      {
+        "hp": 28,
+        "on_spawn": [],
+        "turn_start": [],
+        "on_heal": [
+          {
+            "type": "draw",
+            "amount": 1,
+            "target": "self"
+          }
+        ]
+      }
+    ],
+    "art_flip_h": true
+  },
+  {
+    "id": "fire_crimson_clam",
+    "card_id": "fire_crimson_clam_card",
+    "name": "赤霞蜃",
+    "element": "fire",
+    "hp": 26,
+    "on_spawn": [],
+    "turn_start": [
+      {
+        "type": "damage",
+        "amount": 5,
+        "element": "fire",
+        "scope": "all_enemy_summons"
+      }
+    ],
+    "turn_end": [],
+    "upgrades": [
+      {
+        "hp": 30,
+        "on_spawn": [],
+        "turn_start": [
+          {
+            "type": "damage",
+            "amount": 6,
+            "element": "fire",
+            "scope": "all_enemy_summons"
+          }
+        ]
+      },
+      {
+        "hp": 34,
+        "on_spawn": [],
+        "turn_start": [
+          {
+            "type": "damage",
+            "amount": 7,
+            "element": "fire",
+            "scope": "all_enemy_summons"
+          }
+        ]
+      }
+    ],
+    "art_flip_h": true
+  },
+  {
+    "id": "earth_law_lion",
+    "card_id": "earth_law_lion_card",
+    "name": "镇法石猊",
+    "element": "earth",
+    "hp": 28,
+    "on_spawn": [],
+    "turn_start": [],
+    "turn_end": [],
+    "enemy_cost_aura": 1,
+    "upgrades": [
+      {
+        "hp": 32,
+        "on_spawn": [],
+        "turn_start": [],
+        "enemy_cost_aura": 1
+      },
+      {
+        "hp": 36,
+        "on_spawn": [],
+        "turn_start": [],
+        "enemy_cost_aura": 1
+      }
+    ],
+    "art_flip_h": true
   }
 ]

@@ -1,11 +1,11 @@
 {
-  "version": "0.5.0",
-  "release": "真气与循环牌库",
-  "cards": 60,
-  "summons": 20,
-  "artifacts": 15,
-  "card_versions": 180,
-  "summon_versions": 60,
-  "artifact_versions": 45,
+  "version": "0.6.0",
+  "release": "高费卡牌与五行新法宝",
+  "cards": 70,
+  "summons": 26,
+  "artifacts": 30,
+  "card_versions": 210,
+  "summon_versions": 78,
+  "artifact_versions": 90,
   "enemies": 8
 }

@@ -600,5 +600,698 @@
         ]
       }
     ]
+  },
+  {
+    "id": "metal_rift_axe",
+    "name": "裂甲钺",
+    "element": "metal",
+    "slot": "implement",
+    "description": "",
+    "effects": [
+      {
+        "type": "break_shield",
+        "amount": 12,
+        "target": "opponent"
+      },
+      {
+        "type": "status",
+        "target": "opponent",
+        "status": "weak_defense",
+        "stacks": 2
+      }
+    ],
+    "cooldown": 3,
+    "target_mode": "none",
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "break_shield",
+            "amount": 18,
+            "target": "opponent"
+          },
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "weak_defense",
+            "stacks": 3
+          }
+        ],
+        "cooldown": 3
+      },
+      {
+        "effects": [
+          {
+            "type": "break_shield",
+            "amount": 24,
+            "target": "opponent"
+          },
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "weak_defense",
+            "stacks": 4
+          }
+        ],
+        "cooldown": 3
+      }
+    ]
+  },
+  {
+    "id": "metal_tempered_robe",
+    "name": "百炼衣",
+    "element": "metal",
+    "slot": "guard",
+    "description": "",
+    "effects": [
+      {
+        "type": "status",
+        "target": "self",
+        "status": "strong_attack",
+        "stacks": 1
+      }
+    ],
+    "trigger": "damage_received",
+    "durability": 3,
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "strong_attack",
+            "stacks": 1
+          }
+        ],
+        "durability": 5
+      },
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "strong_attack",
+            "stacks": 2
+          }
+        ],
+        "durability": 5
+      }
+    ]
+  },
+  {
+    "id": "metal_roaming_pendant",
+    "name": "游锋佩",
+    "element": "metal",
+    "slot": "pendant",
+    "description": "",
+    "effects": [
+      {
+        "type": "status",
+        "target": "opponent",
+        "status": "bleed",
+        "stacks": 1
+      }
+    ],
+    "trigger": "enemy_summon_death",
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "bleed",
+            "stacks": 2
+          }
+        ]
+      },
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "bleed",
+            "stacks": 3
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "water_shift_pot",
+    "name": "移澜壶",
+    "element": "water",
+    "slot": "implement",
+    "description": "",
+    "effects": [
+      {
+        "type": "shield_heal",
+        "amount": 8,
+        "target": "self"
+      }
+    ],
+    "cooldown": 3,
+    "target_mode": "none",
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "shield_heal",
+            "amount": 12,
+            "target": "self"
+          }
+        ],
+        "cooldown": 3
+      },
+      {
+        "effects": [
+          {
+            "type": "shield_heal",
+            "amount": 16,
+            "target": "self"
+          }
+        ],
+        "cooldown": 3
+      }
+    ]
+  },
+  {
+    "id": "water_mirror_robe",
+    "name": "镜湖衣",
+    "element": "water",
+    "slot": "guard",
+    "description": "",
+    "effects": [
+      {
+        "type": "status",
+        "target": "opponent",
+        "status": "weak_attack",
+        "stacks": 1
+      }
+    ],
+    "trigger": "damage_received",
+    "durability": 3,
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "weak_attack",
+            "stacks": 1
+          }
+        ],
+        "durability": 4
+      },
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "weak_attack",
+            "stacks": 2
+          }
+        ],
+        "durability": 4
+      }
+    ]
+  },
+  {
+    "id": "water_return_pearl",
+    "name": "返潮珠",
+    "element": "water",
+    "slot": "pendant",
+    "description": "",
+    "effects": [
+      {
+        "type": "draw",
+        "amount": 1,
+        "target": "self",
+        "condition": {
+          "type": "hand_at_most",
+          "amount": 2
+        }
+      }
+    ],
+    "trigger": "turn_end",
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "draw",
+            "amount": 1,
+            "target": "self",
+            "condition": {
+              "type": "hand_at_most",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "effects": [
+          {
+            "type": "draw",
+            "amount": 2,
+            "target": "self",
+            "condition": {
+              "type": "hand_at_most",
+              "amount": 3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "wood_dew_branch",
+    "name": "含露枝",
+    "element": "wood",
+    "slot": "implement",
+    "description": "",
+    "effects": [
+      {
+        "type": "heal_lowest_ally",
+        "amount": 6,
+        "target": "self"
+      },
+      {
+        "type": "gain_energy",
+        "target": "self",
+        "amount": 1,
+        "element": "wood"
+      }
+    ],
+    "cooldown": 3,
+    "target_mode": "none",
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "heal_lowest_ally",
+            "amount": 9,
+            "target": "self"
+          },
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "amount": 1,
+            "element": "wood"
+          }
+        ],
+        "cooldown": 3
+      },
+      {
+        "effects": [
+          {
+            "type": "heal_lowest_ally",
+            "amount": 12,
+            "target": "self"
+          },
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "amount": 2,
+            "element": "wood"
+          }
+        ],
+        "cooldown": 3
+      }
+    ]
+  },
+  {
+    "id": "wood_nesting_robe",
+    "name": "栖枝衣",
+    "element": "wood",
+    "slot": "guard",
+    "description": "",
+    "effects": [
+      {
+        "type": "heal",
+        "amount": 2,
+        "target": "self"
+      }
+    ],
+    "trigger": "ally_summon_hit",
+    "durability": 3,
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "heal",
+            "amount": 3,
+            "target": "self"
+          }
+        ],
+        "durability": 4
+      },
+      {
+        "effects": [
+          {
+            "type": "heal",
+            "amount": 4,
+            "target": "self"
+          }
+        ],
+        "durability": 5
+      }
+    ]
+  },
+  {
+    "id": "wood_flower_knot",
+    "name": "百花结",
+    "element": "wood",
+    "slot": "pendant",
+    "description": "",
+    "effects": [
+      {
+        "type": "gain_random_energy",
+        "target": "self",
+        "amount": 1
+      }
+    ],
+    "trigger": "first_ally_heal_own_turn",
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "gain_random_energy",
+            "target": "self",
+            "amount": 1
+          }
+        ]
+      },
+      {
+        "effects": [
+          {
+            "type": "gain_random_energy",
+            "target": "self",
+            "amount": 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "fire_wild_banner",
+    "name": "燎原幡",
+    "element": "fire",
+    "slot": "implement",
+    "description": "",
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 4,
+        "element": "fire",
+        "target": "random_opponent"
+      },
+      {
+        "type": "damage",
+        "amount": 4,
+        "element": "fire",
+        "target": "random_opponent"
+      },
+      {
+        "type": "damage",
+        "amount": 4,
+        "element": "fire",
+        "target": "random_opponent"
+      }
+    ],
+    "cooldown": 3,
+    "target_mode": "none",
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 5,
+            "element": "fire",
+            "target": "random_opponent"
+          },
+          {
+            "type": "damage",
+            "amount": 5,
+            "element": "fire",
+            "target": "random_opponent"
+          },
+          {
+            "type": "damage",
+            "amount": 5,
+            "element": "fire",
+            "target": "random_opponent"
+          }
+        ],
+        "cooldown": 3
+      },
+      {
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 6,
+            "element": "fire",
+            "target": "random_opponent"
+          },
+          {
+            "type": "damage",
+            "amount": 6,
+            "element": "fire",
+            "target": "random_opponent"
+          },
+          {
+            "type": "damage",
+            "amount": 6,
+            "element": "fire",
+            "target": "random_opponent"
+          }
+        ],
+        "cooldown": 3
+      }
+    ]
+  },
+  {
+    "id": "fire_scale_robe",
+    "name": "赤鳞衣",
+    "element": "fire",
+    "slot": "guard",
+    "description": "",
+    "effects": [
+      {
+        "type": "status",
+        "target": "opponent",
+        "status": "burn",
+        "stacks": 1
+      }
+    ],
+    "trigger": "damage_received",
+    "durability": 3,
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "burn",
+            "stacks": 1
+          }
+        ],
+        "durability": 4
+      },
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "burn",
+            "stacks": 2
+          }
+        ],
+        "durability": 4
+      }
+    ]
+  },
+  {
+    "id": "fire_kindling_pendant",
+    "name": "薪火坠",
+    "element": "fire",
+    "slot": "pendant",
+    "description": "",
+    "effects": [
+      {
+        "type": "status",
+        "target": "self",
+        "status": "charge",
+        "stacks": 1
+      }
+    ],
+    "trigger": "zero_cost_card",
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "charge",
+            "stacks": 1
+          },
+          {
+            "type": "status",
+            "target": "self",
+            "status": "strong_attack",
+            "stacks": 1
+          }
+        ]
+      },
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "charge",
+            "stacks": 2
+          },
+          {
+            "type": "status",
+            "target": "self",
+            "status": "strong_attack",
+            "stacks": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "earth_settle_seal",
+    "name": "定尘印",
+    "element": "earth",
+    "slot": "implement",
+    "description": "",
+    "effects": [
+      {
+        "type": "status",
+        "target": "self",
+        "status": "shield",
+        "stacks": 6
+      },
+      {
+        "type": "grow_all_summons",
+        "amount": 1,
+        "target": "self"
+      }
+    ],
+    "cooldown": 3,
+    "target_mode": "none",
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "shield",
+            "stacks": 9
+          },
+          {
+            "type": "grow_all_summons",
+            "amount": 2,
+            "target": "self"
+          }
+        ],
+        "cooldown": 3
+      },
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "shield",
+            "stacks": 12
+          },
+          {
+            "type": "grow_all_summons",
+            "amount": 3,
+            "target": "self"
+          }
+        ],
+        "cooldown": 3
+      }
+    ]
+  },
+  {
+    "id": "earth_thick_robe",
+    "name": "厚土袍",
+    "element": "earth",
+    "slot": "guard",
+    "description": "",
+    "effects": [
+      {
+        "type": "status",
+        "target": "self",
+        "status": "tenacity",
+        "stacks": 1
+      }
+    ],
+    "trigger": "first_health_lost_enemy_turn",
+    "durability": 3,
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "tenacity",
+            "stacks": 2
+          }
+        ],
+        "durability": 4
+      },
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "tenacity",
+            "stacks": 3
+          }
+        ],
+        "durability": 5
+      }
+    ]
+  },
+  {
+    "id": "earth_return_jade",
+    "name": "归尘珏",
+    "element": "earth",
+    "slot": "pendant",
+    "description": "",
+    "effects": [
+      {
+        "type": "status",
+        "target": "self",
+        "status": "shield",
+        "stacks": 3
+      }
+    ],
+    "trigger": "ally_summon_death",
+    "upgrades": [
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "shield",
+            "stacks": 4
+          }
+        ]
+      },
+      {
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "shield",
+            "stacks": 5
+          }
+        ]
+      }
+    ]
   }
 ]

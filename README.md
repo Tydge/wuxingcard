@@ -1,6 +1,6 @@
 # 五行 · 命盘 — 可玩原型
 
-当前版本 **0.5.0**，Godot 4.6 的单机 PVE 五行卡牌战斗原型。三份 v0.3 原始设计文档保存在 `docs/`。
+当前版本 **0.6.0**，Godot 4.6 的单机 PVE 五行卡牌战斗原型。三份 v0.3 原始设计文档保存在 `docs/`。
 
 ## 开始游戏
 
@@ -61,10 +61,10 @@ Android 和 Windows 共用导出暂存与图片优化：排除未使用图片，
 - 战斗开始五行灵气均为0，真气3点；每个己方回合开始真气+1，可跨回合积攒。点击我方五行圆圈消耗1真气转为对应1灵气，灵气上限10；封锁、满额或行动阶段之外不能转化。真气本身不提供抗性、不触发中毒；转化按获得灵气正常触发中毒与法宝。
 - 开局随机决定先后手，双方同时抽3张起始牌，后手补抽1张；随后按先手、后手顺序触发开局法宝，观想选完再进入先手第一回合，真气+1并抽1张。没有额外效果时，此时双方都是4张手牌；手牌上限8张，抽牌堆耗尽时洗回弃牌堆，手牌不参与；每次实际循环直接失去生命5、10、20、40……，无弃牌则不循环。完整时序见 [战场流程](docs/battle_flow.md)。
 - 敌我共用能量、抽牌、出牌、伤害和状态逻辑；敌方手牌显示牌背，不公开内容。
-- 60 种数据定义卡牌（40 张普通牌、20 张召唤牌）、8 种敌人、全卡池随机测试牌组及 3 套回归测试预设牌组。效果通过 `effects` 顺序结算，包括伤害、治疗、抽牌、获得/随机获得/削减/转换能量、随机弃牌、状态及召唤。
+- 70 种数据定义卡牌（44 张普通牌、26 张召唤牌）、8 种敌人、全卡池随机测试牌组及 3 套回归测试预设牌组。效果通过 `effects` 顺序结算，包括伤害、治疗、抽牌、获得/随机获得/削减/转换能量、随机弃牌、状态及召唤。
 - 双方各有 3 个召唤槽，围绕人物立绘呈三角形站位，敌方左右镜像。五张基础召唤牌消耗 2 点对应属性灵气，召唤 15 生命的物体；物体在持有者回合开始时产生 1 点相生属性灵气。另有玄金铃（三级均1费、生命8／11／14，加蓄力），以及四张原版2费召唤牌：春藤鹿治疗、听雨螺抽牌、离火鸦造成火伤、镇山龟加坚韧。第三组为金翎隼（2 费 / 12 血，开始时攻击生命最低的敌方目标，并列随机）、灵汐鲤（3 / 20，开始时先为召唤者恢复3生命，再使对手受到3水伤）、碧瘴蛙（1 / 6，结束时对手获 2 中毒）、赤尾狐（2 / 10，结束时对手获 1 灼伤）、岩甲獾（2 / 16，结束时召唤者获 5 护盾）。召唤物的回合开始与结束效果共用卡牌底层结算规则；多个召唤物按上、中、下槽位依次施法、结算和显示反馈，再继续回合。召唤物不获得状态；受到同系伤害 −50%，受到克制自身属性的伤害 +50%，与伤害来源的蓄力／虚弱加算，不使用持有者的能量抗性。伤害牌可自由指定对手或召唤物；焚阵对双方角色与全部召唤物结算全场伤害并播放各目标特效；可选目标只显示小准星，多段伤害预览按结算顺序逐段显示，并计入护盾和剩余生命。
 - 状态：灼伤、中毒、出血、虚弱、脆弱、蓄力、坚韧、再生、护盾、强攻、弱攻、强防、弱防、元素封锁。固定伤害状态先于百分比计算，强攻／弱攻与强防／弱防分别抵消且无上限；多段伤害每段消耗一层，单段群体伤害共享一次攻击加成。双方的状态以独立图标显示，每排 8 个，层数在图标右下角。敌人根据伤害、恢复、资源和状态评估手牌并连续出牌。
-- 仙侠山门主界面：仙山云海背景、书法题字、金边模式入口和流动微光；测试模式支持本机保存的自建卡组与随机卡组。藏经阁展示全部 60 张真实卡牌预制体，支持五行筛选、翻页动效、平滑放大与收回、卡旁关键词说明，召唤牌保留生命徽章。
+- 仙侠山门主界面：仙山云海背景、书法题字、金边模式入口和流动微光；测试模式支持本机保存的自建卡组与随机卡组。藏经阁展示全部 70 张真实卡牌预制体，支持五行筛选、翻页动效、平滑放大与收回、卡旁关键词说明，召唤牌保留生命徽章。
 - 横版对战界面：左我方 / 右敌方立绘面对面，我方 HUD 在左下、敌方 HUD 在右上，圆形五行能量、扇形手牌、悬停放大、拖拽出牌、从牌堆飞入手牌的抽牌动画、弃牌从原手牌位置向场内飘起并渐隐（我方向上、敌方向下且保留倒置卡背）、敌方卡牌从牌背飞入场中的展示，以及胜负、平局和重开。战斗顶部的「记录」显示按时间排序的本局事件，可导出包含种子、双方开局卡组、法宝和结算经过的 JSON 战报。
 - 布局以画面中心点对称：我方手牌（底部偏右）对应敌方卡背（顶部偏左），我方抽牌堆（右下角）对应敌方抽牌堆（左上角）。
 - 五行共用的参数化战斗特效：出牌轨迹、命中法阵、护盾、治疗、能量增减、状态与伤害数字。出牌轨迹按卡牌的实际目标决定落点——打向对手的牌从我方立绘飞向敌方立绘，只增益自己的牌落回自己立绘上。受击时角色和召唤物有短促后仰与闪色，伤害数字使用书法衬线字体、墨色笔触底和厚描边；只有发生五行克制或抵抗时，才在数字旁显示对应文字。抽牌与弃牌不画额外符号，只由卡牌预制体本身的飞牌与手牌变化表现。动态形状由 Godot 绘制，命中法阵复用一张 AI 生成的透明纹理。
@@ -86,7 +86,7 @@ Android 和 Windows 共用导出暂存与图片优化：排除未使用图片，
 
 ## 可编辑的卡牌信息库
 
-项目根目录的 [卡牌目录.md](卡牌目录.md) 收录全部 60 张卡牌，已同步0.5.0，包含五系原版速查索引，以及每张牌的原版／精／玄费用和完整效果、ID、原版规则明细、召唤物生命与触发时机、所属牌组、美术方向和资源路径。全部卡牌与法宝并列对照见[各等级效果总表](docs/卡牌与法宝各等级效果_0.5.0.md)，法宝三级效果见[法宝目录](法宝目录.md)。
+项目根目录的 [卡牌目录.md](卡牌目录.md) 收录全部 70 张卡牌，已同步0.6.0，包含五系原版速查索引，以及每张牌的原版／精／玄费用和完整效果、ID、原版规则明细、召唤物生命与触发时机、所属牌组、美术方向和资源路径。全部卡牌与法宝并列对照见[各等级效果总表](docs/卡牌与法宝各等级效果_0.6.0.md)，法宝三级效果见[法宝目录](法宝目录.md)。
 
 这是人工维护的设计文档，不参与游戏运行。可以直接修改、新增或删除详细条目，下次让开发 agent 按文档落实变化即可。后续卡牌开发应先读取此文件，与 JSON 实现对照；详细条目代表最新设计意图，不要用旧 JSON 覆盖用户编辑。完成开发后同步维护文档与索引。
 
@@ -124,7 +124,7 @@ Android 和 Windows 共用导出暂存与图片优化：排除未使用图片，
 
 卡牌定义与外观分开：`data/cards.json` 定义费用、属性、效果等规则，玩家和敌人的手牌保存卡牌 ID；`ui/card_view.tscn` 是普通正面卡牌预制场景，召唤牌另有 `ui/summon_card_view.tscn`，`ui/card_back.tscn` 是牌背预制场景，使用 `assets/cards/card_back.webp` 美术图。敌方手牌、双方牌堆和抽牌飞行动画共用牌背；敌方的牌背美术旋转 180°。双方手牌固定为同一尺寸，张数增加时只收紧间距，让相邻卡牌互相遮挡；扇形上下翻转并贴近画面边缘，允许部分牌面超出屏幕，但避开我方状态栏和结束回合按钮。悬停可看完整卡牌。手牌及场上召唤物的悬停放大、卡牌一览的点击放大共用卡旁关键词说明；等待 0.5 秒后快速渐入，移开或收回立即消失，选择空间更大的左右一侧显示。所有正面卡牌始终显示相同的费用、属性、插画、名称与效果文字；召唤牌额外把基础生命作为右下角外挂徽章，保留完整的居中文字区，所有元素只做等比例缩放。卡牌外框固定为 **5:7**；插画窗口固定为 **4:3 横向**，建议生成 **1024×768** 图片。早期 2:3 竖版五行占位图会在插画窗口内居中裁切；后续生成的独立卡图按新的 4:3 规格制作。
 
-本版包含独立生成的 40 张普通牌插画、20 对召唤物透明立绘与 4:3 手牌插画、角色立绘、战斗和山门背景、透明法阵纹理。五系基础直伤牌只保留 1 费、10 点伤害的版本：锋芒、藤刺、水刃、炎咒、碎岩；原有 2 费 20 伤、3 费 32 伤版本已从卡池和牌组移除。封火令已从卡池和牌组移除。所有现有卡牌均使用 `assets/cards/generated/{id}.webp` 独立插画；旧五行通用插画仅作缺失资源时的后备。本次新增 10 张牌的完整提示词、原图路径及游戏资源路径见 [新增牌美术记录](docs/card_expansion_art_2026-09-27.md)。新增六张牌的独立插画与提示词见 [新状态卡牌美术记录](docs/flat_status_card_art_2026-09-27.md)。普通牌插画生成提示词见 [普通牌美术说明](docs/card_art_prompts.md)，召唤物提示词见 [召唤物美术说明](docs/summon_art_prompts.md)。第三组五只灵兽，以及三昧火与连锋诀的改图提示词、原图与资源位置见 [本轮美术记录](docs/summon_wave3_art_2026-09-27.md)。运行 `python3 tools/art_pipeline.py manifest` 可生成全部卡面及角色、背景、特效资源任务；用 `python3 tools/art_pipeline.py ingest card fire_strike 图片路径` 检查 4:3 比例并按 ID 导入新插画。
+本版包含独立生成的 44 张普通牌插画、26 对召唤物透明立绘与 4:3 手牌插画、角色立绘、战斗和山门背景、透明法阵纹理。五系基础直伤牌只保留 1 费、10 点伤害的版本：锋芒、藤刺、水刃、炎咒、碎岩；原有 2 费 20 伤、3 费 32 伤版本已从卡池和牌组移除。封火令已从卡池和牌组移除。所有现有卡牌均使用 `assets/cards/generated/{id}.webp` 独立插画；旧五行通用插画仅作缺失资源时的后备。本次新增 10 张牌的完整提示词、原图路径及游戏资源路径见 [新增牌美术记录](docs/card_expansion_art_2026-09-27.md)。新增六张牌的独立插画与提示词见 [新状态卡牌美术记录](docs/flat_status_card_art_2026-09-27.md)。普通牌插画生成提示词见 [普通牌美术说明](docs/card_art_prompts.md)，召唤物提示词见 [召唤物美术说明](docs/summon_art_prompts.md)。第三组五只灵兽，以及三昧火与连锋诀的改图提示词、原图与资源位置见 [本轮美术记录](docs/summon_wave3_art_2026-09-27.md)。运行 `python3 tools/art_pipeline.py manifest` 可生成全部卡面及角色、背景、特效资源任务；用 `python3 tools/art_pipeline.py ingest card fire_strike 图片路径` 检查 4:3 比例并按 ID 导入新插画。
 
 横版对峙使用 `assets/characters/fullbody/{id}.webp` 的透明全身立绘，原有 `assets/characters/{id}.webp` 继续用于属性栏肖像。四名角色的全身源图统一面朝画面右侧；敌人放在战场右侧时由界面水平镜像，形成面对面站位。`tools/make_standees.gd` 按 alpha 边界裁切，再等比例放入 **320×480** 的透明画框，不裁掉头、脚或法器，输出到 `assets/characters/{id}_standee.webp`；战斗里以 300×450 显示。执行 `Godot --headless --path . --script res://tools/make_standees.gd -- --force` 可重建全部战场立绘，之后运行 `Godot --headless --path . --import` 导入新图片。
 
@@ -170,30 +170,20 @@ Windows 上可使用同样的 `--headless --script 验证脚本绝对路径` 参
 
 ## 测试
 
-```sh
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tests/smoke_test.gd
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tests/summon_presentation_test.gd
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tests/card_expansion_test.gd
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tests/deck_store_test.gd
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tests/artifact_test.gd
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tests/artifact_ui_test.gd
-```
-
-测试覆盖伤害公式、护盾和多段伤害预览、召唤物行动与受击、状态触发与衰减、递增疲劳，并以固定种子完整运行 90 场预设战斗；新增牌测试覆盖复合效果、群体伤害、随机能量、中毒事件、800 份随机牌组、30 场完整随机对战与 80 点生命上限。游戏 UI 也通过本机 Godot 实际启动，检查指定槽位召唤、伤害目标选择和无效拖拽：
+测试按修改范围执行，完整规范见[测试规范](docs/testing.md)。普通文档或注释修改通常不启动Godot；卡牌、法宝、存档与界面改动选择对应组，不为每次提交或推送默认运行全套。
 
 ```sh
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/test_main_menu.gd
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/test_deck_workshop.gd
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/test_card_expansion_ui.gd
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/test_card_keywords.gd
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/test_drag.gd
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/test_summon_drag.gd
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/test_summon_fx.gd
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tools/test_card_art.gd
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tools/test_summon_art.gd
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/capture_interaction.gd
-/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot --path . --script res://tools/capture_new_summons.gd
+# 默认仅4项headless规则检查
+python3 tools/check_project.py
+# 先查看卡牌修改影响的检查范围，不启动Godot
+python3 tools/check_project.py --group cards --group damage --list
+# 运行相关组；法宝UI调整可以仅用 --test artifact_ui_test
+python3 tools/check_project.py --group cards --group damage
+# 正式导出或大范围改动才运行注册的完整清单
+python3 tools/check_project.py --suite full
 ```
+
+日常分组减少随机对战样本；完整回归保留全部样本与PC/触屏检查。默认失败立即停止并记录逐项耗时，不自动重试。日志与报告按quick、targeted、full分开保存到`work/checks/`。不符合当前规则的历史演示脚本不作为推荐入口。
 
 ## 美术提示词
 
@@ -207,13 +197,7 @@ Windows 上可使用同样的 `--headless --script 验证脚本绝对路径` 参
 - 元素提示、山门和战斗规则说明、按时间排序的战斗记录均支持 PC 和手机。战报在 `user://battle_reports/`；Windows 位于 Godot 应用用户目录内的 `battle_reports`，Android 位于应用私有数据目录。
 - 普通规则测试显式关闭随机法宝，法宝回归另行覆盖。开局动画测试固定双方观澜珠，覆盖双方先手、共10张牌的分阶段批量飞入、敌方自动行动、观想选牌、操作解锁和中途重开。
 
-统一检查命令：
-
-```sh
-python3 tools/check_project.py
-```
-
-检查规则、法宝连锁、AI、开局、能量提示与帮助、卡图、关键词、鼠标拖拽、构筑和触屏。需要鼠标/渲染的检查会短暂打开 Godot 测试窗口，其他检查使用 headless。结果和逐项日志在 `work/checks/`。导出默认要求整套检查通过；可用 `--checks-report work/checks/latest.json` 复用与当前源码和引擎完全一致的通过记录。
+正式导出前使用`python3 tools/check_project.py --suite full`。构建脚本自动复用有效的`work/checks/full/latest.json`，也可显式指定`--checks-report`；只有完整通过且运行代码、资源、测试与引擎一致的报告可复用，局部报告不能代替。仅说明文档变化不会使检查失效，构建仍保存当前完整源码清单。具体分组、失败处理和已知未通过项见[测试规范](docs/testing.md)。
 
 Windows 与 Android 导出包均附 `source_manifest.json`、`checks.json`、`build_info.json`，记录完整源码文件哈希、源码总指纹、Git 提交、包括新文件在内的工作树状态和本次验证。试玩包版本以清单为准，不能仅凭提交号判断含未提交改动的构建。正式交付前将相关源码和资源纳入 Git，再从同一套源码生成两种平台的包。
 
@@ -229,7 +213,7 @@ Windows 与 Android 导出包均附 `source_manifest.json`、`checks.json`、`bu
 
 全部法器的草案冷却数值增加1：通常冷却3，鸣雷尺·玄冷却2。冷却N在使用后的第N个己方回合恢复（冷却3跳过随后两个己方回合）。三昧火原版改为3费、敌方召唤物群伤15；焚阵原版改为1费、全场群伤12。凝霜纱减伤后为0也消耗耐久；原本完全免疫时不消耗。藤刺升级版施加出血，出牌支付费用后先失血，致命出血中止后续效果。
 
-本次只修改本地源码，未重新导出Windows或Android包。新增规则和实际渲染回归分别见 `tests/upgrade_test.gd`、`tests/upgrade_ui_test.gd`；完整检查入口为 `python3 tools/check_project.py`。
+本次只修改本地源码，未重新导出Windows或Android包。新增规则和实际渲染回归分别见 `tests/upgrade_test.gd`、`tests/upgrade_ui_test.gd`；完整检查入口为 `python3 tools/check_project.py --suite full`；日常按[测试规范](docs/testing.md)选择范围。
 
 ### Android 触屏交互回归
 
@@ -255,7 +239,7 @@ Windows 与 Android 导出包均附 `source_manifest.json`、`checks.json`、`bu
 
 测试卡组15～30张，无尽初始恰好15张。瘴毒咒由5／7／9层减为5／6／7层，同瘴咒由双方4／6／8层减为4／5／6层。电脑版悬停五行、真气、状态和抽牌堆查看说明；手机版按住0.45秒显示，松开关闭，短点我方五行圆圈才转化。循环疲劳仅在抽牌堆说明中提示。
 
-旧无尽存档保留卡牌、法宝、灵钱和连胜；正在战斗的旧规则对局备份为`.pre-qi`后，使用同一对手与种子从开局继续，避免旧行动记录在新资源规则下失效。已休整的牌组不强制删牌。新版真气行动与选牌记录可准确恢复。
+旧无尽存档保留卡牌、法宝、灵钱和连胜；正在战斗的旧规则对局备份为`.rules-v1`／`.rules-v2`后，使用同一对手与种子从开局继续，避免旧行动记录在新资源规则下失效。已休整的牌组不强制删牌。新版真气行动与选牌记录可准确恢复。
 
 ## 2026-10-01 卡牌与法宝调整
 
@@ -264,3 +248,11 @@ Windows 与 Android 导出包均附 `source_manifest.json`、`checks.json`、`bu
 观想关键词只显示「查看牌堆顶至多N张，选1张入手，其余顺序不变。」；移除生牌关键词说明。烬心环每次受到有效元素伤害时触发，双方回合均可生效，护盾完全吸收的伤害也触发，完全免疫、中毒、出血、疲劳不触发。法宝图标与耐久绘制在人物立绘之上，详情和弹窗继续绘制在法宝之上。
 
 三级效果总表、卡牌目录与法宝目录同步更新。`tests/card_balance_test.gd`覆盖自动目标、数值与状态、受伤触发边界和模拟预览，纳入完整检查入口；`tests/artifact_ui_test.gd`检查法宝、立绘与弹窗层级及敌方耐久显示。
+
+## 0.6.0 高费卡牌与五行法宝
+
+新增四象鸣雷、裂锋螳、沧浪生枝、噬息玄鲵、五蕴灵榕、含露花灵、焚天诀、赤霞蜃、叠岳击、镇法石猊；新增15件法宝，五行各一法器、一护身、一灵佩。全部三级已实现，当前70种卡牌、26类召唤物、30件法宝，分别210／78／90个等级定义。36张配套插画和透明立绘使用内置图像生成工具制作，铜钱图标使用原生SVG。
+
+裂锋螳先选槽再选出场伤害目标，取消不消耗资源；含露花灵只按实际治疗触发，多只各自抽牌；镇法石猊的全体费用光环可叠加并即时随死亡解除；叠岳击只限制基础50点，护盾不消耗。战斗卡面强化数值绿色、弱化红色，无尽余额与各项价格使用铜钱图标。
+
+完整三级设计及规则见[本轮新增内容](docs/expansion_2026-10-02.md)，生成提示词和资源见[美术记录](docs/expansion_art_2026-10-02.md)。本轮未重新导出试玩包，已有发布记录仍代表对应的旧版本。

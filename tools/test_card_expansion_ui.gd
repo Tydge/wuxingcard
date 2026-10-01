@@ -1,3 +1,5 @@
+# LEGACY: expectations predate global 焚阵 and its two-energy cost.
+# Not registered in check_project.py; use current card rules / hand UI groups.
 extends SceneTree
 
 var failures := 0
