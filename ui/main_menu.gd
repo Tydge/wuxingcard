@@ -2,6 +2,7 @@ class_name MainMenu
 extends Control
 
 signal test_requested(deck: Dictionary)
+signal endless_requested
 
 const ENTRY_SCRIPT := preload("res://ui/menu_entry.gd")
 const ATMOSPHERE_SCRIPT := preload("res://ui/menu_atmosphere.gd")
@@ -53,6 +54,7 @@ var inspect_action: Button
 var inspect_switch_tween: Tween
 var inspect_previous: Control
 var inspect_destination := Vector2.ZERO
+var endless_caption := "长路无尽，万法归一"
 
 func configure(card_data: Dictionary, factory: Callable, summon_data: Dictionary = {}) -> void:
 	cards = card_data
@@ -134,7 +136,7 @@ func _show_home() -> void:
 	var entries := [
 		["rogue", "肉鸽模式", "踏入秘境，探寻未知", false],
 		["arena", "竞技模式", "以五行之术，论道争锋", false],
-		["endless", "无尽模式", "长路无尽，万法归一", false],
+		["endless", "无尽模式", endless_caption, true],
 		["test", "测试模式", "编修卡组 · 入阵试法", true],
 		["collection", "万法藏阁", "卡牌 · 法宝", true]]
 	for i in entries.size():
@@ -149,6 +151,8 @@ func _show_home() -> void:
 			button.pressed.connect(_show_decks)
 		elif entry[0] == "collection":
 			button.pressed.connect(_show_collection)
+		elif entry[0] == "endless":
+			button.pressed.connect(func(): endless_requested.emit())
 		button.modulate.a = 0.0
 		var entrance := button.create_tween()
 		entrance.tween_interval(0.08 * i)
@@ -358,10 +362,7 @@ func _open_inspector(card: Dictionary, source: Control) -> void:
 		inspect_keywords = CardKeywordPopup.new()
 		inspector.add_child(inspect_keywords)
 		inspect_keywords.configure(entries, Rect2(inspect_position, Vector2(inspect_width, inspect_width * 1.4)), size)
-	inspect_tween = inspector.create_tween().set_parallel(true)
-	inspect_tween.tween_property(inspect_card, "position", inspect_position, 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	inspect_tween.tween_property(inspect_card, "scale", Vector2.ONE, 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	inspect_tween.tween_property(shade, "modulate:a", 1.0, 0.3)
+	inspect_tween = CardInspectMotion.focus(inspector, inspect_card, inspect_origin, inspect_origin_scale, inspect_position, shade)
 	inspect_tween.tween_property(hint, "modulate:a", 1.0, 0.4)
 	inspect_tabs = UpgradeTabs.new()
 	inspector.add_child(inspect_tabs)
@@ -442,10 +443,7 @@ func _close_inspector() -> void:
 		inspect_keywords.queue_free()
 	inspect_keywords = null
 	if inspect_tween != null and inspect_tween.is_running(): inspect_tween.kill()
-	inspect_tween = inspector.create_tween().set_parallel(true)
-	inspect_tween.tween_property(inspect_card, "position", inspect_origin, 0.32).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	inspect_tween.tween_property(inspect_card, "scale", Vector2.ONE * inspect_origin_scale, 0.32).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	inspect_tween.tween_property(inspector, "modulate:a", 0.0, 0.32)
+	inspect_tween = CardInspectMotion.fold(inspector, inspect_card, inspect_origin, inspect_origin_scale)
 	inspect_tween.chain().tween_callback(func():
 		if is_instance_valid(inspect_source): inspect_source.visible = true
 		inspector.queue_free()

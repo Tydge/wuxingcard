@@ -21,29 +21,29 @@ func run() -> void:
 	check(ui.theme.default_font != null, "game uses a complete portable font theme")
 	var manager := BattleManager.new()
 	root.add_child(manager)
-	check(manager.cards.size() == 60 and manager.summon_templates.size() == 20, "current card and summon pool is included")
+	check(manager.cards.size() == 180 and manager.summon_templates.size() == 60, "current card and summon pool is included")
 	var supported := GameFonts.BODY.get_supported_chars()
 	for card: Dictionary in manager.cards.values():
-		var art: Texture2D = load("res://assets/cards/generated/%s.webp" % card["id"])
-		check(art != null and art.get_width() > 0, "card art loads: " + card["id"])
+		var art: Texture2D = load("res://assets/cards/generated/%s.webp" % card["art_id"])
+		check(art != null and art.get_width() > 0, "card art loads: " + card["art_id"])
 		for glyph in str(card["name"]) + str(card["text"]):
 			if glyph.strip_edges() != "": check(supported.contains(glyph), "bundled font covers card glyph: " + glyph)
 	for summoned: Dictionary in manager.summon_templates.values():
-		var standee: Texture2D = load("res://assets/summons/standee/%s.webp" % summoned["id"])
-		check(standee != null and standee.get_image().detect_alpha() != Image.ALPHA_NONE, "transparent summon art included: " + summoned["id"])
-	check(manager.artifacts.size() == 15, "all artifact definitions are packaged")
+		var standee: Texture2D = load("res://assets/summons/standee/%s.webp" % summoned["art_id"])
+		check(standee != null and standee.get_image().detect_alpha() != Image.ALPHA_NONE, "transparent summon art included: " + summoned["art_id"])
+	check(manager.artifacts.size() == 45, "all artifact definitions are packaged")
 	for artifact: Dictionary in manager.artifacts.values():
-		var art: Texture2D = load("res://assets/artifacts/%s.webp" % artifact["id"])
-		check(art != null and art.get_width() > 0, "artifact card art loads: " + artifact["id"])
+		var art: Texture2D = load("res://assets/artifacts/%s.webp" % artifact["art_id"])
+		check(art != null and art.get_width() > 0, "artifact card art loads: " + artifact["art_id"])
 		if artifact["slot"] == "implement":
-			var weapon: Texture2D = load("res://assets/artifacts/%s_standee.webp" % artifact["id"])
-			check(weapon != null and weapon.get_image().detect_alpha() != Image.ALPHA_NONE, "transparent implement standee included: " + artifact["id"])
-	for actor_id in ["player", "ember", "tide", "harmony"]:
+			var weapon: Texture2D = load("res://assets/artifacts/%s_standee.webp" % artifact["art_id"])
+			check(weapon != null and weapon.get_image().detect_alpha() != Image.ALPHA_NONE, "transparent implement standee included: " + artifact["art_id"])
+	for actor_id in ["player", "ember", "tide", "harmony", "crane", "veil", "spear", "moon", "ink"]:
 		check(ResourceLoader.exists("res://assets/characters/%s.webp" % actor_id) and ResourceLoader.exists("res://assets/characters/%s_standee.webp" % actor_id), "runtime portrait and full-body standee included: " + actor_id)
 		check(not ResourceLoader.exists("res://assets/characters/fullbody/%s.webp" % actor_id), "unused full-body source excluded: " + actor_id)
 	for element in BattleRules.ELEMENTS:
-		check(not ResourceLoader.exists("res://assets/cards/elements/%s.webp" % element), "unused shared card placeholder excluded: " + element)
-	for background in ["arena", "mountain_gate"]:
+		check(ResourceLoader.exists("res://assets/cards/elements/%s.webp" % element), "shared elemental fallback included: " + element)
+	for background in ["arena", "mountain_gate", "endless_camp"]:
 		check(ResourceLoader.exists("res://assets/backgrounds/%s.webp" % background), "battle and home background included: " + background)
 	check(ResourceLoader.exists("res://audio/audio_director.gd"), "shared desktop/Android audio director is packaged")
 	for path in AudioDirector.MENU_TRACKS + AudioDirector.BATTLE_TRACKS:
@@ -56,10 +56,12 @@ func run() -> void:
 		await manager.start_battle("ember", "random", seed_value + 2100)
 		for actor in [manager.player,manager.enemy]:
 			check(actor.hp > 0 and actor.hp <= 80 and actor.max_hp == 80 and manager.valid_random_deck(actor.hand + actor.draw_pile), "exported battle %d %s starts with legal 25-card deck and 80 maximum HP (hp %d/%d, hand %d, pile %d)" % [seed_value, actor.id, actor.hp, actor.max_hp, actor.hand.size(), actor.draw_pile.size()])
+		check(manager.player.qi == (4 if manager.first_side == "player" else 3), "exported opening uses neutral qi")
 		var steps := 0
 		while manager.phase not in BattleManager.FINISHED_PHASES and steps < 1000:
 			steps += 1
 			if manager.phase == "player_action":
+				fund_player(manager)
 				var played := false
 				for index in manager.player.hand.size():
 					var card: Dictionary = manager.cards[manager.player.hand[index]]
@@ -74,5 +76,15 @@ func run() -> void:
 				check(false, "exported battle stalled: " + manager.phase)
 				break
 		check(steps < 1000, "exported random battle finishes")
-	print("Export pack verified on %s: 60 cards and art, 20 summons, bundled Chinese fonts, 15 complete battles; %d failures" % [OS.get_name(),failures])
+	print("Export pack verified on %s: 180 card definitions and art, 60 summons, bundled Chinese fonts, 15 complete battles; %d failures" % [OS.get_name(),failures])
 	quit(1 if failures > 0 else 0)
+
+func fund_player(manager: BattleManager) -> void:
+	for id in manager.player.hand:
+		var card: Dictionary = manager.cards[id]
+		if manager._card_candidates(manager.player, card).is_empty(): continue
+		var needed := maxi(0, int(card["cost"]) - int(manager.player.energy[card["element"]]))
+		if needed <= 0 or needed > manager.player.qi or not manager.can_convert_qi(manager.player, card["element"]): continue
+		for unit in needed:
+			if not manager.convert_qi(manager.player, card["element"]): break
+		return

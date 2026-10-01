@@ -18,10 +18,22 @@ static func artifact_score(manager: BattleManager, selection: Dictionary) -> flo
 	copy.free()
 	return score
 
+static func funded_card_score(manager: BattleManager, card: Dictionary, selection: Dictionary) -> float:
+	var copy := manager.simulation_copy()
+	var index := manager._simulation_card(copy, copy.enemy, card)
+	var needed := maxi(0, int(card["cost"]) - int(copy.enemy.energy[card["element"]]))
+	for i in needed:
+		if not copy.convert_qi(copy.enemy, card["element"]): break
+	var played := copy._play_card(copy.enemy, copy.player, index, selection) if copy.phase == "enemy_action" else false
+	var score := outcome_score(manager, copy, 1) if played else -INF
+	copy.free()
+	return score
+
 static func outcome_score(before: BattleManager, after: BattleManager, spent_cards: int) -> float:
 	if after.enemy.hp <= 0: return -100.0 if after.player.hp <= 0 else -1000.0
 	if after.player.hp <= 0: return 1000.0
 	var score := float(before.player.hp - after.player.hp)
+	score += float(after.enemy.qi - before.enemy.qi) * 0.8
 	score += float(after.enemy.hp - before.enemy.hp) * 0.9
 	score += float(before.player.hand.size() - after.player.hand.size()) * 8.0
 	score += float(after.enemy.hand.size() - before.enemy.hand.size() + spent_cards) * 4.0

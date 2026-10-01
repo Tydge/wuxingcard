@@ -29,6 +29,8 @@ func run() -> void:
 	for element in BattleRules.ELEMENTS:
 		actor.energy[element] = 0
 		opponent.energy[element] = 0
+	manager.phase = "player_action"
+	actor.own_turn_count = 1
 	var initial_hp := opponent.hp
 	check(manager.artifact_target_mode(actor) == "none", "metal implement has no target selection")
 	check(manager.activate_artifact(actor), "metal implement automatically hits enemy hero")

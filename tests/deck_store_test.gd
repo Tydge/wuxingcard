@@ -33,7 +33,7 @@ func run() -> void:
 	var store := DeckStore.new(manager.cards, path)
 	store.load_decks()
 	check(store.decks.is_empty(), "new profile starts without saved decks")
-	check(not store.problem(sample(19)).is_empty() and store.problem(sample(20)).is_empty(), "twenty-card minimum")
+	check(not store.problem(sample(14)).is_empty() and store.problem(sample(15)).is_empty(), "fifteen-card minimum")
 	check(store.problem(sample(30)).is_empty() and not store.problem(sample(31)).is_empty(), "thirty-card maximum")
 	check(store.problem(["metal_strike", "metal_strike"], false).is_empty() and not store.problem(["metal_strike", "metal_strike", "metal_strike"], false).is_empty(), "same card allows two copies and rejects a third")
 	check(not store.problem(["obsolete_card"], false).is_empty(), "unknown cards cannot be saved")
@@ -59,7 +59,7 @@ func run() -> void:
 	check(reopened.save_deck(id, "非法", sample(31)).has("error") and reopened.find_deck(id)["cards"].size() == 30, "invalid update leaves the old save intact")
 	# Starting any saved legal size preserves exactly its chosen cards. Only the
 	# opponent is constrained by the existing random 25-card cost guardrails.
-	for size in [20, 25, 30]:
+	for size in [15, 20, 25, 30]:
 		var deck := {"id": id, "name": "测试法卷", "cards": sample(size)}
 		await manager.start_battle("ember", "random", 1881, deck)
 		check(counts(manager.player.hand + manager.player.draw_pile) == counts(deck["cards"]), "custom battle preserves %d selected cards" % size)
@@ -68,33 +68,15 @@ func run() -> void:
 	var old_generation := manager.battle_generation
 	await manager.start_battle("ember", "random", 2, draft)
 	check(manager.battle_generation == old_generation, "battle rejects incomplete drafts before changing any state")
-	# Energy uses the immutable full deck, including opening cards, played cards
-	# and discards; exhausted draw piles do not remove natural generation.
-	await manager.start_battle("ember", "random", 4242, {"id": id, "name": "五行卷", "cards": sample(25)})
-	var actor := manager.player
-	for element in BattleRules.ELEMENTS: actor.energy[element] = 0
-	var weights := manager.natural_weights(actor)
-	var full_counts := {}
-	for element in BattleRules.ELEMENTS: full_counts[element] = 0
-	for card_id in actor.initial_deck: full_counts[manager.cards[card_id]["element"]] += 1
-	check(weights == full_counts, "natural weights match the full configured deck")
-	actor.draw_pile.clear()
-	actor.hand.clear()
-	actor.discard_pile = ["fire_strike"]
-	check(manager.natural_weights(actor) == weights, "drawing, playing and discarding cannot change the weights")
-	for draw in 100:
-		for element in BattleRules.ELEMENTS: actor.energy[element] = 0
-		var gained := manager.generate_natural_energy(actor)
-		check(full_counts[gained] > 0, "only configured elements are generated after fatigue")
-	actor.energy["metal"] = 10
-	actor.add_status("lock", 1, 2, "wood")
-	var eligible := manager.natural_weights(actor)
-	check(eligible["metal"] == 0 and eligible["wood"] == 0, "capped and locked attributes are still excluded")
-	for element in BattleRules.ELEMENTS: actor.energy[element] = 10
-	check(manager.generate_natural_energy(actor).is_empty(), "all capped attributes produce no energy")
+	# Every legal deck starts without elemental energy; neutral qi is independent of its colours.
+	manager.random_artifacts_enabled = false
+	await manager.start_battle("ember", "random", 2, {"id": id, "name": "五行卷", "cards": sample(15)})
+	check(manager.player.qi == 4 and manager.enemy.qi == 3, "first side receives three opening qi and one turn qi")
+	for actor in [manager.player, manager.enemy]:
+		for amount in actor.energy.values(): check(int(amount) == 0, "all five elements start at zero")
 	check(reopened.delete_deck(id), "deck deletion persists")
 	store.load_decks()
 	check(store.find_deck(id).is_empty() and store.decks.size() == 1, "deleted deck remains deleted after reloading")
 	DirAccess.remove_absolute(path)
-	print("Deck store test: drafts, persistence, copy/size limits, custom battles and fixed natural energy; %d failures" % failures)
+	print("Deck store test: drafts, persistence, copy/size limits, custom battles and neutral qi; %d failures" % failures)
 	quit(1 if failures > 0 else 0)

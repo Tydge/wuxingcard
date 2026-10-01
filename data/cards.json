@@ -154,14 +154,14 @@
         "effects": [
           {
             "type": "damage",
-            "amount": 13,
+            "amount": 12,
             "element": "wood"
           },
           {
             "type": "status",
             "target": "opponent",
             "status": "bleed",
-            "stacks": 1
+            "stacks": 2
           }
         ]
       },
@@ -170,14 +170,14 @@
         "effects": [
           {
             "type": "damage",
-            "amount": 16,
+            "amount": 14,
             "element": "wood"
           },
           {
             "type": "status",
             "target": "opponent",
             "status": "bleed",
-            "stacks": 2
+            "stacks": 4
           }
         ]
       }
@@ -243,7 +243,7 @@
             "type": "status",
             "target": "self",
             "status": "regen",
-            "stacks": 7
+            "stacks": 6
           }
         ]
       },
@@ -254,7 +254,7 @@
             "type": "status",
             "target": "self",
             "status": "regen",
-            "stacks": 9
+            "stacks": 7
           }
         ]
       }
@@ -605,6 +605,12 @@
             "type": "damage",
             "amount": 13,
             "element": "earth"
+          },
+          {
+            "type": "status",
+            "target": "self",
+            "status": "strong_attack",
+            "stacks": 1
           }
         ]
       },
@@ -1034,7 +1040,7 @@
     "id": "metal_chime_card",
     "name": "玄金铃",
     "element": "metal",
-    "cost": 2,
+    "cost": 1,
     "text": "回合开始：召唤者获得2层蓄力。",
     "art_prompt": "悬浮的玄金铜铃，环绕凝聚力量的金色声波，暗色东方幻想",
     "effects": [
@@ -1046,7 +1052,7 @@
     ],
     "upgrades": [
       {
-        "cost": 2,
+        "cost": 1,
         "effects": [
           {
             "type": "summon",
@@ -1056,7 +1062,7 @@
         ]
       },
       {
-        "cost": 2,
+        "cost": 1,
         "effects": [
           {
             "type": "summon",
@@ -1257,12 +1263,12 @@
     "name": "青藤引灵",
     "element": "wood",
     "cost": 2,
-    "text": "造成14点木伤害，获得1点随机能量。",
+    "text": "造成16点木伤害，获得1点随机能量。",
     "art_prompt": "带刺翠绿灵藤挥过古林石台，藤蔓末端托起一枚五色流光的灵珠，叶脉吸收四周细小灵气，主动作是锐利藤鞭与凝聚灵珠，木系引灵术",
     "effects": [
       {
         "type": "damage",
-        "amount": 14,
+        "amount": 16,
         "element": "wood"
       },
       {
@@ -1277,7 +1283,7 @@
         "effects": [
           {
             "type": "damage",
-            "amount": 18,
+            "amount": 20,
             "element": "wood"
           },
           {
@@ -1292,7 +1298,7 @@
         "effects": [
           {
             "type": "damage",
-            "amount": 20,
+            "amount": 22,
             "element": "wood"
           },
           {
@@ -1332,7 +1338,7 @@
             "type": "status",
             "target": "opponent",
             "status": "poison",
-            "stacks": 7
+            "stacks": 6
           }
         ]
       },
@@ -1343,7 +1349,7 @@
             "type": "status",
             "target": "opponent",
             "status": "poison",
-            "stacks": 9
+            "stacks": 7
           }
         ]
       }
@@ -1460,7 +1466,7 @@
     "id": "fire_burning_field",
     "name": "焚阵",
     "element": "fire",
-    "cost": 1,
+    "cost": 2,
     "text": "对手及其所有召唤物受到20点火伤害。",
     "art_prompt": "古老石台上展开宽广赤金火阵，数道低空火浪同时向三个分散的石质灵物席卷，火光覆盖战场而没有人物受伤，俯视宽幅构图，古亭和深蓝山崖映衬群体火术",
     "effects": [
@@ -1473,7 +1479,7 @@
     ],
     "upgrades": [
       {
-        "cost": 1,
+        "cost": 2,
         "effects": [
           {
             "type": "damage",
@@ -1484,7 +1490,7 @@
         ]
       },
       {
-        "cost": 1,
+        "cost": 2,
         "effects": [
           {
             "type": "damage",
@@ -1556,12 +1562,12 @@
     "name": "崩山印",
     "element": "earth",
     "cost": 3,
-    "text": "造成35点土伤害，然后自身随机弃1张手牌。",
+    "text": "造成33点土伤害，随机弃1张手牌。",
     "art_prompt": "巨大山形石印向古石台落下，迸出强烈金棕震波，近景一枚没有文字的薄玉符被冲击震碎成飞散玉片，仙山悬崖背景，强力土术与资源消耗的清晰对照",
     "effects": [
       {
         "type": "damage",
-        "amount": 35,
+        "amount": 33,
         "element": "earth"
       },
       {
@@ -1576,7 +1582,7 @@
         "effects": [
           {
             "type": "damage",
-            "amount": 41,
+            "amount": 38,
             "element": "earth"
           },
           {
@@ -1591,7 +1597,7 @@
         "effects": [
           {
             "type": "damage",
-            "amount": 47,
+            "amount": 43,
             "element": "earth"
           },
           {
@@ -1873,7 +1879,7 @@
     ],
     "upgrades": [
       {
-        "cost": 1,
+        "cost": 0,
         "effects": [
           {
             "type": "remove_status",
@@ -1884,7 +1890,7 @@
             "type": "status",
             "target": "self",
             "status": "charge",
-            "stacks": 3
+            "stacks": 2
           }
         ]
       },
@@ -2276,7 +2282,7 @@
     "name": "破障雷",
     "element": "metal",
     "cost": 3,
-    "text": "对手失去10层护盾，然后受到25点金伤害。",
+    "text": "对手失去10层护盾，并受到25点金伤害。",
     "art_prompt": "一道金黄色雷电先击碎古石台前的透明护盾，随后凝成第二道锐利金色电锋直贯远方；清楚呈现破盾后攻击的先后。",
     "effects": [
       {
@@ -2287,7 +2293,8 @@
       {
         "type": "damage",
         "amount": 25,
-        "element": "metal"
+        "element": "metal",
+        "target": "opponent"
       }
     ],
     "upgrades": [
@@ -2302,7 +2309,8 @@
           {
             "type": "damage",
             "amount": 30,
-            "element": "metal"
+            "element": "metal",
+            "target": "opponent"
           }
         ]
       },
@@ -2317,7 +2325,8 @@
           {
             "type": "damage",
             "amount": 35,
-            "element": "metal"
+            "element": "metal",
+            "target": "opponent"
           }
         ]
       }
@@ -2365,7 +2374,7 @@
     "name": "寒针",
     "element": "water",
     "cost": 1,
-    "text": "造成7点水伤害，对手获得2层弱攻。",
+    "text": "造成7点水伤害，对手获得2层弱防。",
     "art_prompt": "月下古亭旁，静水凝成唯一一枚纤细冰针，掠过寒潭射向远处目标，留下一道清冷霜痕；单次精准攻击，不是齐射或多段伤害。",
     "effects": [
       {
@@ -2376,7 +2385,7 @@
       {
         "type": "status",
         "target": "opponent",
-        "status": "weak_attack",
+        "status": "weak_defense",
         "stacks": 2
       }
     ],
@@ -2392,7 +2401,7 @@
           {
             "type": "status",
             "target": "opponent",
-            "status": "weak_attack",
+            "status": "weak_defense",
             "stacks": 3
           }
         ]
@@ -2408,7 +2417,7 @@
           {
             "type": "status",
             "target": "opponent",
-            "status": "weak_attack",
+            "status": "weak_defense",
             "stacks": 4
           }
         ]
@@ -2481,13 +2490,13 @@
             "type": "status",
             "target": "self",
             "status": "poison",
-            "stacks": 6
+            "stacks": 5
           },
           {
             "type": "status",
             "target": "opponent",
             "status": "poison",
-            "stacks": 6
+            "stacks": 5
           }
         ]
       },
@@ -2498,13 +2507,13 @@
             "type": "status",
             "target": "self",
             "status": "poison",
-            "stacks": 8
+            "stacks": 6
           },
           {
             "type": "status",
             "target": "opponent",
             "status": "poison",
-            "stacks": 8
+            "stacks": 6
           }
         ]
       }

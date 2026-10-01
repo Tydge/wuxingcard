@@ -39,11 +39,9 @@ static func entries(card: Dictionary, summons: Dictionary) -> Array[Dictionary]:
 		effects.append_array(summon.get("turn_start", []))
 		effects.append_array(summon.get("turn_end", []))
 	for effect in effects:
-		if effect.get("type") in ["contemplate", "generate_card"]:
-			var kind: String = effect["type"]
-			if not seen.has(kind):
-				seen[kind] = true
-				result.append({"title":"观想N" if kind == "contemplate" else "生牌", "text":"查看牌堆顶至多N张牌，选择1张抽入手牌，其余按原顺序留在牌堆。空牌堆按一次抽牌结算疲劳。" if kind == "contemplate" else "随机生成1张原版牌；不消耗牌堆，不改变自然能量比例。手牌已满时进入弃牌堆。"})
+		if effect.get("type") == "contemplate" and not seen.has("contemplate"):
+			seen["contemplate"] = true
+			result.append({"title":"观想N", "text":"查看牌堆顶至多N张，选1张入手，其余顺序不变。"})
 		if effect.get("type") not in ["status", "remove_status"]: continue
 		var id: String = effect["status"]
 		var element: String = effect.get("element", "")

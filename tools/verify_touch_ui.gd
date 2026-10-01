@@ -98,6 +98,11 @@ func run() -> void:
 	workshop.call("_open_artifacts", {})
 	await process_frame
 	check(workshop.artifact_rows.size() == 3, "phone loadout shows all three drop slots")
+	var relic_cards: Array[ArtifactLibraryCard] = []
+	for child in workshop.content.get_children():
+		if child is ArtifactLibraryCard: relic_cards.append(child)
+	check(relic_cards.size() == 6 and relic_cards.all(func(card): return card.plus.size.x >= 48 and card.plus.size.y >= 48), "phone relic pages have six cards and usable equip buttons")
+	check(relic_cards[0].get_global_rect().end.y <= relic_cards[3].get_global_rect().position.y, "touch equip buttons never overlap the following row")
 	var artifact_content: Control = workshop.content
 	var implement_row: ArtifactLoadoutRow = workshop.artifact_rows["implement"]
 	var drag_data := {"kind": "artifact", "slot": "implement", "id": "metal_thunder_ruler"}
@@ -112,6 +117,7 @@ func run() -> void:
 	manager.player.setup("player", "云溪月", [], manager.rng)
 	manager.enemy.setup("ember", "炽羽", [], manager.rng)
 	manager.player.hand.assign(["metal_strike", "earth_bastion", "wood_strike", "water_strike", "fire_strike"])
+	for element in BattleRules.ELEMENTS: manager.player.energy[element] = 10
 	manager.player.energy.metal = 0
 	manager.phase = "player_action"
 	manager.round_number = 1
@@ -240,10 +246,10 @@ func run() -> void:
 	ui.call("_refresh")
 	await process_frame
 	press(ui.status_touch_regions[0].rect.get_center(), true)
+	await create_timer(0.5).timeout
+	check(ui.touch_inspecting, "holding a status icon opens a touch explanation")
 	press(ui.status_touch_regions[0].rect.get_center(), false)
-	check(ui.touch_inspecting, "status icon opens a touch explanation")
-	ui.call("_request_back")
-	check(not ui.touch_inspecting and not is_instance_valid(ui.back_dialog), "back closes the explanation first")
+	check(not ui.touch_inspecting and not is_instance_valid(ui.back_dialog), "release closes the status explanation")
 	manager.player.artifacts["guard"] = "wood_vine_robe"
 	ui.call("_show_artifact_preview", "player", "guard")
 	check(ui.touch_inspecting and is_instance_valid(ui.hover_preview), "tap artifact opens a touch inspection")
@@ -343,5 +349,12 @@ func run() -> void:
 	press(Vector2(662, 552), false)
 	await create_timer(1.0).timeout
 	check(manager.phase != "victory" and manager.phase != "menu", "Retry button starts another battle on touch")
+	while ui.opening_active: await process_frame
+	manager.battle_generation += 1
+	manager.phase = "menu"
+	await create_timer(0.85).timeout
+	ui.queue_free()
+	await process_frame
+	await create_timer(0.6).timeout
 	print("Touch interface checks: ", failures, " failures")
 	quit(1 if failures else 0)

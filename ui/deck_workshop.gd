@@ -209,9 +209,7 @@ func _build_editor(animate: bool = true) -> void:
 	view_mode = "editor"
 	_reset(animate)
 	filter_buttons.clear()
-	_text(content, "编修", Rect2(65, 48, 235, 70), 49, GOLD, true)
-	_text(content, "五行藏卷", Rect2(250, 73, 290, 36), 20, JADE)
-	_button(content, "返回卡组", Rect2(1340, 64, 180, 48), _leave_editor)
+	_editor_heading()
 	_panel(content, Rect2(219, 172, 939, 597), Color("#142e29ed"), Color("#88744d"))
 	var filters := ["all"] + BattleRules.ELEMENTS
 	for i in filters.size():
@@ -235,18 +233,7 @@ func _build_editor(animate: bool = true) -> void:
 	next_page_button = _button(content, "›", Rect2(810, 805, 72, 48), _change_page.bind(1))
 	_update_page_navigation()
 	_text(content, "" if PlatformUI.is_touch() else "拖入卡组 · 点击查看", Rect2(228, 772, 926, 28), 15, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
-	name_edit = LineEdit.new()
-	name_edit.position = Vector2(1205, 124)
-	name_edit.size = Vector2(314, 41)
-	name_edit.text = edit_name
-	name_edit.max_length = 24
-	name_edit.add_theme_font_override("font", brush_font)
-	name_edit.add_theme_font_size_override("font_size", 24)
-	name_edit.add_theme_color_override("font_color", GOLD)
-	name_edit.add_theme_stylebox_override("normal", _style(Color("#122d28c9"), Color("#c3a67060")))
-	name_edit.add_theme_stylebox_override("focus", _style(INK, GOLD))
-	name_edit.text_changed.connect(func(value: String): edit_name = value)
-	content.add_child(name_edit)
+	_editor_identity()
 	drop_zone = DeckDropZone.new()
 	drop_zone.position = Vector2(1187, 178)
 	drop_zone.size = Vector2(347, 528)
@@ -266,10 +253,41 @@ func _build_editor(animate: bool = true) -> void:
 	row_column.mouse_filter = Control.MOUSE_FILTER_PASS
 	row_scroll.add_child(row_column)
 	total_label = _text(content, "", Rect2(1195, 712, 327, 32), 21, GOLD, false, HORIZONTAL_ALIGNMENT_RIGHT)
-	_text(content, "20–30 张 · 同名最多 %d 张" % DeckStore.MAX_COPIES, Rect2(1196, 753, 327, 25), 15, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
+	_text(content, _limit_hint(), Rect2(1196, 753, 327, 25), 15, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
+	_editor_actions()
+	_update_editor()
+
+# Both modes share the editor; the journey supplies ownership and rules.
+func _editor_heading() -> void:
+	_text(content, "编修", Rect2(65, 48, 235, 70), 49, GOLD, true)
+	_text(content, "五行藏卷", Rect2(250, 73, 290, 36), 20, JADE)
+	_button(content, "返回卡组", Rect2(1340, 64, 180, 48), _leave_editor)
+
+func _editor_identity() -> void:
+	name_edit = LineEdit.new()
+	name_edit.position = Vector2(1205, 124)
+	name_edit.size = Vector2(314, 41)
+	name_edit.text = edit_name
+	name_edit.max_length = 24
+	name_edit.add_theme_font_override("font", brush_font)
+	name_edit.add_theme_font_size_override("font_size", 24)
+	name_edit.add_theme_color_override("font_color", GOLD)
+	name_edit.add_theme_stylebox_override("normal", _style(Color("#122d28c9"), Color("#c3a67060")))
+	name_edit.add_theme_stylebox_override("focus", _style(INK, GOLD))
+	name_edit.text_changed.connect(func(value: String): edit_name = value)
+	content.add_child(name_edit)
+
+func _editor_actions() -> void:
 	save_button = _button(content, "保存", Rect2(1187, 805, 160, 49), _save)
 	play_button = _button(content, "入阵", Rect2(1369, 805, 165, 49), _save_and_play)
-	_update_editor()
+
+func _limit_hint() -> String: return "15–30 张 · 同名最多 %d 张" % DeckStore.MAX_COPIES
+func _maximum_cards() -> int: return DeckStore.MAX_CARDS
+func _deck_problem() -> String: return store.problem(draft)
+
+func _refresh_card_views() -> void:
+	for views: Array in page_motion.page_views:
+		for view: DeckLibraryCard in views: view.set_copies(ContentCatalog.family_count(draft, view.card["id"], cards))
 
 func _card_less(a: Dictionary, b: Dictionary) -> bool:
 	if int(a["cost"]) != int(b["cost"]): return int(a["cost"]) < int(b["cost"])
@@ -316,10 +334,9 @@ func _remove_card(id: String) -> void:
 	_update_editor(id)
 
 func _update_editor(highlight: String = "") -> void:
-	for views: Array in page_motion.page_views:
-		for view: DeckLibraryCard in views: view.set_copies(ContentCatalog.family_count(draft, view.card["id"], cards))
-	total_label.text = "%d / 30" % draft.size()
-	play_button.disabled = not store.problem(draft).is_empty()
+	_refresh_card_views()
+	total_label.text = "%d / %d" % [draft.size(), _maximum_cards()]
+	play_button.disabled = not _deck_problem().is_empty()
 	var scroll := row_scroll.scroll_vertical
 	for child in row_column.get_children():
 		if child is CanvasItem: child.hide()
@@ -327,11 +344,8 @@ func _update_editor(highlight: String = "") -> void:
 	row_nodes.clear()
 	for id in _sorted_unique(draft):
 		var row := DeckRow.new()
-		row.configure(cards[id], draft.count(id))
-		if PlatformUI.is_touch():
-			row.pressed.connect(func(): inspect_requested.emit(row.card, row.inspect_anchor))
-			row.remove_requested.connect(_remove_card)
-		else: row.pressed.connect(_remove_card.bind(id))
+		row.configure(cards[id], draft.count(id), _row_has_remove())
+		_connect_row(row, id)
 		row.inspect_requested.connect(func(card: Dictionary, source: Control): inspect_requested.emit(card, source))
 		row_column.add_child(row)
 		row_nodes[id] = row
@@ -341,6 +355,14 @@ func _update_editor(highlight: String = "") -> void:
 	if draft.is_empty():
 		_text(row_column, "点 ＋ 加入卡牌" if PlatformUI.is_touch() else "拖入第一张卡牌", Rect2(0, 0, 306, 95), 22, JADE, true, HORIZONTAL_ALIGNMENT_CENTER)
 	row_scroll.set_deferred("scroll_vertical", scroll)
+
+func _row_has_remove() -> bool: return false
+
+func _connect_row(row: DeckRow, id: String) -> void:
+	if PlatformUI.is_touch():
+		row.pressed.connect(func(): inspect_requested.emit(row.card, row.inspect_anchor))
+		row.remove_requested.connect(_remove_card)
+	else: row.pressed.connect(_remove_card.bind(id))
 
 func _fly_into_row(id: String, source: Vector2) -> void:
 	var flying: Control = factory.call(cards[id], Vector2(100, 140))
@@ -395,7 +417,7 @@ func _create_library_card(card: Dictionary, index: int, sheet: Control) -> Contr
 	view.inspect_requested.connect(func(data: Dictionary, source: Control):
 		if not page_turn_busy: inspect_requested.emit(data, source))
 	view.add_requested.connect(func(id: String):
-		if not page_turn_busy: _add_card(id))
+		if not page_turn_busy: _add_card(id, view.get_global_rect().get_center()))
 	view.drag_denied.connect(func(): _toast("同名卡牌最多%d张" % DeckStore.MAX_COPIES))
 	sheet.add_child(view)
 	return view
@@ -478,18 +500,19 @@ func _build_artifact_editor() -> void:
 		var button := _button(content, "全部法宝" if slot == "all" else ArtifactLibrary.SLOT_NAMES[slot], Rect2(213 + i * 222, 130, 198, 46), func(): selected_artifact_slot = slot; page = 0; _build_artifact_editor())
 		if slot == selected_artifact_slot: button.add_theme_stylebox_override("normal", _style(Color("#385246"), GOLD))
 	var entries := _artifact_entries()
-	var pages := maxi(1, ceili(float(entries.size()) / 8.0))
+	var per_page := 6 if PlatformUI.is_touch() else 8
+	var pages := maxi(1, ceili(float(entries.size()) / per_page))
 	page = clampi(page, 0, pages - 1)
-	for i in range(page * 8, mini(entries.size(), page * 8 + 8)):
+	for i in range(page * per_page, mini(entries.size(), page * per_page + per_page)):
 		var entry: Dictionary = entries[i]
-		var local := i - page * 8
+		var local := i - page * per_page
 		var view := ArtifactLibraryCard.new()
-		view.configure(entry, Vector2(182, 254))
-		view.position = Vector2(219 + (local % 4) * 221, 207 + (local / 4) * 275)
+		view.configure(entry, Vector2(180, 252) if PlatformUI.is_touch() else Vector2(182, 254))
+		view.position = Vector2(267 + (local % 3) * 300, 190 + (local / 3) * 302) if PlatformUI.is_touch() else Vector2(219 + (local % 4) * 221, 207 + (local / 4) * 275)
 		content.add_child(view)
 		view.equip_requested.connect(_equip_artifact_id)
 		view.inspect_requested.connect(func(item: Dictionary, source: Control): inspect_requested.emit(item, source))
-	_text(content, "拖入右侧对应位置 · 点击查看", Rect2(245, 765, 840, 25), 16, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
+	_text(content, "" if PlatformUI.is_touch() else "拖入右侧对应位置 · 点击查看", Rect2(245, 765, 840, 25), 16, JADE, false, HORIZONTAL_ALIGNMENT_CENTER)
 	_button(content, "‹", Rect2(547, 805, 70, 48), func(): page = maxi(0, page - 1); _build_artifact_editor())
 	_text(content, "%d / %d" % [page + 1, pages], Rect2(630, 805, 130, 48), 20, GOLD, false, HORIZONTAL_ALIGNMENT_CENTER)
 	_button(content, "›", Rect2(773, 805, 70, 48), func(): page = mini(pages - 1, page + 1); _build_artifact_editor())

@@ -229,14 +229,15 @@ func run() -> void:
 	workshop.play_button.pressed.emit()
 	check(workshop.view_mode == "artifacts", "Enter Battle opens the saved loadout before combat")
 	workshop.call("_enter_with_artifacts")
-	await create_timer(6.3).timeout
-	check(find_menu() == null and manager.phase == "player_action", "saved deck enters the existing playable battle")
-	var chosen: Array = manager.player.hand + manager.player.draw_pile
+	while ui.opening_active: await process_frame
+	check(find_menu() == null and manager.phase == manager.first_side + "_action", "saved deck enters the existing playable battle")
+	var chosen: Array = manager.player.initial_deck.duplicate()
 	chosen.sort()
 	final_cards.sort()
 	check(chosen == final_cards and manager.player.max_hp == 80 and manager.enemy.max_hp == 80, "battle uses exact saved cards and eighty HP")
-	check(manager.valid_random_deck(manager.enemy.hand + manager.enemy.draw_pile), "enemy remains an independent random twenty-five-card deck")
+	check(manager.valid_random_deck(manager.enemy.initial_deck), "enemy remains an independent random twenty-five-card deck")
 	await shot("custom_deck_battle")
+	manager.battle_generation += 1
 	manager.phase = "menu"
 	ui.call("_refresh")
 	await process_frame

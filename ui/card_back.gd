@@ -18,3 +18,6 @@ func configure(card_size: Vector2, upside_down: bool = false) -> void:
 	art.rotation_degrees = 180.0 if upside_down else 0.0
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(art)
+
+func _make_custom_tooltip(for_text: String) -> Object:
+	return RuleTooltip.create(for_text)

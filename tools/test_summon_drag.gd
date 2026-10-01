@@ -11,7 +11,7 @@ func run() -> void:
 	await process_frame
 	await process_frame
 	var ui: Control = current_scene
-	ui.call("_start_battle")
+	ui.manager.start_battle("ember", "balanced", 2)
 	await create_timer(0.2).timeout
 	if not is_instance_valid(ui.get("turn_notice")):
 		push_error("Turn announcement did not appear")

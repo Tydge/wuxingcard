@@ -107,6 +107,7 @@ var pending_player_draws := 0
 var pending_enemy_draws := 0
 var draw_generation := 0
 var draw_animation_active := false
+var opening_active := false
 var touch_finger := -1
 var touch_hand_index := -1
 var touch_hand_card_id := ""
@@ -120,6 +121,11 @@ var touch_shade: ColorRect
 var touch_returning_preview: Control
 var status_touch_regions: Array[Dictionary] = []
 var energy_touch_regions: Array[Dictionary] = []
+var deck_touch_regions: Array[Dictionary] = []
+var qi_touch_regions: Array[Dictionary] = []
+var touch_rule_control: Dictionary = {}
+var touch_rule_serial := 0
+const RULE_HOLD_SECONDS := 0.45
 var information_panel: BattleInfoPanel
 var back_dialog: Control
 var artifact_aiming := false
@@ -127,6 +133,10 @@ var artifact_target_layer: Control
 var hovered_artifact_slot := ""
 var artifact_preview_button: Button
 var choice_dialog: ContemplationDialog
+var endless: EndlessRun
+var endless_save_path := EndlessRun.DEFAULT_PATH
+var endless_active := false
+var endless_restoring := false
 
 func _ready() -> void:
 	if OS.has_feature("android"):
@@ -140,6 +150,8 @@ func _ready() -> void:
 	theme = custom_theme
 	manager = BattleManager.new()
 	add_child(manager)
+	endless = EndlessRun.new(manager.cards, manager.artifacts, manager.enemies, endless_save_path)
+	endless.load_run()
 	manager.changed.connect(_refresh)
 	manager.interactive_choices = true
 	manager.choice_requested.connect(_show_contemplation)
@@ -163,6 +175,7 @@ func _ready() -> void:
 	battle_fx.set_anchors(PLAYER_ANCHOR, ENEMY_ANCHOR)
 	fx_layer.add_child(battle_fx)
 	manager.summon_presenter = _present_summon_effect
+	manager.opening_presenter = _present_opening_stage
 	_refresh()
 
 func _box(color: Color, border: Color = Color.TRANSPARENT, radius: int = 12, border_width: int = 1) -> StyleBoxFlat:
@@ -226,14 +239,22 @@ func _fit_mobile_surface() -> void:
 	scale = Vector2.ONE * fitted.size.x / VIEW_SIZE.x
 
 func _refresh() -> void:
-	if not is_inside_tree():
+	if not is_inside_tree() or endless_restoring:
 		return
+	if endless_active and manager.phase in BattleManager.FINISHED_PHASES and endless.state.get("phase", "") == "battle":
+		endless.settle(manager.phase)
 	GameAudio.set_context("menu" if manager.phase == "menu" else "battle")
 	var keep_touch_card := PlatformUI.is_touch() and touch_finger >= 0 and touch_hand_index >= 0 and touch_hand_index < manager.player.hand.size() and touch_inspecting and manager.phase != "menu" and manager.phase not in BattleManager.FINISHED_PHASES and manager.player.hand[touch_hand_index] == touch_hand_card_id
-	if not keep_touch_card: _clear_hover_preview()
+	var keep_touch_rule := PlatformUI.is_touch() and touch_finger >= 0 and not touch_rule_control.is_empty() and int(touch_rule_control.get("generation", -1)) == manager.battle_generation and manager.phase != "menu" and manager.phase not in BattleManager.FINISHED_PHASES
+	if not keep_touch_card and not keep_touch_rule: _clear_hover_preview()
 	status_touch_regions.clear()
 	energy_touch_regions.clear()
-	if not keep_touch_card:
+	deck_touch_regions.clear()
+	qi_touch_regions.clear()
+	if not keep_touch_rule:
+		touch_rule_control.clear()
+		touch_rule_serial += 1
+	if not keep_touch_card and not keep_touch_rule:
 		touch_finger = -1
 		touch_hand_index = -1
 	touch_drag_rejected = false
@@ -249,7 +270,8 @@ func _refresh() -> void:
 		hand_cards.clear()
 		enemy_backs.clear()
 		_clear_actors()
-		_build_menu()
+		if endless_active and endless.state.get("phase", "") != "battle": _build_endless_screen()
+		else: _build_menu()
 		move_child(fx_layer, get_child_count() - 1)
 		return
 	var background := ColorRect.new()
@@ -269,9 +291,19 @@ func _refresh() -> void:
 		art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		add_child(art)
 		move_child(art, 1)
-	move_child(artifact_layer, 2 if texture != null else 1)
-	move_child(actor_layer, 3 if texture != null else 2)
+	# Restore this order on every refresh: backdrop, characters, equipment.
+	# The later feedback layer keeps previews and modals above all three.
+	move_child(actor_layer, 2 if texture != null else 1)
+	move_child(artifact_layer, 3 if texture != null else 2)
 	_build_battle()
+	if keep_touch_rule:
+		for entry in energy_touch_regions + status_touch_regions + deck_touch_regions + qi_touch_regions:
+			if entry.get("kind", "") == touch_rule_control.get("kind", "") and entry.get("side", "") == touch_rule_control.get("side", "") and entry.get("element", "") == touch_rule_control.get("element", "") and entry.get("status_id", "") == touch_rule_control.get("status_id", ""):
+				touch_rule_control["text"] = entry["text"]
+				touch_rule_control["rect"] = entry["rect"]
+				if bool(touch_rule_control.get("shown", false)) and is_instance_valid(hover_preview):
+					hover_preview.get_child(0).text = entry["text"]
+				break
 	if keep_touch_card:
 		hand_cards[touch_hand_index].hide()
 		var preview_target := _touch_preview_target(touch_hand_index)
@@ -285,10 +317,112 @@ func _refresh() -> void:
 func _build_menu() -> void:
 	var screen := MAIN_MENU_SCRIPT.new()
 	screen.configure(manager.cards, _card_front, manager.summon_templates)
+	if endless != null and endless.state.get("phase", "") in ["setup", "rest", "battle"]:
+		screen.endless_caption = "继续挑战 · 第%d关" % endless.stage()
 	screen.test_requested.connect(_start_test_battle)
+	screen.endless_requested.connect(_open_endless)
 	add_child(screen)
 
+func _build_endless_screen() -> void:
+	var screen := EndlessScreen.new()
+	screen.configure(endless, _card_front, manager.summon_templates)
+	screen.back_requested.connect(_endless_home)
+	screen.battle_requested.connect(_start_endless_battle)
+	add_child(screen)
+
+func _open_endless() -> void:
+	if not endless.error.is_empty() and endless.state.is_empty():
+		_open_information("无尽进度", endless.error)
+		return
+	if endless.state.is_empty() and not endless.new_run():
+		_open_information("无尽进度", endless.error)
+		return
+	endless_active = true
+	if endless.state["phase"] == "battle": _restore_endless_battle()
+	else: manager.phase = "menu"; _refresh()
+
+func _endless_home() -> void:
+	endless_active = false
+	manager.battle_generation += 1
+	manager.phase = "menu"
+	manager.pending_choice.clear()
+	manager.choice_completed.emit()
+	_clear_endless_presentation()
+	draw_generation += 1
+	opening_active = false
+	action_busy = false
+	enemy_animating = false
+	_refresh()
+
+func _clear_endless_presentation() -> void:
+	_clear_contemplation()
+	_clear_hover_preview()
+	_clear_discard_animations()
+	_clear_drag_hints()
+	_cancel_artifact_aim()
+	battle_fx.clear_effects()
+	for child in fx_layer.get_children():
+		if child != battle_fx:
+			if child is CanvasItem: child.hide()
+			child.queue_free()
+	turn_notice = null
+	back_dialog = null
+	pending_player_draws = 0
+	pending_enemy_draws = 0
+	draw_animation_active = false
+
+func _start_endless_battle() -> void:
+	menu_enemy = str(endless.state["battle"]["enemy"]["id"])
+	menu_deck = "random"
+	menu_custom_deck = endless.battle_deck()
+	_start_battle()
+
+func _endless_record(command: Dictionary) -> bool:
+	if not endless_active or endless_restoring: return true
+	if endless.record_command(command): return true
+	_open_information("无尽进度", endless.error)
+	return false
+
+func _restore_endless_battle() -> void:
+	# Replay saved decisions without presenting animations. This preserves RNG,
+	# exact card copies, partial turns and suspended contemplation effects.
+	endless_restoring = true
+	_clear_contemplation()
+	_clear_actors()
+	_clear_hover_preview()
+	_clear_discard_animations()
+	battle_fx.clear_effects()
+	draw_generation += 1
+	pending_player_draws = 0
+	pending_enemy_draws = 0
+	draw_animation_active = false
+	opening_active = false
+	action_busy = false
+	enemy_animating = false
+	manager.opening_presenter = Callable()
+	manager.summon_presenter = Callable()
+	var restored := endless.replay_battle(manager)
+	manager.opening_presenter = _present_opening_stage
+	manager.summon_presenter = _present_summon_effect
+	endless_restoring = false
+	if not restored:
+		_endless_home()
+		_open_information("无尽进度", "这场对局暂时无法恢复，原存档已保留")
+		return
+	_refresh()
+	if not endless.notice.is_empty():
+		_show_floating(endless.notice, "player", GOLD)
+		endless.notice = ""
+	# The resolver has already queued the pending choice announcement. Let it
+	# run once after restoration, so a second dialog cannot replace a fast tap.
+	_resume_endless_enemy()
+
+func _resume_endless_enemy() -> void:
+	if endless_active and not endless_restoring and manager.phase == "enemy_action" and not enemy_animating and not action_busy:
+		_run_enemy_turn()
+
 func _start_test_battle(deck: Dictionary = {}) -> void:
+	endless_active = false
 	if not deck.is_empty() and not DeckStore.new(manager.cards).problem(deck.get("cards", [])).is_empty(): return
 	var random := RandomNumberGenerator.new()
 	random.randomize()
@@ -315,7 +449,34 @@ func _start_battle() -> void:
 	action_busy = true
 	_clear_drag_hints()
 	battle_fx.clear_effects()
-	await manager.start_battle(menu_enemy, menu_deck, -1, menu_custom_deck)
+	manager.replay_choice_indices.clear()
+	if endless_active:
+		await manager.start_battle(menu_enemy, menu_deck, int(endless.state["battle"]["seed"]), menu_custom_deck, endless.battle_options())
+	else: await manager.start_battle(menu_enemy, menu_deck, -1, menu_custom_deck)
+
+func _present_opening_stage(stage: String) -> void:
+	var generation := manager.battle_generation
+	if stage == "order":
+		opening_active = true
+		action_busy = true
+		enemy_animating = false
+		draw_generation += 1
+		pending_player_draws = 0
+		pending_enemy_draws = 0
+		draw_animation_active = false
+		_refresh()
+		_show_turn_notice(manager.first_side, "你先手 · 敌方后手" if manager.first_side == "player" else "敌方先手 · 你后手")
+		await get_tree().create_timer(0.55).timeout
+	else:
+		_refresh()
+		while generation == manager.battle_generation and manager.phase != "menu" and (draw_animation_active or pending_player_draws > 0 or pending_enemy_draws > 0):
+			await get_tree().process_frame
+	if generation != manager.battle_generation or manager.phase == "menu": return
+	if stage == "first_turn":
+		opening_active = false
+		action_busy = false
+		_refresh()
+		if manager.phase == "enemy_action" and not enemy_animating: _run_enemy_turn()
 
 func _build_battle() -> void:
 	_build_standees()
@@ -326,9 +487,16 @@ func _build_battle() -> void:
 	_build_decks()
 	_build_hand()
 	_build_artifacts()
+	# Status controls must stay above the weapon's transparent click rectangle.
+	_build_status_icons(manager.enemy, "enemy")
+	_build_status_icons(manager.player, "player")
 	_build_end_turn()
 	_button(self, "规则", Rect2(680, 25, 112, 58), _open_rules)
 	_button(self, "记录", Rect2(810, 25, 112, 58), _open_journal)
+	if endless_active:
+		var stage := endless.stage() - (1 if manager.phase == "victory" and endless.state["phase"] == "rest" else 0)
+		_label(self, "无尽 · 第%d关" % stage, Vector2(960, 30), Vector2(230, 48), 24, GOLD)
+		call_deferred("_resume_endless_enemy")
 	if not draw_animation_active and (pending_player_draws > 0 or pending_enemy_draws > 0):
 		var player_count := pending_player_draws
 		var enemy_count := pending_enemy_draws
@@ -376,9 +544,9 @@ func _build_combatant_hud(side: String) -> void:
 
 	# The orb row is laid out identically on both sides so 金水木火土 always read
 	# left to right; only the surrounding text mirrors.
+	_qi_badge(panel, actor, side)
 	for i in BattleRules.ELEMENTS.size():
 		_energy_orb(panel, actor, side, i)
-	_build_status_icons(actor, side)
 
 func _side_subtitle(side: String) -> String:
 	if manager.selected_deck_id.begins_with("custom:"):
@@ -411,11 +579,37 @@ func _energy_orb(parent: Node, actor: Combatant, side: String, index: int) -> vo
 	orb.add_theme_stylebox_override("panel", _box(Color("#0c1826").lerp(tint, 0.14), tint.darkened(0.1), int(ORB_DIAMETER / 2.0), 2))
 	orb.tooltip_text = BattleRules.energy_tooltip(actor, element)
 	orb.mouse_filter = Control.MOUSE_FILTER_STOP
-	orb.mouse_default_cursor_shape = Control.CURSOR_HELP
+	orb.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if side == "player" and manager.can_convert_qi(actor, element) else Control.CURSOR_HELP
+	orb.gui_input.connect(_energy_gui_input.bind(side, element))
 	parent.add_child(orb)
-	energy_touch_regions.append({"rect": _hud_global_rect(side, local), "text": orb.tooltip_text})
+	energy_touch_regions.append({"rect": Rect2(_hud_origin(side) + local.position, local.size), "text": orb.tooltip_text, "kind":"energy", "side":side, "element":element})
 	_label(orb, BattleRules.element_name(element), Vector2(0, 2), Vector2(ORB_DIAMETER, 18), 14, tint, HORIZONTAL_ALIGNMENT_CENTER)
 	_label(orb, str(actor.energy[element]), Vector2(0, 17), Vector2(ORB_DIAMETER, 30), 24, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+
+func _qi_badge(parent: Node, actor: Combatant, side: String) -> void:
+	var portrait := _hud_local(side, HUD_PORTRAIT)
+	var local := Rect2(14, ORB_ROW_Y + 9, 62, 36) if side == "player" else Rect2(portrait.position.x + 5, ORB_ROW_Y + 9, 62, 36)
+	var badge := QiBadge.new()
+	badge.name = "QiBadge_" + side
+	badge.position = local.position
+	badge.size = local.size
+	badge.tooltip_text = "真气 %d\n每个己方回合开始获得1点。\n轻点五行圆圈：1点真气转化为1点对应灵气。\n未转化的真气不提供抗性。" % actor.qi
+	badge.mouse_filter = Control.MOUSE_FILTER_STOP
+	parent.add_child(badge)
+	var number := _label(badge, str(actor.qi), Vector2(25, 0), Vector2(37, 34), 23, GOLD, HORIZONTAL_ALIGNMENT_LEFT)
+	number.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	qi_touch_regions.append({"rect":Rect2(_hud_origin(side) + local.position, local.size), "text":badge.tooltip_text, "kind":"qi", "side":side})
+
+func _energy_gui_input(event: InputEvent, side: String, element: String) -> void:
+	if PlatformUI.is_touch(): return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed and side == "player":
+		_convert_player_qi(element)
+		get_viewport().set_input_as_handled()
+
+func _convert_player_qi(element: String) -> bool:
+	if action_busy or enemy_animating or opening_active or draw_animation_active or artifact_aiming or drag_index >= 0 or is_instance_valid(back_dialog) or is_instance_valid(information_panel) or touch_inspecting or not manager.can_convert_qi(manager.player, element): return false
+	if not _endless_record({"kind":"qi", "element":element}): return false
+	return manager.convert_qi(manager.player, element)
 
 func _build_status_icons(actor: Combatant, side: String) -> void:
 	for i in actor.statuses.size():
@@ -432,7 +626,7 @@ func _build_status_icons(actor: Combatant, side: String) -> void:
 		if PlatformUI.is_touch():
 			icon.scale = Vector2.ONE * 1.15
 			icon.position.x = origin.x + (12.0 + column * 54.0 if side == "player" else HUD_SIZE.x - 12.0 - 50.6 - column * 54.0)
-			status_touch_regions.append({"rect": Rect2(icon.position, STATUS_ICON_SIZE * 1.15).grow(3), "text": manager.status_tooltip(status)})
+			status_touch_regions.append({"rect": Rect2(icon.position, STATUS_ICON_SIZE * 1.15).grow(3), "text": manager.status_tooltip(status), "kind":"status", "side":side, "status_id":status["id"], "element":status.get("element", "")})
 		add_child(icon)
 
 func _portrait(parent: Node, actor_id: String, pos: Vector2, sz: Vector2, enemy_side: bool) -> void:
@@ -498,8 +692,9 @@ func _build_artifacts() -> void:
 			weapon_button.position = Vector2(14 if side == "player" else 1486, 191)
 			weapon_button.size = Vector2(100, 214)
 			add_child(weapon_button)
-			weapon_button.mouse_entered.connect(_show_artifact_preview.bind(side, "implement"))
-			weapon_button.mouse_exited.connect(_hide_artifact_preview.bind(side, "implement"))
+			if not PlatformUI.is_touch():
+				weapon_button.mouse_entered.connect(_show_artifact_preview.bind(side, "implement"))
+				weapon_button.mouse_exited.connect(_hide_artifact_preview.bind(side, "implement"))
 			weapon_button.pressed.connect(func():
 				if side == "player": _on_artifact_pressed()
 				else: _show_artifact_preview(side, "implement"))
@@ -539,8 +734,9 @@ func _build_artifacts() -> void:
 			trigger.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 			control.add_child(trigger)
 			if not entry.is_empty():
-				trigger.mouse_entered.connect(_show_artifact_preview.bind(side, slot))
-				trigger.mouse_exited.connect(_hide_artifact_preview.bind(side, slot))
+				if not PlatformUI.is_touch():
+					trigger.mouse_entered.connect(_show_artifact_preview.bind(side, slot))
+					trigger.mouse_exited.connect(_hide_artifact_preview.bind(side, slot))
 				trigger.pressed.connect(func():
 					if PlatformUI.is_touch(): _show_artifact_preview(side, slot)
 					elif side == "player" and slot == "implement": _on_artifact_pressed())
@@ -549,7 +745,7 @@ func _build_artifacts() -> void:
 	if artifact_aiming: _build_artifact_targets()
 
 func _show_artifact_preview(side: String, slot: String) -> void:
-	if manager.phase in BattleManager.FINISHED_PHASES: return
+	if manager.phase in BattleManager.FINISHED_PHASES or not touch_rule_control.is_empty(): return
 	var owner: Combatant = manager.player if side == "player" else manager.enemy
 	var entry := manager.artifact_entry(owner, slot)
 	if entry.is_empty() or hovered_artifact_slot == side + slot: return
@@ -618,6 +814,7 @@ func _cancel_artifact_aim() -> void:
 func _activate_player_artifact(selection: Dictionary) -> void:
 	if not selection.is_empty() and (not artifact_aiming or not is_instance_valid(artifact_target_layer)): return
 	if action_busy or not manager.artifact_can_activate(manager.player) or not manager.valid_artifact_target(manager.player, selection): return
+	if not _endless_record({"kind": "artifact", "target": selection}): return
 	var entry := manager.artifact_entry(manager.player, "implement")
 	var target := _artifact_cast_target(manager.player, selection)
 	battle_fx.cast({"element": entry["element"], "effects": manager.artifact_effects(manager.player)}, "player", Vector2(80, 500), target)
@@ -633,6 +830,7 @@ func _artifact_cast_target(actor: Combatant, selection: Dictionary) -> Vector2:
 	return _anchor(own_side)
 
 func _show_contemplation(candidates: Array, full: bool) -> void:
+	if endless_restoring: return
 	_clear_contemplation()
 	_clear_hover_preview()
 	var generation := manager.battle_generation
@@ -640,8 +838,13 @@ func _show_contemplation(candidates: Array, full: bool) -> void:
 	fx_layer.add_child(choice_dialog)
 	choice_dialog.configure(candidates, manager.cards, _card_front, full)
 	choice_dialog.confirmed.connect(func(index: int):
-		_clear_contemplation()
-		if generation == manager.battle_generation: manager.choose_card(index))
+		if generation == manager.battle_generation:
+			if endless_active and not endless.record_choice(index):
+				_open_information("无尽进度", endless.error)
+				choice_dialog.confirm.disabled = false
+				return
+			_clear_contemplation()
+			manager.choose_card(index))
 
 func _clear_contemplation() -> void:
 	if is_instance_valid(choice_dialog): choice_dialog.queue_free()
@@ -710,10 +913,10 @@ func _standee(actor_id: String, x: float, mirrored: bool, bob_seconds: float) ->
 		box.set_meta("rest_x", box.position.x)
 		return box
 
-func _show_turn_notice(side: String) -> void:
+func _show_turn_notice(side: String, opening_caption: String = "") -> void:
 	if is_instance_valid(turn_notice):
 		turn_notice.queue_free()
-	var caption := "第 %d 回合 · %s" % [manager.round_number, "你的行动" if side == "player" else "敌人行动"]
+	var caption := opening_caption if not opening_caption.is_empty() else "第 %d 回合 · %s" % [manager.round_number, "你的行动" if side == "player" else "敌人行动"]
 	turn_notice = _panel(fx_layer, TURN_PLATE, PANEL_DARK, GOLD.darkened(0.4), 8)
 	_label(turn_notice, caption, Vector2.ZERO, TURN_PLATE.size, 21, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	turn_notice.modulate.a = 0.0
@@ -819,10 +1022,16 @@ func _build_decks() -> void:
 	var player_deck := _card_back(DECK_SIZE)
 	player_deck.position = PLAYER_DECK_POS
 	add_child(player_deck)
+	player_deck.mouse_filter = Control.MOUSE_FILTER_STOP
+	player_deck.tooltip_text = manager.deck_tooltip(manager.player)
+	deck_touch_regions.append({"rect":Rect2(PLAYER_DECK_POS, DECK_SIZE).grow(5), "text":player_deck.tooltip_text, "kind":"deck", "side":"player"})
 	_label(self, str(manager.player.draw_pile.size()), PLAYER_DECK_POS + Vector2(0, -26), Vector2(DECK_SIZE.x, 24), 17, GOLD, HORIZONTAL_ALIGNMENT_CENTER)
 	var enemy_deck := _card_back(DECK_SIZE, true)
 	enemy_deck.position = ENEMY_DECK_POS
 	add_child(enemy_deck)
+	enemy_deck.mouse_filter = Control.MOUSE_FILTER_STOP
+	enemy_deck.tooltip_text = manager.deck_tooltip(manager.enemy)
+	deck_touch_regions.append({"rect":Rect2(ENEMY_DECK_POS, DECK_SIZE).grow(5), "text":enemy_deck.tooltip_text, "kind":"deck", "side":"enemy"})
 	_label(self, str(manager.enemy.draw_pile.size()), ENEMY_DECK_POS + Vector2(0, DECK_SIZE.y + 2), Vector2(DECK_SIZE.x, 24), 17, GOLD, HORIZONTAL_ALIGNMENT_CENTER)
 
 func _on_hand_hover(index: int) -> void:
@@ -1103,6 +1312,20 @@ func _handle_touch(event: InputEvent) -> void:
 	if event is not InputEventScreenTouch and event is not InputEventScreenDrag: return
 	if manager.phase in BattleManager.FINISHED_PHASES or is_instance_valid(information_panel): return
 	var point := PlatformUI.local_point(self, event.position)
+	if not touch_rule_control.is_empty() and event.index == touch_finger:
+		if event is InputEventScreenTouch and not event.pressed:
+			var entry := touch_rule_control.duplicate()
+			var shown := bool(entry.get("shown", false))
+			touch_rule_control.clear()
+			touch_finger = -1
+			if shown: _clear_hover_preview()
+			elif not event.canceled and entry.rect.has_point(point) and entry.get("kind", "") == "energy" and entry.get("side", "") == "player": _convert_player_qi(str(entry["element"]))
+		elif event is InputEventScreenDrag and point.distance_to(touch_origin) > 18:
+			touch_rule_control.clear()
+			touch_finger = -1
+			_clear_hover_preview()
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			if touch_finger >= 0:
@@ -1146,9 +1369,15 @@ func _handle_touch(event: InputEvent) -> void:
 				if not Rect2(hover_preview.position, hover_preview.size).has_point(point): _clear_hover_preview()
 				get_viewport().set_input_as_handled()
 				return
-			for entry in energy_touch_regions + status_touch_regions:
+			for entry in energy_touch_regions + status_touch_regions + deck_touch_regions + qi_touch_regions:
 				if entry.rect.has_point(point):
-					_show_touch_status(entry.text)
+					touch_finger = event.index
+					touch_origin = point
+					touch_rule_control = entry.duplicate()
+					touch_rule_control["shown"] = false
+					touch_rule_control["generation"] = manager.battle_generation
+					touch_rule_serial += 1
+					_hold_rule_control(manager.battle_generation, touch_finger, touch_rule_serial)
 					get_viewport().set_input_as_handled()
 					return
 			for side in ["player", "enemy"]:
@@ -1194,12 +1423,22 @@ func _handle_touch(event: InputEvent) -> void:
 					touch_drag_rejected = false
 		get_viewport().set_input_as_handled()
 
+func _hold_rule_control(generation: int, finger: int, serial: int) -> void:
+	await get_tree().create_timer(RULE_HOLD_SECONDS).timeout
+	if not is_inside_tree() or generation != manager.battle_generation or finger != touch_finger or serial != touch_rule_serial or touch_rule_control.is_empty(): return
+	if is_instance_valid(information_panel) or is_instance_valid(back_dialog):
+		touch_rule_control.clear()
+		touch_finger = -1
+		return
+	touch_rule_control["shown"] = true
+	_show_touch_status(str(touch_rule_control["text"]))
+
 func _show_touch_status(description: String) -> void:
 	_clear_hover_preview()
 	touch_hand_index = -1
-	hover_preview = _panel(fx_layer, Rect2(525, 315, 550, 210), PANEL_DARK, GOLD)
-	_label(hover_preview, description, Vector2(24, 18), Vector2(502, 140), 30)
-	_label(hover_preview, "轻点空白处收起", Vector2(24, 164), Vector2(502, 32), 22, MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	hover_preview = _panel(fx_layer, Rect2(500, 280, 600, 300), PANEL_DARK, GOLD)
+	_label(hover_preview, description, Vector2(24, 18), Vector2(552, 220), 26)
+	_label(hover_preview, "松开收起", Vector2(24, 254), Vector2(552, 32), 22, MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 	touch_inspecting = true
 
 func _drop_selection(card: Dictionary, point: Vector2) -> Dictionary:
@@ -1313,6 +1552,7 @@ func _update_drag_hints(card: Dictionary, pointer: Vector2) -> void:
 	damage_preview.visible = true
 
 func _input(event: InputEvent) -> void:
+	if endless_restoring: return
 	if not manager.pending_choice.is_empty(): return
 	if PlatformUI.is_touch():
 		# Android may synthesize mouse events after a handled touch. Consume those
@@ -1354,11 +1594,15 @@ func _request_back() -> void:
 	if manager.phase == "menu":
 		for child in get_children():
 			if child is MainMenu: child.go_back()
+			elif child is EndlessScreen: child.go_back()
 		return
 	if artifact_aiming:
 		_cancel_artifact_aim()
 		return
-	if touch_inspecting:
+	if touch_inspecting or not touch_rule_control.is_empty():
+		touch_rule_control.clear()
+		touch_rule_serial += 1
+		touch_finger = -1
 		_clear_hover_preview()
 		return
 	if drag_index >= 0:
@@ -1385,9 +1629,15 @@ func _request_back() -> void:
 	_button(panel, "返回山门", Rect2(306, 155, 216, 70), func():
 		back_dialog.queue_free()
 		back_dialog = null
+		if endless_active:
+			_endless_home()
+			return
 		manager.battle_generation += 1
 		manager.phase = "menu"
+		manager.pending_choice.clear()
+		manager.choice_completed.emit()
 		draw_generation += 1
+		opening_active = false
 		action_busy = false
 		_clear_drag_hints()
 		battle_fx.clear_effects()
@@ -1410,6 +1660,7 @@ func _play_card_from(card_index: int, source: Vector2, selection: Dictionary = {
 	if not manager.player.can_pay(card) or not manager.valid_card_target(manager.player, card, selection):
 		_refresh()
 		return
+	if not _endless_record({"kind": "card", "index": card_index, "target": selection}): return
 	var generation := manager.battle_generation
 	action_busy = true
 	player_hidden_index = card_index
@@ -1438,6 +1689,7 @@ func _build_end_turn() -> void:
 func _on_end_turn() -> void:
 	if action_busy or manager.phase != "player_action":
 		return
+	if not _endless_record({"kind": "end_turn"}): return
 	var generation := manager.battle_generation
 	action_busy = true
 	selected_index = -1
@@ -1453,14 +1705,23 @@ func _on_end_turn() -> void:
 		_run_enemy_turn()
 
 func _run_enemy_turn() -> void:
+	if enemy_animating: return
 	var generation := manager.battle_generation
 	enemy_animating = true
 	await get_tree().create_timer(0.75).timeout
 	if generation != manager.battle_generation:
 		return
 	while manager.phase == "enemy_action":
+		if not _endless_record({"kind": "enemy"}):
+			enemy_animating = false
+			return
 		var action := manager.peek_enemy_action()
 		var chosen_index := int(action["index"])
+		if action.get("kind", "") == "qi":
+			await manager.enemy_step(-1, action["target"], "qi")
+			await get_tree().create_timer(0.18).timeout
+			if generation != manager.battle_generation: return
+			continue
 		if action.get("kind", "") == "artifact":
 			var entry := manager.artifact_entry(manager.enemy, "implement")
 			var target := _artifact_cast_target(manager.enemy, action["target"])
@@ -1526,6 +1787,7 @@ func _cast_card(card: Dictionary, side: String, destination: Vector2) -> float:
 	return duration + maxi(0, hits - 1) * 0.16
 
 func _present_card(card: Dictionary, side: String, source: Vector2) -> void:
+	var generation := manager.battle_generation
 	GameAudio.play_sfx("card_play", 0.0, 100)
 	var dim := ColorRect.new()
 	dim.color = Color(0.0, 0.01, 0.02, 0.19)
@@ -1542,18 +1804,32 @@ func _present_card(card: Dictionary, side: String, source: Vector2) -> void:
 	entrance.tween_property(stage, "position", REVEAL_CENTER, 0.55).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	entrance.tween_property(stage, "scale", Vector2.ONE, 0.55).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	entrance.tween_property(dim, "modulate:a", 1.0, 0.4)
-	await entrance.finished
+	# Bound tweens are killed when their view is removed; killed tweens never
+	# emit finished. Timed waits let cancellation release the presentation task.
+	await get_tree().create_timer(0.55).timeout
+	if generation != manager.battle_generation or not is_instance_valid(stage):
+		if is_instance_valid(stage): stage.queue_free()
+		if is_instance_valid(dim): dim.queue_free()
+		return
 	await get_tree().create_timer(CARD_REVEAL_SECONDS).timeout
+	if generation != manager.battle_generation or not is_instance_valid(stage):
+		if is_instance_valid(stage): stage.queue_free()
+		if is_instance_valid(dim): dim.queue_free()
+		return
 	var fade := stage.create_tween().set_parallel(true)
 	fade.tween_property(stage, "modulate:a", 0.0, 0.24)
 	fade.tween_property(dim, "modulate:a", 0.0, 0.24)
-	await fade.finished
-	stage.queue_free()
-	dim.queue_free()
+	await get_tree().create_timer(0.24).timeout
+	if is_instance_valid(stage): stage.queue_free()
+	if is_instance_valid(dim): dim.queue_free()
 
 func _animate_pending_draws(player_count: int, enemy_count: int, generation: int) -> void:
 	# The model has already appended these cards. Their views stay hidden until the
-	# moving card reaches the corresponding fan slot.
+	# moving cards reach their fan slots. Both hands enter in one simultaneous batch.
+	var flights: Array[Control] = []
+	var arrivals: Array[Dictionary] = []
+	var tween := create_tween().set_parallel(true)
+	GameAudio.play_sfx("card_draw", -2.0, 125)
 	for side in ["player", "enemy"]:
 		var count: int = player_count if side == "player" else enemy_count
 		for offset in count:
@@ -1566,31 +1842,31 @@ func _animate_pending_draws(player_count: int, enemy_count: int, generation: int
 			var hand_size := HAND_CARD_SIZE
 			var target := _hand_card_position(index, views.size()) + hand_size / 2.0 if side == "player" else _enemy_card_position(index, views.size()) + hand_size / 2.0
 			var source := _draw_pile_point(side)
-			GameAudio.play_sfx("card_draw", -2.0, 125)
 			var flying := _card_back(hand_size, side == "enemy")
 			fx_layer.add_child(flying)
+			flights.append(flying)
+			arrivals.append({"side":side, "index":index})
 			flying.position = source - flying.size / 2.0
 			flying.pivot_offset = flying.size / 2.0
 			flying.scale = Vector2.ONE * (DECK_SIZE.x / hand_size.x)
-			var tween := flying.create_tween().set_parallel(true)
 			tween.tween_property(flying, "position", target - flying.size / 2.0, 0.43).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 			tween.tween_property(flying, "scale", Vector2.ONE, 0.43)
-			await tween.finished
-			if generation != draw_generation:
-				flying.queue_free()
-				return
-			views = hand_cards if side == "player" else enemy_backs
-			if index < views.size() and is_instance_valid(views[index]):
-				views[index].visible = true
-				views[index].modulate.a = 0.0
-				views[index].create_tween().tween_property(views[index], "modulate:a", 1.0, 0.18)
-			flying.queue_free()
-			await get_tree().create_timer(0.06).timeout
+	# Keep a valid tween even if a refresh removed every queued view.
+	tween.tween_interval(0.43)
+	await get_tree().create_timer(0.43).timeout
+	for flying in flights:
+		if is_instance_valid(flying): flying.queue_free()
+	if generation != draw_generation or manager.phase == "menu": return
+	for arrival in arrivals:
+		var views: Array[Control] = hand_cards if arrival["side"] == "player" else enemy_backs
+		var index: int = arrival["index"]
+		if index < views.size() and is_instance_valid(views[index]):
+			views[index].visible = true
+			views[index].modulate.a = 0.0
+			views[index].create_tween().tween_property(views[index], "modulate:a", 1.0, 0.18)
 	pending_player_draws = maxi(0, pending_player_draws - player_count)
 	pending_enemy_draws = maxi(0, pending_enemy_draws - enemy_count)
 	draw_animation_active = false
-	if action_busy and manager.round_number == 1 and manager.played_cards == 0:
-		action_busy = false
 	_refresh()
 
 func _draw_pile_point(side: String) -> Vector2:
@@ -1644,6 +1920,9 @@ func _clear_discard_animations() -> void:
 	discard_cards.clear()
 
 func _build_result() -> void:
+	if endless_active:
+		_build_endless_result()
+		return
 	var dim := ColorRect.new()
 	dim.color = Color(0.01, 0.02, 0.04, 0.75)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1656,6 +1935,29 @@ func _build_result() -> void:
 	_label(box, "打出 %d 张牌     造成 %d 伤害     削减 %d 能量" % [manager.played_cards, manager.player_damage, manager.energy_destroyed], Vector2(40, 190), Vector2(560, 65), 19, MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 	_button(box, "再次挑战", Rect2(70, 296, 225, 62), func(): _start_battle(), Color("#604a31"), GOLD)
 	_button(box, "返回山门", Rect2(345, 296, 225, 62), func(): manager.phase = "menu"; _refresh(), Color("#293e51"), GOLD)
+
+func _build_endless_result() -> void:
+	var dim := ColorRect.new()
+	dim.color = Color("#020e16d9")
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(dim)
+	var box := _panel(self, Rect2(450, 220, 700, 455), PANEL_DARK, GOLD, 18)
+	var won := manager.phase == "victory"
+	var wins := int(endless.state["wins"])
+	_label(box, "胜 利" if won else "此 行 已 尽", Vector2(50, 34), Vector2(600, 80), 48, GOLD if won else RED, HORIZONTAL_ALIGNMENT_CENTER)
+	_label(box, "+%d 灵钱 · 生命回满" % int(endless.state["last_reward"]) if won else "止步第%d关 · 连胜%d关" % [endless.stage(), wins], Vector2(45, 139), Vector2(610, 50), 29, WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	_label(box, endless.error if not endless.error.is_empty() else "双方倒下，此行止步" if manager.phase == "tie" else "最高连胜 %d" % endless.best, Vector2(45, 207), Vector2(610, 48), 24, MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	_button(box, "前往休整" if won else "查看结算", Rect2(42, 329, 290, 72), func():
+		if endless.state["phase"] == "battle" and not endless.settle(manager.phase): _refresh(); return
+		manager.battle_generation += 1
+		manager.phase = "menu"
+		action_busy = false
+		enemy_animating = false
+		_clear_endless_presentation()
+		draw_generation += 1
+		opening_active = false
+		_refresh())
+	_button(box, "返回山门", Rect2(367, 329, 290, 72), _endless_home)
 
 func _anchor(side: String) -> Vector2:
 	return ENEMY_ANCHOR if side == "enemy" else PLAYER_ANCHOR
@@ -1697,6 +1999,7 @@ func _show_damage_number(amount: int, point: Vector2, matchup: String = "") -> v
 		delay.tween_callback(func(): number.modulate.a = 1.0; number.play())
 
 func _on_summon_event(side: String, slot: int, kind: String, element: String, amount: int, matchup: String = "") -> void:
+	if endless_restoring: return
 	if fx_layer == null or not is_inside_tree():
 		return
 	var point := _summon_point(side, slot)
@@ -1728,6 +2031,7 @@ func _on_summon_event(side: String, slot: int, kind: String, element: String, am
 				fade.chain().tween_callback(fallen.queue_free)
 
 func _on_summon_triggered(side: String, slot: int, timing: String, effect: Dictionary) -> void:
+	if endless_restoring: return
 	if timing != "on_spawn": return
 	var owner := manager.player if side == "player" else manager.enemy
 	if slot < 0 or slot >= owner.summons.size(): return
@@ -1767,6 +2071,7 @@ func _present_summon_effect(side: String, slot: int, summoned: Summon, effect: D
 			await get_tree().process_frame
 
 func _on_action_event(message: String, side: String, kind: String, element: String, amount: int) -> void:
+	if endless_restoring: return
 	if is_instance_valid(information_panel) and information_panel.can_export and is_instance_valid(information_panel.body):
 		information_panel.body.text = _journal_text()
 	if fx_layer == null or not is_inside_tree():
@@ -1858,6 +2163,9 @@ func _journal_text() -> String:
 
 func _open_information(caption: String, text: String, exportable: bool = false) -> void:
 	if is_instance_valid(information_panel): return
+	touch_rule_control.clear()
+	touch_rule_serial += 1
+	touch_finger = -1
 	_clear_hover_preview()
 	information_panel = BattleInfoPanel.new()
 	information_panel.configure(caption, text, exportable)

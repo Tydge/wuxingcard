@@ -68,12 +68,25 @@ func run() -> void:
 	check(updated_row.entry["id"] == library_card.entry["id"] and workshop.page == 1 and workshop.content == artifact_content and artifact_content.get_children() == page_nodes, "plus equips on the current page without replacing any page controls")
 	updated_row.remove_button.pressed.emit()
 	check(workshop.page == 1 and workshop.content == artifact_content and artifact_content.get_children() == page_nodes, "removing an artifact also retains the selected page")
+	menu.hide()
+	compact.hide()
+	enlarged.hide()
 	var battle: Control = load("res://ui/battle_ui.gd").new()
+	battle.size = Vector2(1600, 900)
 	root.add_child(battle)
 	await battle.manager.start_battle("ember", "random", 31337)
 	check(battle.manager.phase == "player_action", "random battle reaches player action")
 	check(battle.manager.player.artifacts["implement"] != "" and battle.manager.enemy.artifacts["guard"] != "", "both sides display random loadouts")
 	check(battle.actor_layer.get_child_count() >= 4, "battlefield builds hero and implement standees")
+	check(battle.artifact_layer.get_index() > battle.actor_layer.get_index() and battle.fx_layer.get_index() > battle.artifact_layer.get_index(), "equipment badges draw above characters with previews and modals above equipment")
+	var enemy_guard_badge: ArtifactBadge
+	for control in battle.artifact_layer.get_children():
+		for child in control.get_children():
+			if child is ArtifactBadge and control.position.x > 1400: enemy_guard_badge = child
+	check(enemy_guard_badge != null and enemy_guard_badge.value == battle.manager.enemy.artifact_durability, "enemy durability badge displays its current value above the standee")
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://work/balance_20261001"))
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png(ProjectSettings.globalize_path("res://work/balance_20261001/enemy_artifact_layer.png"))
 	var enemy_weapon: TextureRect
 	for child in battle.actor_layer.get_children():
 		if child is TextureRect and child != battle.standee_nodes["enemy"] and child.position.x > 1450.0:

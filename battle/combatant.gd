@@ -11,6 +11,7 @@ var display_name := ""
 var max_hp := 100
 var hp := 100
 var energy: Dictionary = {}
+var qi := 3
 var draw_pile: Array[String] = []
 var initial_deck: Array[String] = []
 var hand: Array[String] = []
@@ -30,6 +31,7 @@ func setup(new_id: String, new_name: String, deck: Array, random: RandomNumberGe
 	display_name = new_name
 	hp = max_hp
 	fatigue_level = 0
+	qi = 3
 	artifacts = {"implement": "", "guard": "", "pendant": ""}
 	artifact_resistances.clear()
 	artifact_durability = 0
@@ -38,7 +40,7 @@ func setup(new_id: String, new_name: String, deck: Array, random: RandomNumberGe
 	artifact_flags.clear()
 	energy.clear()
 	for element in BattleRules.ELEMENTS:
-		energy[element] = 1
+		energy[element] = 0
 	draw_pile.clear()
 	initial_deck.clear()
 	hand.clear()
@@ -145,7 +147,7 @@ func lose_energy(element: String, amount: int) -> int:
 
 func snapshot() -> Combatant:
 	var copy := Combatant.new()
-	for property in ["id", "display_name", "max_hp", "hp", "fatigue_level", "artifact_durability", "artifact_ready_turn", "own_turn_count"]:
+	for property in ["id", "display_name", "max_hp", "hp", "qi", "fatigue_level", "artifact_durability", "artifact_ready_turn", "own_turn_count"]:
 		copy.set(property, get(property))
 	for property in ["energy", "artifacts", "artifact_resistances", "artifact_flags"]:
 		copy.set(property, get(property).duplicate(true))

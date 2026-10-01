@@ -35,7 +35,13 @@ func run() -> void:
 	menu.go_back()
 	check(not is_instance_valid(menu.rules_panel), "Back closes help before leaving the menu")
 	ui.manager.random_artifacts_enabled = false
-	await ui.manager.start_battle("ember", "random", 901)
+	await ui.manager.start_battle("ember", "random", 2)
+	# Help/tooltip assertions need a stable battlefield, with no AI animation
+	# still running when the scene is freed at the end of this test.
+	ui.manager.battle_generation += 1
+	ui.manager.phase = "player_action"
+	ui.enemy_animating = false
+	ui.action_busy = false
 	for actor in [ui.manager.player, ui.manager.enemy]:
 		for element in BattleRules.ELEMENTS: actor.energy[element] = 5
 	await create_timer(5.4).timeout
@@ -56,12 +62,15 @@ func run() -> void:
 	touch.pressed = true
 	touch.position = metal.get_global_transform_with_canvas() * (metal.size / 2.0)
 	ui._handle_touch(touch)
-	check(ui.touch_inspecting and is_instance_valid(ui.hover_preview), "tap on an energy circle opens its explanation")
+	await create_timer(0.5).timeout
+	check(ui.touch_inspecting and is_instance_valid(ui.hover_preview), "holding an energy circle opens its explanation")
 	await shot("energy_touch")
-	ui._clear_hover_preview()
+	touch.pressed = false
+	ui._handle_touch(touch)
+	check(not ui.touch_inspecting, "release closes the energy explanation")
 	ui._open_rules()
 	await process_frame
-	check(ui.information_panel.body.text.contains("弃牌不洗回"), "in-battle rules explain fatigue and resource mechanics")
+	check(ui.information_panel.body.text.contains("洗回弃牌堆"), "in-battle rules explain fatigue and resource mechanics")
 	await shot("rules")
 	ui._request_back()
 	check(not is_instance_valid(ui.information_panel), "Back closes the information modal")

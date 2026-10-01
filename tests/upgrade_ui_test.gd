@@ -134,12 +134,12 @@ func run() -> void:
 	var deck: Array[String] = ui.manager.generate_random_deck()
 	ui.manager.start_battle("ember", "random", 128, {"id":"opening_upgrade", "name":"开局观想", "cards":deck, "artifacts":{"pendant":"water_tide_pearl__2"}})
 	await process_frame
-	await create_timer(0.2).timeout
-	check(ui.manager.phase == "battle_start" and ui.choice_dialog != null and ui.manager.player.hand.size() == 5, "upgraded opening pendant draws first, then waits for the player's choice")
+	while ui.choice_dialog == null: await process_frame
+	check(ui.manager.phase == "battle_start" and ui.choice_dialog != null and ui.manager.player.hand.size() == 4, "upgraded opening pendant draws first, then waits for the player's choice")
 	ui.choice_dialog._select(0)
 	ui.choice_dialog.confirm.pressed.emit()
-	await process_frame
-	check(ui.manager.phase == "player_action" and ui.manager.player.hand.size() == 7, "opening choice resumes the first turn's normal draw")
+	while ui.opening_active: await process_frame
+	check(ui.manager.phase == "player_action" and ui.manager.player.hand.size() == 6, "opening choice resumes the first turn's normal draw")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("res://work/upgrade_ui_decks.json"))
 	print("Upgrade UI: collection, smooth transitions, mixed-grade construction, artifact equip and contemplation; %d failures" % failures)
 	quit(1 if failures else 0)

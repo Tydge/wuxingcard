@@ -26,15 +26,19 @@ func run() -> void:
 	manager._equip_loadout(manager.player, {"pendant": "fire_ember_ring"})
 	manager.player.add_status("poison", 4, 0)
 	manager._resolve_effect(manager.player, manager.enemy, {"type": "gain_energy", "target": "self", "element": "wood", "amount": 1}, "wood")
-	check(manager.player.hp == 73 and manager.player.status_stacks("poison") == 2, "energy and ring consume poison in order: four then three")
-	check(manager.player.energy["wood"] == 1 and manager.player.energy["fire"] == 1, "ring energy is still a real energy event")
+	check(manager.player.hp == 76 and manager.player.status_stacks("poison") == 3, "energy poison life loss does not activate the damage ring")
+	check(manager.player.energy["wood"] == 1 and manager.player.energy["fire"] == 0, "ring does not gain fire from poison")
 	clean()
 	manager._equip_loadout(manager.player, {"guard": "wood_vine_robe", "pendant": "fire_ember_ring"})
 	manager.player.hp = 40
+	manager.player.draw_pile.clear()
+	manager.player.discard_pile.assign(["metal_strike"])
 	manager.draw_card(manager.player)
-	check(manager.player.hp == 41 and manager.player.artifact_durability == 2 and manager.player.energy["fire"] == 1, "fatigue routes through life-loss artifact reactions")
+	check(manager.player.hp == 37 and manager.player.artifact_durability == 2 and manager.player.energy["fire"] == 0, "fatigue triggers life-loss healing but not the damage ring")
 	manager.player.hp = 1
 	manager.player.fatigue_level = 0
+	manager.player.draw_pile.clear()
+	manager.player.discard_pile.assign(["metal_strike"])
 	manager.draw_card(manager.player)
 	check(manager.player.hp == 0 and manager.phase == "defeat", "post-loss healing does not revive lethal fatigue")
 	clean()
@@ -82,8 +86,10 @@ func run() -> void:
 	manager.artifacts["test_guard"] = {"id": "test_guard", "name": "测试法衣", "slot": "guard", "element": "wood", "durability": 2, "trigger": "health_lost", "effects": [{"type": "heal", "target": "self", "amount": 3}]}
 	manager._equip_loadout(manager.player, {"guard": "test_guard"})
 	manager.player.hp = 40
+	manager.player.draw_pile.clear()
+	manager.player.discard_pile.assign(["metal_strike"])
 	manager.draw_card(manager.player)
-	check(manager.player.hp == 42 and manager.player.artifact_durability == 1, "new artifact IDs use data-defined effects")
+	check(manager.player.hp == 38 and manager.player.artifact_durability == 1, "new artifact IDs use data-defined effects")
 	for element in BattleRules.ELEMENTS:
 		manager.player.energy[element] = 5
 		var tooltip := BattleRules.energy_tooltip(manager.player, element)

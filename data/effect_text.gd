@@ -54,6 +54,10 @@ static func describe(effects: Array, context: String = "hero") -> String:
 			sentence = sentence.trim_prefix("自身").replace("，自身", "，")
 		elif context == "summon" and previous.begins_with("召唤者"):
 			sentence = sentence.trim_prefix("召唤者")
+		if i > 0 and effects[i - 1].get("type") == "break_shield" and effect.get("type") == "damage" and effect.get("target") == "opponent" and not effect.has("condition") and not conditional[-1]:
+			parts[-1] += "，并" + sentence.trim_prefix("对手")
+			i += count
+			continue
 		if not effect.has("condition") and not parts.is_empty() and not conditional[-1]:
 			var merged := false
 			for subject in ["", "自身", "对手", "召唤者"]:
@@ -149,7 +153,7 @@ static func card_text(card: Dictionary, summons: Dictionary) -> String:
 
 static func artifact_text(entry: Dictionary) -> String:
 	var trigger := str(entry.get("trigger", ""))
-	var prefix: String = {"first_card_own_turn":"每个己方回合首次打出牌时，", "health_lost":"每次失去生命后，", "first_energy_own_turn":"每个己方回合首次获得能量时，", "first_hit_enemy_turn":"每个敌方回合首次受到伤害后，", "battle_start":"开局：", "first_health_lost_own_turn":"每个己方回合首次失去生命时，", "summon":"每次召唤时，"}.get(trigger, "")
+	var prefix: String = {"first_card_own_turn":"每个己方回合首次打出牌时，", "health_lost":"每次失去生命后，", "damage_received":"受到伤害时，", "first_energy_own_turn":"每个己方回合首次获得能量时，", "first_hit_enemy_turn":"每个敌方回合首次受到伤害后，", "battle_start":"开局：", "first_health_lost_own_turn":"每个己方回合首次失去生命时，", "summon":"每次召唤时，"}.get(trigger, "")
 	if trigger == "element_damage":
 		return "受到火伤害时，该次伤害-%d%%。" % roundi(float(entry.get("resistances", {}).get("fire", 0.0)) * 100)
 	return prefix + describe(entry.get("effects", []), "artifact")

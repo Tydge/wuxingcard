@@ -29,14 +29,16 @@ func run_tests() -> void:
 	manager.random_artifacts_enabled = false
 	root.add_child(manager)
 	manager.start_battle("ember", "balanced", 12345)
-	check(manager.player.hand.size() == 5, "opening hand plus first-turn draw")
+	check(manager.player.hand.size() == 4, "opening hand plus first-turn draw")
 	check(manager.enemy.hand.size() == 4, "enemy hand hidden but drawn")
-	check(manager.player.draw_pile.size() == 24, "draw pile after opening")
+	check(manager.player.draw_pile.size() == 25, "draw pile after opening")
 	var before_fatigue := manager.player.hp
 	manager.player.draw_pile.clear()
+	manager.player.discard_pile.assign(["metal_strike"])
 	manager.draw_card(manager.player)
+	manager.player.discard_pile.append(manager.player.hand.pop_back())
 	manager.draw_card(manager.player)
-	check(manager.player.hp == before_fatigue - 3, "fatigue increases 1 then 2")
+	check(manager.player.hp == before_fatigue - 15, "cycling fatigue increases 5 then 10")
 	check(manager.player.fatigue_level == 2, "fatigue level")
 	test_status_rules(manager)
 	test_opposite_status_rules()
@@ -54,6 +56,7 @@ func run_tests() -> void:
 				while manager.phase not in BattleManager.FINISHED_PHASES and steps < 1000:
 					steps += 1
 					if manager.phase == "player_action":
+						preload("res://tests/simulation_player.gd").fund(manager)
 						var chosen := -1
 						for i in manager.player.hand.size():
 							if manager.player.can_pay(manager.cards[manager.player.hand[i]]):
@@ -316,7 +319,7 @@ func test_new_summon_rules(manager: BattleManager) -> void:
 	var actor := manager.player
 	var opponent := manager.enemy
 	var expected := {
-		"metal_chime": ["metal", 2, 12],
+		"metal_chime": ["metal", 1, 8],
 		"wood_deer": ["wood", 2, 13],
 		"water_conch": ["water", 2, 10],
 		"fire_raven": ["fire", 2, 11],

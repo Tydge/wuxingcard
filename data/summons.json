@@ -276,7 +276,7 @@
     "card_id": "metal_chime_card",
     "name": "玄金铃",
     "element": "metal",
-    "hp": 12,
+    "hp": 8,
     "turn_start": [
       {
         "type": "status",
@@ -287,7 +287,7 @@
     ],
     "upgrades": [
       {
-        "hp": 15,
+        "hp": 11,
         "turn_start": [
           {
             "type": "status",
@@ -307,7 +307,7 @@
         ]
       },
       {
-        "hp": 18,
+        "hp": 14,
         "turn_start": [
           {
             "type": "status",

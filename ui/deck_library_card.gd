@@ -12,6 +12,7 @@ var copies_label: Label
 var plus: Button
 var copies := 0
 var drag_started := false
+var add_allowed := true
 
 func configure(data: Dictionary, card_factory: Callable, width: float) -> void:
 	card = data
@@ -51,10 +52,18 @@ func set_copies(value: int) -> void:
 	copies = value
 	copies_label.text = "已入组 %d / %d" % [value, DeckStore.MAX_COPIES] if value > 0 else "召唤" if front is SummonCardView else "法术"
 	plus.disabled = copies >= DeckStore.MAX_COPIES
+	add_allowed = not plus.disabled
 	front.modulate = Color("#b1bcb8") if plus.disabled else Color.WHITE
 
+func set_availability(value: int, owned: int, allowed: bool) -> void:
+	set_copies(value)
+	if owned >= 0: copies_label.text = "入组%d · 库%d" % [value, owned]
+	add_allowed = allowed
+	plus.disabled = not allowed
+	front.modulate = Color("#b1bcb8") if not allowed else Color.WHITE
+
 func _get_drag_data(_at_position: Vector2) -> Variant:
-	if copies >= DeckStore.MAX_COPIES:
+	if not add_allowed:
 		drag_denied.emit()
 		return null
 	drag_started = true

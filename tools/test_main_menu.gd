@@ -33,8 +33,9 @@ func run() -> void:
 	DirAccess.make_dir_recursive_absolute(output)
 	await create_timer(1.0).timeout
 	await shot("home")
-	for mode in ["rogue", "arena", "endless"]:
+	for mode in ["rogue", "arena"]:
 		check(menu.mode_buttons[mode].disabled, "unfinished mode cannot be selected")
+	check(not menu.mode_buttons["endless"].disabled, "endless mode is available")
 	check(not menu.mode_buttons["test"].disabled and not menu.mode_buttons["collection"].disabled, "test and collection are available")
 	menu.mode_buttons["collection"].pressed.emit()
 	await process_frame
@@ -132,7 +133,7 @@ func run() -> void:
 	await create_timer(5.8).timeout
 	var manager: BattleManager = ui.get("manager")
 	check(find_menu() == null and manager.phase == "player_action" and manager.player.hand.size() == 5, "random deck selection starts a playable battle")
-	check(manager.selected_enemy_id in ["ember", "tide", "harmony"] and manager.selected_deck_id == "random", "test mode chooses an enemy and generates random decks")
+	check(manager.enemies.any(func(enemy): return enemy["id"] == manager.selected_enemy_id) and manager.selected_deck_id == "random", "test mode chooses an enemy and generates random decks")
 	check(manager.valid_random_deck(manager.player.hand + manager.player.draw_pile) and manager.valid_random_deck(manager.enemy.hand + manager.enemy.draw_pile), "test mode creates two legal 25-card decks")
 	# Inspect the actual rendered orb labels in both HUDs, rather than only the
 	# shared element constant. Each orb's local x increases in the same order.

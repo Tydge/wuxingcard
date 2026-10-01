@@ -43,7 +43,7 @@ func run() -> void:
 	check(manager.cards["water_four_aspects"]["text"] == "获得金、木、火、土能量各1点。" and manager.cards["water_four_aspects__1"]["text"] == manager.cards["water_four_aspects"]["text"], "four aspects retains its concise original wording")
 	check(manager.cards["water_four_aspects__2"]["text"] == "获得金、木、火、土能量各1点，抽1张牌。", "four aspects second upgrade adds only its extra effect")
 	check(manager.cards["metal_ward__1"]["text"] == "获得16层护盾、1层强防。", "parallel statuses share one verb")
-	check(manager.cards["wood_shared_miasma__2"]["text"] == "双方获得8层中毒。", "symmetric statuses use both sides")
+	check(manager.cards["wood_shared_miasma__2"]["text"] == "双方获得6层中毒。", "symmetric statuses use both sides")
 	check(manager.cards["water_drain__1"]["text"] == "对手失去3点火能量，自身获得1点水能量。", "short wording keeps opposite recipients unambiguous")
 	check(manager.cards["wood_spirit_vine__2"]["text"].contains("获得1点随机能量两次"), "independent random gains remain explicitly separate")
 	for pair in [["metal_furnace_card", "water"], ["wood_seedling_card", "fire"], ["water_spring_card", "wood"], ["fire_lantern_card", "earth"], ["earth_stele_card", "metal"]]:
@@ -81,12 +81,12 @@ func run() -> void:
 		check(not str(entry["description"]).is_empty(), "artifact generated text")
 
 	prepare()
-	check(cast("wood_strike__2", {"kind":"hero"}) and manager.enemy.hp == 44 and manager.enemy.status_stacks("bleed") == 2, "thorn upgrade damage and bleed")
+	check(cast("wood_strike__2", {"kind":"hero"}) and manager.enemy.hp == 46 and manager.enemy.status_stacks("bleed") == 4, "thorn upgrade deals fourteen and adds four bleed")
 	manager.phase = "enemy_action"
 	manager.enemy.hand = ["fire_gather", "metal_forge"]
 	manager._play_card(manager.enemy, manager.player, 0)
 	manager._play_card(manager.enemy, manager.player, 0)
-	check(manager.enemy.hp == 41 and manager.enemy.status_stacks("bleed") == 0, "two bleed layers lose two then one on zero-cost cards")
+	check(manager.enemy.hp == 39 and manager.enemy.status_stacks("bleed") == 2, "four bleed layers lose four then three on zero-cost cards")
 	prepare()
 	manager.player.hp = 2
 	manager.player.add_status("bleed", 2, 0)
@@ -99,13 +99,13 @@ func run() -> void:
 	var total := 0
 	for value in manager.player.energy.values(): total += int(value)
 	check(total == 2 and manager.player.hp == 55 and manager.player.status_stacks("poison") == 1, "separate rolls trigger 3+2 poison")
-	check(manager.enemy.hp == 36 and manager.player.artifact_durability == 4, "first-energy robe fires only once")
+	check(manager.enemy.hp == 34 and manager.player.artifact_durability == 4, "first-energy robe fires only once")
 
 	prepare()
 	var pile := manager.player.draw_pile.duplicate()
-	var weights := manager.natural_weights(manager.player)
+	var initial_deck := manager.player.initial_deck.duplicate()
 	check(cast("metal_forge__2") and manager.player.energy["metal"] == 2 and manager.player.hand.size() == 1, "alchemy adds two energy and one generated card")
-	check(manager.player.draw_pile == pile and manager.natural_weights(manager.player) == weights and int(manager.cards[manager.player.hand[0]]["level"]) == 0, "generation preserves deck and energy weights and gives base level")
+	check(manager.player.draw_pile == pile and manager.player.initial_deck == initial_deck and int(manager.cards[manager.player.hand[0]]["level"]) == 0, "generation preserves draw pile and original deck and gives base level")
 	prepare()
 	manager.player.hand.assign(["fire_brand", "fire_brand", "metal_strike", "metal_strike", "water_strike", "water_strike", "wood_heal", "wood_heal"])
 	manager._resolve_effect(manager.player, manager.enemy, {"type":"generate_card", "target":"self", "amount":1, "element":"metal"}, "metal")
@@ -124,8 +124,9 @@ func run() -> void:
 	check(manager.player.discard_pile == ["water_thought__1"] and manager.player.fatigue_level == fatigue, "completion runs once after choice")
 	prepare()
 	manager.player.draw_pile.clear()
+	manager.player.discard_pile.assign(["metal_strike"])
 	manager._resolve_effect(manager.player, manager.enemy, {"type":"contemplate", "target":"self", "amount":4}, "water")
-	check(manager.player.hp == 59 and manager.player.fatigue_level == 1, "empty contemplation causes one fatigue draw")
+	check(manager.player.hp == 55 and manager.player.fatigue_level == 1, "empty contemplation recycles once and loses five life")
 	prepare()
 	manager.enemy.energy["metal"] = 3
 	manager.enemy.hp = 1
@@ -168,6 +169,7 @@ func run() -> void:
 		var actions := 0
 		while manager.phase not in BattleManager.FINISHED_PHASES and actions < 500:
 			if manager.phase == "player_action":
+				preload("res://tests/simulation_player.gd").fund(manager)
 				var played := false
 				for i in manager.player.hand.size():
 					var card: Dictionary = manager.cards[manager.player.hand[i]]

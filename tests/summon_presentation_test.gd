@@ -61,7 +61,7 @@ func run() -> void:
 	restart_on_cast = true
 	manager.phase = "player_turn_end"
 	await manager._end_turn(manager.player)
-	check(manager.phase == "player_action" and manager.enemy.hp == 100 and manager.player.summons[0] == null, "restarting cancels the old pending effect and turn flow")
+	check(manager.phase == manager.first_side + "_action" and manager.enemy.hp == 100 and manager.player.summons[0] == null, "restarting cancels the old pending effect and turn flow")
 	print("Summon presentation test: ordered triggers, deferred effects, victory and restart; %d failures" % failures)
 	quit(1 if failures > 0 else 0)
 

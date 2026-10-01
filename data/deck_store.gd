@@ -2,7 +2,7 @@ class_name DeckStore
 extends RefCounted
 
 const DEFAULT_PATH := "user://decks.json"
-const MIN_CARDS := 20
+const MIN_CARDS := 15
 const MAX_CARDS := 30
 const MAX_COPIES := 2
 

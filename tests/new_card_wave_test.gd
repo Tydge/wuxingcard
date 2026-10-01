@@ -48,7 +48,7 @@ func run() -> void:
     check(manager.enemy.summons[0] == null and manager.enemy.summons[1].hp == 1, "Samadhi Fire hits every enemy summon")
 
     prepare()
-    check(cast("wood_spirit_vine", 2, {"kind":"hero"}) and manager.enemy.hp == 66, "vine now deals 14")
+    check(cast("wood_spirit_vine", 2, {"kind":"hero"}) and manager.enemy.hp == 64, "vine now deals 16")
     prepare()
     check(cast("water_tide_scroll", 3, {"kind":"hero"}) and manager.enemy.hp == 55, "tide scroll now deals 25")
 
@@ -68,15 +68,15 @@ func run() -> void:
     manager.enemy.add_status("shield", 15, 0)
     var break_card: Dictionary = manager.cards["metal_thunder_break"]
     manager.player.energy["metal"] = 3
-    check(manager.preview_damage_segments(manager.player, break_card, {"kind":"hero"}) == [20], "preview accounts for breaking ten shield before damage")
-    check(cast("metal_thunder_break", 3, {"kind":"hero"}) and manager.enemy.status_stacks("shield") == 0 and manager.enemy.hp == 60, "shield break resolves before metal strike")
+    check(manager.card_target_mode(break_card) == "none" and manager._card_candidates(manager.player, break_card) == [{}], "shield break hits opponent without aiming")
+    check(cast("metal_thunder_break", 3) and manager.enemy.status_stacks("shield") == 0 and manager.enemy.hp == 60, "shield break resolves before metal strike")
 
     prepare()
     check(cast("water_frost_moth_card", 3, {"kind":"slot", "slot":0}), "frost moth enters")
     await manager._trigger_summons(manager.player, "turn_end")
     check(manager.enemy.status_stacks("weak") == 2, "frost moth adds two weak at turn end")
     prepare()
-    check(cast("water_cold_needle", 1, {"kind":"hero"}) and manager.enemy.hp == 73 and manager.enemy.status_stacks("weak_attack") == 2, "cold needle hits once and adds two weak attack")
+    check(cast("water_cold_needle", 1, {"kind":"hero"}) and manager.enemy.hp == 73 and manager.enemy.status_stacks("weak_defense") == 2, "cold needle hits once and adds two weak defense")
 
     prepare()
     check(cast("wood_thorn_flower_card", 3, {"kind":"slot", "slot":0}), "plant spirit enters")

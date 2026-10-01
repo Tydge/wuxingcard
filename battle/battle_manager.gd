@@ -35,6 +35,7 @@ var enemy := Combatant.new()
 var rng := RandomNumberGenerator.new()
 var phase := "menu"
 var round_number := 0
+var first_side := "player"
 var selected_enemy_id := "ember"
 var selected_deck_id := "balanced"
 var selected_deck_name := ""
@@ -49,12 +50,23 @@ var battle_generation := 0
 # Optional UI coroutine: cast before resolving, then wait for the feedback.
 # Without a presenter, rule simulations resolve immediately.
 var summon_presenter: Callable
+var opening_presenter: Callable
 var interactive_choices := false
 var pending_choice: Dictionary = {}
 var choice_scoring := false
+# Used only to recover an endless battle from its saved action journal.
+var replay_choice_indices: Array[int] = []
 
 func _ready() -> void:
 	load_content()
+
+func _exit_tree() -> void:
+	battle_generation += 1
+	phase = "menu"
+	pending_choice.clear()
+	choice_completed.emit()
+	summon_presenter = Callable()
+	opening_presenter = Callable()
 
 func load_content() -> void:
 	cards = ContentCatalog.load_all(CARD_PATH)
@@ -180,8 +192,9 @@ func status_tooltip(status: Dictionary) -> String:
 		effect += "\n剩余 %d 回合。" % duration
 	return "%s %d 层\n%s" % [name, stacks, effect]
 
-func start_battle(enemy_id: String, deck_id: String, seed_value: int = -1, custom_deck: Dictionary = {}) -> void:
+func start_battle(enemy_id: String, deck_id: String, seed_value: int = -1, custom_deck: Dictionary = {}, options: Dictionary = {}) -> void:
 	if not custom_deck.is_empty() and not DeckStore.new(cards).problem(custom_deck.get("cards", [])).is_empty(): return
+	if options.has("enemy_deck") and not DeckStore.new(cards).problem(options["enemy_deck"]).is_empty(): return
 	battle_generation += 1
 	pending_choice.clear()
 	choice_completed.emit()
@@ -193,37 +206,63 @@ func start_battle(enemy_id: String, deck_id: String, seed_value: int = -1, custo
 	else:
 		rng.seed = seed_value
 	battle_seed = rng.seed
+	first_side = "player" if rng.randi_range(0, 1) == 0 else "enemy"
 	var enemy_info := find_entry(enemies, enemy_id)
 	var deck_info := find_entry(decks, deck_id)
 	var testing := deck_id == "random" or not custom_deck.is_empty()
 	var player_deck: Array = custom_deck["cards"].duplicate() if not custom_deck.is_empty() else generate_random_deck() if testing else deck_info["cards"]
-	var enemy_deck: Array = generate_random_deck() if testing else enemy_info["deck"]
+	var enemy_deck: Array = options["enemy_deck"].duplicate() if options.has("enemy_deck") else generate_random_deck() if testing else enemy_info["deck"]
 	selected_deck_name = str(custom_deck["name"]) if not custom_deck.is_empty() else "随机牌组" if testing else str(deck_info["name"])
-	player.max_hp = 80 if testing else 100
-	enemy.max_hp = 80 if testing else 100
+	player.max_hp = int(options.get("player_hp", 80 if testing else 100))
+	enemy.max_hp = int(options.get("enemy_hp", 80 if testing else 100))
 	player.setup("player", "云溪月", player_deck, rng)
 	enemy.setup(enemy_id, enemy_info["name"], enemy_deck, rng)
 	var player_loadout := ArtifactLibrary.random_loadout(artifacts, rng) if custom_deck.is_empty() and testing and random_artifacts_enabled else ArtifactLibrary.normalize(custom_deck.get("artifacts", {}), artifacts)
-	var enemy_loadout := ArtifactLibrary.random_loadout(artifacts, rng) if testing and random_artifacts_enabled else {"implement": "", "guard": "", "pendant": ""}
+	var enemy_loadout: Dictionary = options["enemy_artifacts"] if options.has("enemy_artifacts") else ArtifactLibrary.random_loadout(artifacts, rng) if testing and random_artifacts_enabled else {"implement": "", "guard": "", "pendant": ""}
 	_equip_loadout(player, player_loadout)
 	_equip_loadout(enemy, enemy_loadout)
-	phase = "battle_start"
+	phase = "opening_order"
 	round_number = 0
 	played_cards = 0
 	energy_destroyed = 0
 	player_damage = 0
 	battle_log.clear()
 	_report("对阵 %s · 使用「%s」牌组" % [enemy.display_name, selected_deck_name], "system", "start")
-	for i in 4:
+	var first := player if first_side == "player" else enemy
+	var second := enemy if first == player else player
+	_report("%s 先手 · %s 后手（起始多抽1张）" % [first.display_name, second.display_name], "system", "turn_order")
+	await _present_opening("order")
+	if not _opening_is_current(generation): return
+	phase = "opening_draw"
+	_report("双方各抽3张起始卡牌", "system", "opening")
+	for i in 3:
 		draw_card(player)
 		draw_card(enemy)
-	_trigger_battle_start_artifacts(player)
-	await wait_for_choice()
-	if generation != battle_generation: return
-	_trigger_battle_start_artifacts(enemy)
-	await _start_turn(player)
-	if generation == battle_generation:
-		changed.emit()
+	await _present_opening("initial_draw")
+	if not _opening_is_current(generation): return
+	_report("%s 后手补抽1张起始卡牌" % second.display_name, "system", "opening")
+	draw_card(second)
+	await _present_opening("second_draw")
+	if not _opening_is_current(generation): return
+	phase = "battle_start"
+	_report("结算游戏开始时的效果（先手 → 后手）", "system", "opening")
+	for actor in [first, second]:
+		_trigger_battle_start_artifacts(actor)
+		await wait_for_choice()
+		if not _opening_is_current(generation): return
+		await _present_opening("start_effects")
+		if not _opening_is_current(generation): return
+	await _start_turn(first)
+	if not _opening_is_current(generation): return
+	await _present_opening("first_turn")
+	if generation == battle_generation: changed.emit()
+
+func _opening_is_current(generation: int) -> bool:
+	return generation == battle_generation and phase != "menu" and phase not in FINISHED_PHASES
+
+func _present_opening(stage: String) -> void:
+	changed.emit()
+	if opening_presenter.is_valid(): await opening_presenter.call(stage)
 
 func valid_random_deck(deck: Array) -> bool:
 	if deck.size() != RANDOM_DECK_SIZE: return false
@@ -270,41 +309,45 @@ func _report(message: String, side: String = "system", kind: String = "info", el
 func _side(actor: Combatant) -> String:
 	return "player" if actor == player else "enemy"
 
-func natural_weights(actor: Combatant) -> Dictionary:
-	var weights := {}
-	for element in BattleRules.ELEMENTS:
-		weights[element] = 0
-	for card_id in actor.initial_deck:
-		var element: String = cards[card_id]["element"]
-		if int(actor.energy[element]) < 10 and actor.status_stacks("lock", element) == 0:
-			weights[element] += 1
-	return weights
+func can_convert_qi(actor: Combatant, element: String) -> bool:
+	return (actor == player or actor == enemy) and phase == _side(actor) + "_action" and pending_choice.is_empty() and element in BattleRules.ELEMENTS and actor.qi > 0 and int(actor.energy[element]) < 10 and actor.status_stacks("lock", element) == 0
 
-func generate_natural_energy(actor: Combatant) -> String:
-	var weights := natural_weights(actor)
-	var total := 0
-	for element in BattleRules.ELEMENTS:
-		total += int(weights[element])
-	if total == 0:
-		_report("%s 本回合没有可生成的自然能量" % actor.display_name, _side(actor), "energy")
-		return ""
-	var roll := rng.randi_range(1, total)
-	for element in BattleRules.ELEMENTS:
-		roll -= int(weights[element])
-		if roll <= 0:
-			var gained := actor.gain_energy(element, 1)
-			_report("%s 获得 1 %s自然能量" % [actor.display_name, BattleRules.element_name(element)], _side(actor), "energy", element, 1)
-			if gained > 0:
-				_on_energy_gained(actor)
-				_trigger_poison(actor)
-			return element
-	return ""
+func convert_qi(actor: Combatant, element: String) -> bool:
+	if not can_convert_qi(actor, element): return false
+	actor.qi -= 1
+	_report("%s 将1点真气转化为%s灵气" % [actor.display_name, BattleRules.element_name(element)], _side(actor), "qi_convert", element, 1)
+	_resolve_effect(actor, enemy if actor == player else player, {"type":"gain_energy", "target":"self", "element":element, "amount":1}, element)
+	_check_finish()
+	changed.emit()
+	return true
+
+func next_fatigue_damage(actor: Combatant) -> int:
+	return 5 << mini(actor.fatigue_level, 60)
+
+func deck_tooltip(actor: Combatant) -> String:
+	return "抽牌堆 %d张 · 弃牌堆 %d张\n已循环%d次\n下次循环失去%d点生命\n抽牌堆耗尽时洗回弃牌堆；手牌不参与。" % [actor.draw_pile.size(), actor.discard_pile.size(), actor.fatigue_level, next_fatigue_damage(actor)]
+
+func _ensure_draw_pile(actor: Combatant) -> bool:
+	if phase in FINISHED_PHASES: return false
+	if not actor.draw_pile.is_empty(): return true
+	if actor.discard_pile.is_empty():
+		_report("%s 暂无可回收的弃牌，无法抽牌" % actor.display_name, _side(actor), "draw_empty")
+		return false
+	actor.draw_pile.assign(actor.discard_pile)
+	actor.discard_pile.clear()
+	for i in range(actor.draw_pile.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var card_id := actor.draw_pile[i]
+		actor.draw_pile[i] = actor.draw_pile[j]
+		actor.draw_pile[j] = card_id
+	var damage := next_fatigue_damage(actor)
+	actor.fatigue_level += 1
+	_report("%s 牌库循环第%d次，洗回%d张弃牌" % [actor.display_name, actor.fatigue_level, actor.draw_pile.size()], _side(actor), "reshuffle")
+	_lose_life(actor, damage, "循环疲劳", "fatigue_damage")
+	return phase not in FINISHED_PHASES
 
 func draw_card(actor: Combatant) -> void:
-	if actor.draw_pile.is_empty():
-		actor.fatigue_level += 1
-		_lose_life(actor, actor.fatigue_level, "疲劳")
-		return
+	if not _ensure_draw_pile(actor): return
 	var card_id: String = actor.draw_pile.pop_front()
 	if actor.hand.size() >= 8:
 		actor.discard_pile.append(card_id)
@@ -319,13 +362,13 @@ func _start_turn(actor: Combatant) -> void:
 	actor.artifact_flags = {"card": false, "energy": false, "health": false}
 	var opposing := enemy if actor == player else player
 	opposing.artifact_flags["enemy_turn_hit"] = false
+	round_number = maxi(player.own_turn_count, enemy.own_turn_count)
 	if actor == player:
-		round_number += 1
 		phase = "player_turn_start"
 		_report("第 %d 回合 · 你的行动" % round_number, "system", "turn")
 	else:
 		phase = "enemy_turn_start"
-		_report("%s 的回合" % actor.display_name, "system", "turn")
+		_report("第 %d 回合 · %s 的行动" % [round_number, actor.display_name], "system", "turn")
 	var shield_before := actor.status_stacks("shield")
 	if shield_before > 0:
 		actor.halve_shield()
@@ -339,7 +382,8 @@ func _start_turn(actor: Combatant) -> void:
 		return
 	if _check_finish():
 		return
-	generate_natural_energy(actor)
+	actor.qi += 1
+	_report("%s 获得1点真气 · 现有%d" % [actor.display_name, actor.qi], _side(actor), "qi", "", 1)
 	if _check_finish():
 		return
 	draw_card(actor)
@@ -443,6 +487,7 @@ func card_target_mode(card: Dictionary) -> String:
 			return "ally_summon"
 		if effect["type"] == "damage":
 			if effect.get("scope", "") == "all_enemy_summons": return "enemy_summons"
+			if effect.get("target", "") == "opponent" and effect.get("scope", "single") == "single": continue
 			return "damage"
 	return "none"
 
@@ -509,6 +554,7 @@ func simulation_copy() -> BattleManager:
 	copy.enemy = enemy.snapshot()
 	copy.phase = phase
 	copy.round_number = round_number
+	copy.first_side = first_side
 	copy.choice_scoring = choice_scoring
 	copy.rng.seed = rng.seed
 	copy.rng.state = rng.state
@@ -617,9 +663,12 @@ func _receive_card(actor: Combatant, id: String, reason: String) -> void:
 		_report("%s %s获得1张牌" % [actor.display_name, reason], _side(actor), "draw")
 
 func _contemplate(actor: Combatant, amount: int) -> void:
-	if actor.draw_pile.is_empty(): draw_card(actor); return
+	if not _ensure_draw_pile(actor): return
 	var candidates: Array = actor.draw_pile.slice(0, mini(amount, actor.draw_pile.size()))
 	if candidates.is_empty(): return
+	if actor == player and candidates.size() > 1 and not replay_choice_indices.is_empty():
+		_take_choice_card(actor, clampi(replay_choice_indices.pop_front(), 0, candidates.size() - 1))
+		return
 	if actor == player and interactive_choices and candidates.size() > 1:
 		pending_choice = {"generation":battle_generation, "candidates":candidates}
 		call_deferred("_announce_choice")
@@ -691,6 +740,7 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 			var attack_element := str(effect.get("element", card_element))
 			var resolved_selection := selection
 			if effect.get("target", "") == "self": resolved_selection = {"kind": "hero", "side": _side(actor)}
+			elif effect.get("target", "") == "opponent": resolved_selection = {"kind": "hero", "side": _side(opponent)}
 			if effect.get("target", "") == "random_opponent":
 				var candidates := _card_candidates(actor, {"effects":[{"type":"damage"}]})
 				if candidates.is_empty(): return
@@ -843,6 +893,8 @@ func _apply_hero_damage(source: Combatant, target: Combatant, breakdown: Diction
 		note += " · 抵抗"
 	_report("%s 受到 %d 点%s伤害%s" % [target.display_name, dealt, BattleRules.element_name(element), note], _side(target), "damage", element, dealt)
 	_on_health_lost(target, dealt)
+	if raw > 0 and target.hp > 0 and phase not in FINISHED_PHASES:
+		_trigger_artifacts(target, "damage_received")
 	if raw > 0 and target.hp > 0 and not target.artifact_flags.get("enemy_turn_hit", false) and phase.begins_with("enemy_" if target == player else "player_"):
 		target.artifact_flags["enemy_turn_hit"] = true
 		_trigger_artifacts(target, "first_hit_enemy_turn")
@@ -940,6 +992,9 @@ func enemy_step(chosen_index: int = -2, selection: Dictionary = {}, action_kind:
 		chosen_index = int(action["index"])
 		selection = action["target"]
 		action_kind = str(action.get("kind", "card"))
+	if action_kind == "qi":
+		convert_qi(enemy, str(selection.get("element", "")))
+		return phase == "enemy_action"
 	if action_kind == "artifact":
 		activate_artifact(enemy, selection)
 		return phase == "enemy_action"
@@ -975,15 +1030,15 @@ func _choose_enemy_action() -> Dictionary:
 	var best_score := 3.0
 	for i in enemy.hand.size():
 		var card: Dictionary = cards[enemy.hand[i]]
-		if not enemy.can_pay(card):
-			continue
+		var needed := maxi(0, int(card["cost"]) - int(enemy.energy[card["element"]]))
+		if not enemy.can_pay(card) and (needed <= 0 or needed > enemy.qi or enemy.status_stacks("lock", card["element"]) > 0): continue
 		var candidates := _card_candidates(enemy, card)
 		for selection in candidates:
-			var score := _enemy_action_score(card, selection)
+			var score := EnemyPolicy.funded_card_score(self, card, selection) if needed > 0 else _enemy_action_score(card, selection)
 			score += rng.randf_range(-3.0, 3.0)
 			if score > best_score:
 				best_score = score
-				best_action = {"kind": "card", "index": i, "target": selection}
+				best_action = {"kind":"qi", "index":-1, "target":{"element":card["element"]}} if needed > 0 else {"kind":"card", "index":i, "target":selection}
 	if artifact_can_activate(enemy):
 		var candidates: Array[Dictionary] = [{}]
 		var mode := artifact_target_mode(enemy)
@@ -1028,7 +1083,7 @@ func export_battle_report() -> String:
 	var path := "%s/battle_%d_%d.json" % [directory, Time.get_unix_time_from_system(), Time.get_ticks_usec()]
 	var events := battle_log.duplicate()
 	events.reverse()
-	var report := {"version": 1, "seed": str(battle_seed), "enemy": selected_enemy_id, "deck_name": selected_deck_name, "phase": phase, "round": round_number, "player_deck": player.initial_deck, "enemy_deck": enemy.initial_deck, "player_artifacts": player.artifacts, "enemy_artifacts": enemy.artifacts, "events": events}
+	var report := {"version": 1, "seed": str(battle_seed), "first_side": first_side, "enemy": selected_enemy_id, "deck_name": selected_deck_name, "phase": phase, "round": round_number, "player_deck": player.initial_deck, "enemy_deck": enemy.initial_deck, "player_artifacts": player.artifacts, "enemy_artifacts": enemy.artifacts, "events": events}
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null: return ""
 	file.store_string(JSON.stringify(report, "  "))

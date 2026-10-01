@@ -12,8 +12,10 @@ var glow := 0.0
 var title: Label
 var count_label: Label
 var inspect_anchor: Control
+var compact_row := false
 
-func configure(data: Dictionary, amount: int) -> void:
+func configure(data: Dictionary, amount: int, show_remove: bool = false) -> void:
+	compact_row = PlatformUI.is_touch() or show_remove
 	card = data
 	copies = amount
 	accent = BattleRules.color(card["element"])
@@ -26,8 +28,8 @@ func configure(data: Dictionary, amount: int) -> void:
 		add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	var path := "res://assets/cards/generated/%s.webp" % card["id"]
 	if ResourceLoader.exists(path): art = load(path)
-	var title_width := 162 if PlatformUI.is_touch() else 215
-	var count_x := 209 if PlatformUI.is_touch() else 266
+	var title_width := 162 if PlatformUI.is_touch() or show_remove else 215
+	var count_x := 209 if PlatformUI.is_touch() or show_remove else 266
 	for item in [[str(int(card["cost"])), 4, 30, Color("#f9edce")], [card["name"], 42, title_width, Color("#f5efdd")], [str(copies), count_x, 36, Color("#efd29b")]]:
 		var label := Label.new()
 		label.text = item[0]
@@ -50,11 +52,11 @@ func configure(data: Dictionary, amount: int) -> void:
 	inspect_anchor.size = Vector2(28, 39.2)
 	inspect_anchor.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(inspect_anchor)
-	if PlatformUI.is_touch():
+	if PlatformUI.is_touch() or show_remove:
 		var remove := Button.new()
 		remove.text = "−"
 		remove.position = Vector2(248, 0)
-		remove.size = Vector2(58, 70)
+		remove.size = Vector2(58, size.y)
 		remove.add_theme_font_size_override("font_size", 28)
 		remove.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 		remove.pressed.connect(func(): remove_requested.emit(card["id"]))
@@ -77,7 +79,7 @@ func _draw() -> void:
 		draw_texture_rect_region(art, Rect2(64, 3, 178 if PlatformUI.is_touch() else 194, size.y - 6), Rect2(0, (source.y - height) / 2.0, source.x, height), Color(0.5, 0.55, 0.48, 0.48))
 	draw_circle(Vector2(19, size.y / 2.0), 14, accent.darkened(0.6))
 	draw_arc(Vector2(19, size.y / 2.0), 14, 0, TAU, 32, accent, 1.0, true)
-	draw_line(Vector2(246 if PlatformUI.is_touch() else 263, 6), Vector2(246 if PlatformUI.is_touch() else 263, size.y - 6), Color(accent, 0.4), 1.0, true)
+	draw_line(Vector2(246 if compact_row else 263, 6), Vector2(246 if compact_row else 263, size.y - 6), Color(accent, 0.4), 1.0, true)
 
 func _frame() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()

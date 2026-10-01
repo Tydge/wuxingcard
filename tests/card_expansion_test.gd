@@ -49,7 +49,7 @@ func run() -> void:
 	check(cast("metal_rainbow_blade", {"kind":"hero"}) and manager.enemy.hp == 60, "metal spell deals twenty")
 	prepare()
 	manager.player.add_status("poison", 2, 0)
-	check(cast("wood_spirit_vine", {"kind":"hero"}) and manager.enemy.hp == 66, "wood spell deals fourteen")
+	check(cast("wood_spirit_vine", {"kind":"hero"}) and manager.enemy.hp == 64, "wood spell deals sixteen")
 	var energy := 0
 	for element in BattleRules.ELEMENTS: energy += int(manager.player.energy[element])
 	check(energy == 1 and manager.player.hp == 78 and manager.player.status_stacks("poison") == 1, "one random gain triggers poison once")
@@ -81,7 +81,7 @@ func run() -> void:
 	prepare()
 	check(cast("earth_stone_guard", {"kind":"hero"}) and manager.enemy.hp == 64 and manager.player.status_stacks("shield") == 8, "earth damage grants eight shield layers")
 	prepare()
-	check(cast("earth_mountain_seal", {"kind":"hero"}) and manager.enemy.hp == 45 and manager.player.hand.size() == 1 and manager.player.discard_pile.size() == 2, "mountain damage precedes one random own discard")
+	check(cast("earth_mountain_seal", {"kind":"hero"}) and manager.enemy.hp == 47 and manager.player.hand.size() == 1 and manager.player.discard_pile.size() == 2, "mountain damage precedes one random own discard")
 	prepare()
 	manager.player.add_status("poison", 5, 0)
 	check(cast("water_four_aspects"), "four-aspect energy spell is playable")
@@ -122,6 +122,7 @@ func run() -> void:
 		while manager.phase not in BattleManager.FINISHED_PHASES and steps < 1000:
 			steps += 1
 			if manager.phase == "player_action":
+				preload("res://tests/simulation_player.gd").fund(manager)
 				var played := false
 				for index in manager.player.hand.size():
 					var card: Dictionary = manager.cards[manager.player.hand[index]]

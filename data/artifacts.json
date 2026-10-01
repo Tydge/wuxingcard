@@ -522,8 +522,8 @@
     "name": "烬心环",
     "element": "fire",
     "slot": "pendant",
-    "description": "每个己方回合首次失去生命时，获得1点火能量。",
-    "trigger": "first_health_lost_own_turn",
+    "description": "受到伤害时，获得1点火能量。",
+    "trigger": "damage_received",
     "effects": [
       {
         "type": "gain_energy",

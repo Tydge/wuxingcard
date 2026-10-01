@@ -58,7 +58,7 @@ func run() -> void:
 	menu.call("_close_inspector")
 	check(not closing.visible, "closing before half a second prevents a late tooltip")
 	await create_timer(0.6).timeout
-	ui.call("_start_battle")
+	ui.manager.start_battle("ember", "balanced", 2)
 	await create_timer(5.6).timeout
 	manager.player.hand[0] = "fire_brand"
 	manager.player.hand[1] = "metal_ward"
