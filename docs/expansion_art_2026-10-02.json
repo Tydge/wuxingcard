@@ -158,29 +158,59 @@
     "id": "fire_crimson_clam_card",
     "dest": "assets/cards/generated/fire_crimson_clam_card.webp",
     "transparent": false,
-    "subject": "A mythical crimson giant clam-dragon spirit with lacquer-red ornate shell and small dragon head, glowing ember pearl within and fiery coral whiskers, emits vermilion mist, full body",
+    "subject": "赤霞蜃：焦黑熔岩壳、燃烧内核、火焰龙鬃与火星，移除珊瑚和水景。",
     "kind": "creature-card",
-    "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: A mythical crimson giant clam-dragon spirit with lacquer-red ornate shell and small dragon head, glowing ember pearl within and fiery coral whiskers, emits vermilion mist, full body. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
-    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-c4f4c6ee-ec1b-4ff1-a3c4-f41963cee5d0.png",
+    "prompt": "Use case: precise-object-edit.\nAsset type: Chinese fantasy strategy card game illustration, landscape 4:3.\nInput image 1 is the edit target: 赤霞蜃, a shell spirit with a dragon inside.\nPrimary request: redesign the elemental cues so this unmistakably belongs to FIRE even at thumbnail size. Keep the recognizable giant open clam-shell silhouette, the serpentine Chinese dragon emerging from the shell, the central round spirit core, and the intricate realistic painterly Chinese fantasy style and clear central composition.\nChange shell material to dark charcoal volcanic shell with burning orange magma cracks and restrained old gold trim. Replace all coral and watery tissues with curling tongues of vivid yellow-orange flame. The core is an intensely blazing sunlike furnace, dragon mane and whiskers are living flames. Show actual distinct flame shapes rising above shell, orange sparks and glowing embers, incandescent light illuminating the dragon and shell.\nReplace the entire wet landscape backdrop with a dry scorched mountain shrine surrounded by black volcanic rock, distant lava fissures, burnt branches, and ember-filled air. No water, no waterfall, no pond, no coral, no underwater shapes, no red mist substituting for fire. Keep subject detailed and legible, no excessive bloom, no extra creatures, no text, no borders, no UI, no watermark.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-52251210-cccd-4537-ac1d-7023e7ba66a5.png",
     "size": [
       1024,
       768
     ],
-    "alpha": false
+    "alpha": false,
+    "revisions": [
+      {
+        "reason": "2026-10-02 用户指出火系召唤物观感偏水系，替换为明确火焰与熔岩设计。",
+        "previous": {
+          "subject": "A mythical crimson giant clam-dragon spirit with lacquer-red ornate shell and small dragon head, glowing ember pearl within and fiery coral whiskers, emits vermilion mist, full body",
+          "prompt": "Use case: stylized-concept. Asset type: full-bleed 4:3 landscape card illustration. Subject: A mythical crimson giant clam-dragon spirit with lacquer-red ornate shell and small dragon head, glowing ember pearl within and fiery coral whiskers, emits vermilion mist, full body. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. The subject is prominently centered in an atmospheric ancient Chinese mountain garden with subtle mist and dark background; landscape composition 4:3. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+          "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-c4f4c6ee-ec1b-4ff1-a3c4-f41963cee5d0.png",
+          "size": [
+            1024,
+            768
+          ],
+          "alpha": false
+        }
+      }
+    ]
   },
   {
     "id": "fire_crimson_clam",
     "dest": "assets/summons/standee/fire_crimson_clam.webp",
     "transparent": true,
-    "subject": "A mythical crimson giant clam-dragon spirit with lacquer-red ornate shell and small dragon head, glowing ember pearl within and fiery coral whiskers, emits vermilion mist, full body",
+    "subject": "赤霞蜃：焦黑熔岩壳、燃烧内核、火焰龙鬃与火星，移除珊瑚和水景。",
     "kind": "creature-standee",
-    "prompt": "Use case: stylized-concept. Asset type: transparent full-body game standee. Subject: A mythical crimson giant clam-dragon spirit with lacquer-red ornate shell and small dragon head, glowing ember pearl within and fiery coral whiskers, emits vermilion mist, full body. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. Exactly one isolated subject, entire silhouette with generous clear margins, centered, facing slightly left, no scenery or ground, genuine transparent background. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
-    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-32be9ffb-c8d0-44ac-8e87-5fd6ab34afd7.png",
+    "prompt": "Use case: precise-object-edit.\nAsset type: Chinese fantasy strategy game summon standee, isolated full creature on genuinely transparent background, square canvas.\nInput image 1 is the old standee edit target, input image 2 is the approved new card appearance reference. Redesign image 1 to match image 2's FIRE spirit identity. Preserve image 1's full compact open clam shell silhouette and left-facing Chinese dragon head emerging from inside, central round spirit core, and realistic intricate painterly fantasy illustration.\nUse a dark charcoal volcanic shell with orange magma cracks and aged gold trim. Remove all coral, pearl-white watery interiors and pink mist. Replace them with yellow-orange tongues of real fire, flaming dragon mane and whiskers, glowing ember sparks, and a bright burning furnace core. Match the volcanic shell and fiery dragon of image 2, but the dragon faces LEFT as in image 1. Clear strong silhouette at small game size. Full entire shell, head, flames and tails inside frame with 8 percent transparent margins all sides. No scene, no ground, no lava floor, no backdrop, no shadow plate. No coral, no water, no white/checkerboard background, no text, no borders, no watermark. Transparent alpha around the creature, including spaces between flame tendrils. Keep flames crisp and controlled with no giant hazy aura.",
+    "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-3bcad160-2d3f-4ada-acdf-af14b636d97a.png",
     "size": [
       768,
       768
     ],
-    "alpha": true
+    "alpha": true,
+    "revisions": [
+      {
+        "reason": "2026-10-02 用户指出火系召唤物观感偏水系，替换为明确火焰与熔岩设计。",
+        "previous": {
+          "subject": "A mythical crimson giant clam-dragon spirit with lacquer-red ornate shell and small dragon head, glowing ember pearl within and fiery coral whiskers, emits vermilion mist, full body",
+          "prompt": "Use case: stylized-concept. Asset type: transparent full-body game standee. Subject: A mythical crimson giant clam-dragon spirit with lacquer-red ornate shell and small dragon head, glowing ember pearl within and fiery coral whiskers, emits vermilion mist, full body. Style: elegant dark Chinese xianxia fantasy, cinematic detailed painterly realism, exquisite natural materials, recognizable at small game size, consistent polished AAA fantasy card artwork. Exactly one isolated subject, entire silhouette with generous clear margins, centered, facing slightly left, no scenery or ground, genuine transparent background. No text, no lettering, no UI, no card border, no watermarks, no extra characters.",
+          "original": "/Users/wangtaizhi/.codex/generated_images/01a0f756-668f-7873-af31-68903a475136/exec-32be9ffb-c8d0-44ac-8e87-5fd6ab34afd7.png",
+          "size": [
+            768,
+            768
+          ],
+          "alpha": true
+        }
+      }
+    ]
   },
   {
     "id": "earth_stacked_peak",
