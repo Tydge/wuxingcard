@@ -10,7 +10,8 @@ func check(value: bool, message: String) -> void:
 	if not value: failures += 1; push_error(message)
 
 func shot(name: String) -> void:
-	await RenderingServer.frame_post_draw
+	await process_frame
+	RenderingServer.force_draw(false)
 	root.get_texture().get_image().save_png(ProjectSettings.globalize_path(output.path_join(name + ".png")))
 
 func find_menu() -> MainMenu:
@@ -40,7 +41,7 @@ func run() -> void:
 	menu = find_menu()
 	menu.deck_store_path = "res://work/upgrade_ui_decks.json"
 	menu._show_collection()
-	check(menu.filtered_cards.size() == 70, "collection groups the 210 versions into 70 families")
+	check(menu.filtered_cards.size() == 80, "collection groups the 240 versions into 80 families")
 	menu._open_inspector(ui.manager.cards["metal_forge"], menu.card_nodes[0])
 	await create_timer(0.46).timeout
 	await switch_level(1)

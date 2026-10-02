@@ -30,7 +30,8 @@ func hold_release(entry: Dictionary, text: String) -> void:
 	check(not ui.touch_inspecting and not is_instance_valid(ui.hover_preview), "release closes explanation: " + text)
 	check(ui.manager.player.qi == before, "release after hold never converts: " + text)
 func shot(name: String) -> void:
-	await RenderingServer.frame_post_draw
+	await process_frame
+	RenderingServer.force_draw(false)
 	var directory := ProjectSettings.globalize_path("res://work/qi_ui")
 	DirAccess.make_dir_recursive_absolute(directory)
 	root.get_texture().get_image().save_png(directory.path_join(name + ".png"))

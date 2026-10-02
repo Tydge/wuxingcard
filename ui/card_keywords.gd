@@ -43,10 +43,18 @@ static func entries(card: Dictionary, summons: Dictionary) -> Array[Dictionary]:
 		if int(summon.get("enemy_cost_aura", 0)) > 0:
 			result.append({"title":"费用光环", "text":"多只可叠加，0费牌也增加费用；此召唤物死亡后解除。"})
 	for effect in effects:
+		if effect.has("hand_multiplier") and not seen.has("hand_scaling"):
+			seen["hand_scaling"] = true
+			var description := "按对手当前全部手牌计数，不查看或公开牌的内容；选择召唤物时仍按其持有者手牌计数。" if effect.get("hand_owner") == "opponent" else "打出本牌后计数，不含本牌；水系计数包含原、精、玄各等级水系牌。"
+			result.append({"title":"手牌计数", "text":description})
+		if effect.has("stacks_from_status") and not seen.has("poison"):
+			seen["poison"] = true
+			result.append({"title":"木生火", "text":"以对手当前中毒层数除以指定值，向下取整，施加灼伤；不会消耗中毒。"})
+			result.append({"title":"中毒 X", "text":status_description("poison")})
 		if effect.get("type") == "contemplate" and not seen.has("contemplate"):
 			seen["contemplate"] = true
 			result.append({"title":"观想N", "text":"查看牌堆顶至多N张，选1张入手，其余顺序不变。"})
-		if effect.get("type") not in ["status", "remove_status"]: continue
+		if effect.get("type") not in ["status", "remove_status", "reduce_status"]: continue
 		var id: String = effect["status"]
 		var element: String = effect.get("element", "")
 		var key := id + element

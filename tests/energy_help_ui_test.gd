@@ -17,7 +17,8 @@ func collect_orbs(node: Node, results: Array[EnergyOrb]) -> void:
 
 func shot(name: String) -> void:
 	if DisplayServer.get_name() == "headless": return
-	await RenderingServer.frame_post_draw
+	await process_frame
+	RenderingServer.force_draw(false)
 	var directory := ProjectSettings.globalize_path("res://work/audit_ui")
 	DirAccess.make_dir_recursive_absolute(directory)
 	root.get_texture().get_image().save_png(directory.path_join(name + ".png"))

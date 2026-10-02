@@ -108,6 +108,18 @@ func remove_status(status_id: String) -> void:
 		if statuses[i]["id"] == status_id:
 			statuses.remove_at(i)
 
+func reduce_status(status_id: String, amount: int) -> int:
+	var remaining := maxi(0, amount)
+	var removed := 0
+	for i in range(statuses.size() - 1, -1, -1):
+		if statuses[i]["id"] != status_id: continue
+		var reduction := mini(remaining, int(statuses[i]["stacks"]))
+		statuses[i]["stacks"] = int(statuses[i]["stacks"]) - reduction
+		remaining -= reduction
+		removed += reduction
+		if int(statuses[i]["stacks"]) <= 0: statuses.remove_at(i)
+	return removed
+
 func tick_status_durations() -> void:
 	for i in range(statuses.size() - 1, -1, -1):
 		if int(statuses[i]["turns"]) > 0:

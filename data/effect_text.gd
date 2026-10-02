@@ -43,6 +43,14 @@ static func describe(effects: Array, context: String = "hero") -> String:
 						if next == effect:
 							sentence = "双方获得" + _status_amount(effect)
 							count = 2
+			elif kind == "reduce_status":
+				var reductions: Array[String] = ["%d层%s" % [int(effect["amount"]), CardKeywords.NAMES.get(effect["status"], effect["status"])]]
+				while i + count < effects.size():
+					var next: Dictionary = effects[i + count]
+					if next.get("type") != kind or next.has("condition") or _target(next, context) != _target(effect, context): break
+					reductions.append("%d层%s" % [int(next["amount"]), CardKeywords.NAMES.get(next["status"], next["status"])])
+					count += 1
+				if count > 1: sentence = "降低" + _subject(effect, context) + "、".join(reductions)
 			elif kind == "remove_status":
 				var names: Array[String] = [CardKeywords.NAMES.get(effect["status"], effect["status"])]
 				while i + count < effects.size():
@@ -94,6 +102,9 @@ static func _subject(effect: Dictionary, context: String) -> String:
 static func _status_amount(effect: Dictionary) -> String:
 	var name: String = CardKeywords.NAMES.get(effect["status"], effect["status"])
 	if effect.get("status") == "lock": name += "·" + BattleRules.element_name(str(effect.get("element", "")))
+	if effect.has("stacks_from_status"):
+		var formula := "%s层数÷%d，向下取整" % [CardKeywords.NAMES.get(effect["stacks_from_status"], effect["stacks_from_status"]), int(effect["stacks_divisor"])]
+		return "%d层%s（%s）" % [int(effect["display_stacks"]), name, formula] if effect.has("display_stacks") else "（%s）层%s" % [formula, name]
 	return "%d层%s" % [int(effect["stacks"]), name]
 
 static func single(effect: Dictionary, context: String) -> String:
@@ -105,6 +116,11 @@ static func single(effect: Dictionary, context: String) -> String:
 	var text := ""
 	match str(effect["type"]):
 		"damage":
+			if effect.has("hand_multiplier"):
+				var hand := "手牌中%s系卡牌数" % BattleRules.element_name(str(effect["hand_element"])) if effect.has("hand_element") else "手牌数"
+				if effect.get("hand_owner") == "opponent": hand = "对手" + hand
+				var formula := "%d＋%s×%d" % [amount, hand, int(effect["hand_multiplier"])]
+				return "造成%s点%s伤害（%s）。" % [_damage_number(effect), element, formula] if effect.has("display_amount") else "造成（%s）点%s伤害。" % [formula, element]
 			if effect.has("shield_multiplier"):
 				var value := float(effect["shield_multiplier"])
 				var multiplier := str(int(value)) if is_equal_approx(value, float(int(value))) else str(value)
@@ -113,6 +129,7 @@ static func single(effect: Dictionary, context: String) -> String:
 				"all": text = "对场上所有目标造成%s点%s伤害。" % [_damage_number(effect), element]
 				"all_opponents": text = "对所有敌方目标造成%s点%s伤害。" % [_damage_number(effect), element]
 				"all_enemy_summons": text = "对敌方所有召唤物造成%s点%s伤害。" % [_damage_number(effect), element]
+				"all_summons": text = "对所有召唤物造成%s点%s伤害。" % [_damage_number(effect), element]
 				_:
 					match target:
 						"lowest_opponent": text = "对生命值最低的敌方目标造成%s点%s伤害。" % [_damage_number(effect), element]
@@ -124,6 +141,7 @@ static func single(effect: Dictionary, context: String) -> String:
 							text = "对对手造成%s点%s伤害。" % [_damage_number(effect), element] if context in ["summon", "artifact"] or effect.get("target") == "opponent" else "造成%s点%s伤害。" % [_damage_number(effect), element]
 		"status": text = who + "获得" + _status_amount(effect) + "。"
 		"remove_status": text = "解除%s%s。" % [who, CardKeywords.NAMES.get(effect["status"], effect["status"])]
+		"reduce_status": text = "降低%s%d层%s。" % [who, amount, CardKeywords.NAMES.get(effect["status"], effect["status"])]
 		"heal": text = "%s恢复%d点生命。" % [who, amount]
 		"heal_summon": text = "此召唤物恢复%d点生命。" % amount
 		"heal_selected": text = "为自身或我方召唤物恢复%d点生命。" % amount
@@ -141,6 +159,8 @@ static func single(effect: Dictionary, context: String) -> String:
 		"heal_lowest_ally": text = "为生命最低的友方目标恢复%d点生命。" % amount
 		"grow_all_summons": text = "我方所有召唤物增加%d点生命。" % amount
 		"break_shield": text = "%s失去%d层护盾。" % [who, amount]
+	if not effect.get("on_kill", []).is_empty():
+		text = text.trim_suffix("。") + "；若消灭目标，" + describe(effect["on_kill"], context)
 	if effect.has("condition"):
 		var condition: Dictionary = effect["condition"]
 		if condition.get("type") == "hand_at_most": text = "手牌≤%d张时，%s" % [int(condition["amount"]), text]

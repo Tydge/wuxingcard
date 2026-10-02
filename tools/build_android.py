@@ -29,7 +29,7 @@ def main():
         raise SystemExit('Android signing configuration is missing; see README Android export instructions.')
     signing = json.loads(args.signing.read_text())
     env = os.environ.copy()
-    env.update(JAVA_HOME=args.java, GODOT_ANDROID_KEYSTORE_RELEASE_PATH=signing['keystore'],
+    env.update(WUXING_TEST_AUDIO='0', JAVA_HOME=args.java, GODOT_ANDROID_KEYSTORE_RELEASE_PATH=signing['keystore'],
                GODOT_ANDROID_KEYSTORE_RELEASE_USER=signing['alias'],
                GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=signing['password'])
     built = datetime.now().astimezone()
@@ -52,7 +52,7 @@ def main():
                       .replace('version/name="0.1"', f'version/name="{version_name}"'))
 
     def run(*arguments):
-        subprocess.run([args.godot, '--headless', '--path', str(stage), *map(str, arguments)],
+        subprocess.run([args.godot, '--headless', '--audio-driver', 'Dummy', '--path', str(stage), *map(str, arguments)],
                        check=True, env=env, cwd=stage)
 
     run('--script', ROOT / 'tools/prepare_export_art.gd', '--', report)
@@ -60,7 +60,7 @@ def main():
     run('--script', ROOT / 'tools/verify_export_art.gd', '--', report)
     pack = stage / 'work/android-verified.pck'
     run('--export-pack', 'Android', pack)
-    subprocess.run([args.godot, '--headless', '--main-pack', str(pack), '--script',
+    subprocess.run([args.godot, '--headless', '--audio-driver', 'Dummy', '--main-pack', str(pack), '--script',
                     str(ROOT / 'tools/verify_export_pack.gd')], check=True, env=env, cwd=stage)
     folder = ROOT / 'dist' / f'WuxingMingpan-Android-{stamp}'
     folder.mkdir(parents=True)

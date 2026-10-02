@@ -104,6 +104,23 @@ func test() -> void:
 	check(FileAccess.file_exists(run.path + ".rules-v4"), "old ring-trigger journal has a recoverable backup")
 	DirAccess.remove_absolute(run.path + ".rules-v4")
 
+	run.state["rules_version"] = 5
+	run.state["battle"]["commands"] = [{"kind":"convert_qi", "element":"fire"}]
+	run._commit(run.state.duplicate(true))
+	var ash_update := EndlessRun.new(manager.cards, manager.artifacts, manager.enemies, run.path)
+	check(ash_update.load_run() and ash_update.state["rules_version"] == EndlessRun.RULES_VERSION and ash_update.state["battle"]["commands"].is_empty() and ash_update.state["owned_cards"] == assets and ash_update.opponent() == foe, "new card pool migration preserves assets and opponent while clearing the old journal")
+	check(FileAccess.file_exists(run.path + ".rules-v5"), "previous card pool journal has a recoverable backup")
+	DirAccess.remove_absolute(run.path + ".rules-v5")
+
+	run.state = ash_update.state.duplicate(true)
+	run.state["rules_version"] = 6
+	run.state["battle"]["commands"] = [{"kind":"end_turn"}]
+	run._commit(run.state.duplicate(true))
+	var hand_update := EndlessRun.new(manager.cards, manager.artifacts, manager.enemies, run.path)
+	check(hand_update.load_run() and hand_update.state["rules_version"] == 7 and hand_update.state["owned_cards"] == assets and hand_update.opponent() == foe and hand_update.state["battle"]["commands"].is_empty(), "hand scaling pool migration preserves assets and opponent")
+	check(FileAccess.file_exists(run.path + ".rules-v6"), "version 6 journal has a recoverable backup")
+	DirAccess.remove_absolute(run.path + ".rules-v6")
+
 	DirAccess.remove_absolute(run.path + ".rules-v1")
 	DirAccess.remove_absolute(run.path)
 	manager.queue_free()

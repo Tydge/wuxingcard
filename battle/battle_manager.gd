@@ -164,15 +164,15 @@ func display_card(actor: Combatant, card: Dictionary) -> Dictionary:
 	var neutral := Combatant.new()
 	neutral.setup("preview", "", [], RandomNumberGenerator.new())
 	for effect: Dictionary in shown.get("effects", []):
+		if effect.get("type") == "status" and effect.has("stacks_from_status"):
+			var target := actor if effect.get("target") == "self" else (enemy if actor == player else player)
+			effect["display_stacks"] = _effect_status_stacks(target, effect)
 		if effect.get("type") != "damage": continue
-		var original := int(effect["amount"])
-		var base := original
-		if effect.has("shield_multiplier"):
-			base = mini(int(effect.get("base_cap", 50)), floori(actor.status_stacks("shield") * float(effect["shield_multiplier"])))
+		var base := _effect_damage_amount(actor, effect, str(card["id"]))
 		var modified: int = BattleRules.damage_breakdown(neutral, base, str(effect.get("element", card["element"])), source)["raw"]
-		if effect.has("shield_multiplier"): effect["display_amount"] = modified
+		if effect.has("shield_multiplier") or effect.has("hand_multiplier"): effect["display_amount"] = modified
 		else: effect["amount"] = modified
-		if modified != (base if effect.has("shield_multiplier") else original):
+		if modified != base:
 			effect["display_color"] = "#79df8a" if modified > base else "#ff817a"
 			changed_numbers[str(modified)] = effect["display_color"]
 		_consume_attack_statuses(source)
@@ -586,6 +586,7 @@ func card_target_mode(card: Dictionary) -> String:
 		if effect["type"] == "grow_summon":
 			return "ally_summon"
 		if effect["type"] == "damage":
+			if effect.get("scope", "") == "all_summons": return "all_summons"
 			if effect.get("scope", "") == "all_enemy_summons": return "enemy_summons"
 			if effect.get("target", "") in ["opponent", "random_opponent", "lowest_opponent", "highest_opponent"] and effect.get("scope", "single") == "single": continue
 			return "damage"
@@ -605,24 +606,47 @@ func valid_card_target(actor: Combatant, card: Dictionary, selection: Dictionary
 	var side := str(selection.get("side", "enemy" if actor == player else "player"))
 	if side not in damage_target_sides(actor, card): return false
 	var owner := player if side == "player" else enemy
+	if mode == "all_summons" and kind != "summon": return false
 	if kind == "hero": return owner.hp > 0
 	return kind == "summon" and slot >= 0 and slot < owner.summons.size() and owner.summons[slot] != null
 
 func damage_target_sides(actor: Combatant, card: Dictionary) -> Array[String]:
 	for effect in card["effects"]:
-		if effect.get("scope", "single") == "all": return ["player", "enemy"]
+		if effect.get("scope", "single") in ["all", "all_summons"]: return ["player", "enemy"]
 	return ["enemy" if actor == player else "player"]
 
 # A segment takes its damage snapshot before applying any hit. An area segment
 # therefore shares one attack bonus even when the caster is among its targets.
+func _effect_damage_amount(actor: Combatant, effect: Dictionary, exclude_card_id: String = "") -> int:
+	if effect.has("shield_multiplier"):
+		return mini(int(effect.get("base_cap", 50)), floori(actor.status_stacks("shield") * float(effect["shield_multiplier"])))
+	var amount := int(effect.get("amount", 0))
+	if effect.has("hand_multiplier"):
+		var count := 0
+		var excluded := false
+		var owner := actor if effect.get("hand_owner", "self") == "self" else (enemy if actor == player else player)
+		for id: String in owner.hand:
+			# Card faces are shown before playing; settlement sees the card already removed.
+			if owner == actor and not excluded and id == exclude_card_id:
+				excluded = true
+				continue
+			if not effect.has("hand_element") or cards.get(id, {}).get("element") == effect["hand_element"]: count += 1
+		amount += count * int(effect["hand_multiplier"])
+	return amount
+
+func _effect_status_stacks(target: Combatant, effect: Dictionary) -> int:
+	if effect.has("stacks_from_status"):
+		return floori(float(target.status_stacks(str(effect["stacks_from_status"]))) / maxi(1, int(effect["stacks_divisor"])))
+	return int(effect.get("stacks", 0))
+
 func _damage_plan(actor: Combatant, opponent: Combatant, effect: Dictionary, card_element: String, selection: Dictionary) -> Array[Dictionary]:
 	var targets: Array[Dictionary] = []
 	var scope := str(effect.get("scope", "single"))
-	if scope in ["all", "all_opponents", "all_enemy_summons"]:
+	if scope in ["all", "all_opponents", "all_enemy_summons", "all_summons"]:
 		var owners: Array[Combatant] = [opponent]
-		if scope == "all": owners.append(actor)
+		if scope in ["all", "all_summons"]: owners.append(actor)
 		for owner in owners:
-			if scope != "all_enemy_summons": targets.append({"owner": owner, "kind": "hero"})
+			if scope not in ["all_enemy_summons", "all_summons"]: targets.append({"owner": owner, "kind": "hero"})
 			for slot in owner.summons.size():
 				if owner.summons[slot] != null: targets.append({"owner": owner, "kind": "summon", "slot": slot})
 	else:
@@ -630,9 +654,7 @@ func _damage_plan(actor: Combatant, opponent: Combatant, effect: Dictionary, car
 		var owner := actor if selection.get("side", "") == own_side else opponent
 		if selection.get("kind", "hero") != "summon" or (int(selection.get("slot", -1)) >= 0 and int(selection["slot"]) < owner.summons.size() and owner.summons[int(selection["slot"])] != null):
 			targets.append({"owner": owner, "kind": selection.get("kind", "hero"), "slot": int(selection.get("slot", -1))})
-	var amount := int(effect["amount"])
-	if effect.has("shield_multiplier"):
-		amount = mini(int(effect.get("base_cap", 50)), floori(actor.status_stacks("shield") * float(effect["shield_multiplier"])))
+	var amount := _effect_damage_amount(actor, effect)
 	var element := str(effect.get("element", card_element))
 	for hit in targets:
 		var owner: Combatant = hit["owner"]
@@ -694,7 +716,7 @@ func _absorb_shield(target: Combatant, absorbed: int) -> void:
 
 func preview_damage_segments(actor: Combatant, card: Dictionary, selection: Dictionary) -> Array[int]:
 	var segments: Array[int] = []
-	if card_target_mode(card) not in ["damage", "enemy_summons"] or not valid_card_target(actor, card, selection): return segments
+	if card_target_mode(card) not in ["damage", "enemy_summons", "all_summons"] or not valid_card_target(actor, card, selection): return segments
 	var copy := simulation_copy()
 	var source: Combatant = copy.player if actor == player else copy.enemy
 	var opponent: Combatant = copy.enemy if actor == player else copy.player
@@ -829,10 +851,10 @@ func _card_candidates(actor: Combatant, card: Dictionary) -> Array[Dictionary]:
 			if actor.summons[slot] != null: continue
 			for aim in _living_targets(opponent): candidates.append({"kind":"slot", "slot":slot, "entrance_target":aim})
 		return candidates
-	if mode == "damage":
+	if mode in ["damage", "all_summons"]:
 		for side in damage_target_sides(actor, card):
 			var owner := player if side == "player" else enemy
-			candidates.append({"kind":"hero", "side":side})
+			if mode == "damage": candidates.append({"kind":"hero", "side":side})
 			for slot in 3:
 				if owner.summons[slot] != null: candidates.append({"kind":"summon", "side":side, "slot":slot})
 	else:
@@ -868,11 +890,17 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 			var hits: Array[Dictionary] = []
 			for hit in plan:
 				var dealt: int
+				var owner: Combatant = hit["owner"]
+				var life_before: int = owner.hp if hit["kind"] == "hero" else owner.summons[int(hit["slot"])].hp
 				if hit["kind"] == "hero":
 					dealt = _apply_hero_damage(actor, hit["owner"], hit["breakdown"], attack_element)
 				else:
 					dealt = _apply_summon_hit(actor, hit["owner"], int(hit["slot"]), int(hit["raw"]), attack_element)
 				hits.append({"side": _side(hit["owner"]), "kind": hit["kind"], "slot": int(hit.get("slot", -1)), "amount": dealt})
+				# The reward belongs to this hit, before the lethal segment ends battle.
+				# A reaction killing another unit must not count as this spell's kill.
+				if life_before > 0 and dealt >= life_before and actor.hp > 0:
+					_resolve_sequence(actor, opponent, effect.get("on_kill", []), card_element)
 			damage_segment_resolved.emit(hits)
 			_check_finish()
 		"summon":
@@ -986,14 +1014,19 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 		"status":
 			var status_id: String = effect["status"]
 			var element: String = effect.get("element", "")
-			target.add_status(status_id, int(effect["stacks"]), int(effect.get("turns", 0)), element)
+			var stacks := _effect_status_stacks(target, effect)
+			target.add_status(status_id, stacks, int(effect.get("turns", 0)), element)
 			var detail := " · %s" % BattleRules.element_name(element) if element != "" else ""
-			_report("%s 获得 %d 层%s%s" % [target.display_name, int(effect["stacks"]), STATUS_NAMES.get(status_id, status_id), detail], _side(target), "status_" + status_id, card_element, int(effect["stacks"]))
+			_report("%s 获得 %d 层%s%s" % [target.display_name, stacks, STATUS_NAMES.get(status_id, status_id), detail], _side(target), "status_" + status_id, card_element, stacks)
 		"remove_status":
 			var status_id: String = effect["status"]
 			var removed := target.status_stacks(status_id)
 			target.remove_status(status_id)
 			_report("%s 解除%s" % [target.display_name, STATUS_NAMES.get(status_id, status_id)], _side(target), "shield_loss" if status_id == "shield" else "status_remove", card_element, removed)
+		"reduce_status":
+			var status_id: String = effect["status"]
+			var removed := target.reduce_status(status_id, amount)
+			_report("%s 降低%d层%s" % [target.display_name, removed, STATUS_NAMES.get(status_id, status_id)], _side(target), "status_remove", card_element, removed)
 		"break_shield":
 			var removed := mini(amount, target.status_stacks("shield"))
 			if removed > 0: _absorb_shield(target, removed)

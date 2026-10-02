@@ -1,10 +1,10 @@
 {
-  "version": "0.7.0",
-  "release": "新手指引与卡面修复",
-  "cards": 70,
+  "version": "0.8.0",
+  "release": "新卡牌与仓库卡图修复",
+  "cards": 80,
   "summons": 26,
   "artifacts": 30,
-  "card_versions": 210,
+  "card_versions": 240,
   "summon_versions": 78,
   "artifact_versions": 90,
   "enemies": 8

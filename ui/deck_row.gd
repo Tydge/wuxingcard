@@ -26,7 +26,8 @@ func configure(data: Dictionary, amount: int, show_remove: bool = false) -> void
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	for state in ["normal", "hover", "pressed", "focus"]:
 		add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	var path := "res://assets/cards/generated/%s.webp" % card["id"]
+	art = null
+	var path := "res://assets/cards/generated/%s.webp" % card.get("art_id", ContentCatalog.base_id(card))
 	if ResourceLoader.exists(path): art = load(path)
 	var title_width := 162 if PlatformUI.is_touch() or show_remove else 215
 	var count_x := 209 if PlatformUI.is_touch() or show_remove else 266

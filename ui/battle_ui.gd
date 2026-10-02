@@ -1493,7 +1493,7 @@ func _drop_selection(card: Dictionary, point: Vector2) -> Dictionary:
 						nearest = slot
 						nearest_distance = distance
 			if nearest >= 0: return {"kind": "slot", "slot": nearest}
-		"damage":
+		"damage", "all_summons":
 			for side in manager.damage_target_sides(manager.player, card):
 				var owner := manager.player if side == "player" else manager.enemy
 				for slot in owner.summons.size():
@@ -1501,7 +1501,7 @@ func _drop_selection(card: Dictionary, point: Vector2) -> Dictionary:
 						return {"kind": "summon", "slot": slot, "side": side}
 				var hero_rect := ENEMY_HERO_TARGET
 				if side == "player": hero_rect.position.x = VIEW_SIZE.x - hero_rect.end.x
-				if hero_rect.has_point(point): return {"kind": "hero", "side": side}
+				if manager.card_target_mode(card) == "damage" and hero_rect.has_point(point): return {"kind": "hero", "side": side}
 		"ally_summon", "enemy_summons":
 			var side := "player" if manager.card_target_mode(card) == "ally_summon" else "enemy"
 			var owner := manager.player if side == "player" else manager.enemy
@@ -1521,10 +1521,10 @@ func _show_drag_hints(card: Dictionary) -> void:
 		for slot in manager.player.summons.size():
 			if manager.player.summons[slot] == null:
 				choices.append({"selection": {"kind": "slot", "slot": slot}, "point": _summon_point("player", slot)})
-	elif mode == "damage":
+	elif mode in ["damage", "all_summons"]:
 		for side in manager.damage_target_sides(manager.player, card):
 			var owner := manager.player if side == "player" else manager.enemy
-			choices.append({"selection": {"kind": "hero", "side": side}, "point": _anchor(side)})
+			if mode == "damage": choices.append({"selection": {"kind": "hero", "side": side}, "point": _anchor(side)})
 			for slot in owner.summons.size():
 				if owner.summons[slot] != null:
 					choices.append({"selection": {"kind": "summon", "slot": slot, "side": side}, "point": _summon_point(side, slot)})
@@ -1542,7 +1542,7 @@ func _show_drag_hints(card: Dictionary) -> void:
 		marker.set_meta("selection", choice["selection"])
 		fx_layer.add_child(marker)
 		drag_hints.append(marker)
-	if mode == "damage":
+	if mode in ["damage", "all_summons"]:
 		damage_preview = _panel(fx_layer, Rect2(Vector2.ZERO, Vector2(200, 58 if PlatformUI.is_touch() else 42)), Color("#09121ff2"), GOLD, 8)
 		damage_preview.z_index = 20
 		damage_preview.visible = false
@@ -1564,7 +1564,7 @@ func _update_drag_hints(card: Dictionary, pointer: Vector2) -> void:
 		var selected: Dictionary = hint.get_meta("selection")
 		var all_targets := false
 		for effect in card["effects"]:
-			if effect.get("scope", "single") in ["all_opponents", "all", "all_enemy_summons"]: all_targets = true
+			if effect.get("scope", "single") in ["all_opponents", "all", "all_enemy_summons", "all_summons"]: all_targets = true
 		hint.call("set_highlighted", selected == selection or (all_targets and manager.valid_card_target(manager.player, card, selection)))
 	if not is_instance_valid(damage_preview):
 		return
@@ -1871,12 +1871,12 @@ func _cast_card(card: Dictionary, side: String, destination: Vector2) -> float:
 		# Actual random aims arrive from the resolver; never draw four false hero hits.
 		return 0.05
 	for effect in card["effects"]:
-		if effect.get("scope", "single") not in ["all_opponents", "all", "all_enemy_summons"]: continue
+		if effect.get("scope", "single") not in ["all_opponents", "all", "all_enemy_summons", "all_summons"]: continue
 		var actor := manager.player if side == "player" else manager.enemy
 		var duration := 0.0
 		for target_side in manager.damage_target_sides(actor, card):
 			var owner := manager.player if target_side == "player" else manager.enemy
-			if effect.get("scope", "single") != "all_enemy_summons":
+			if effect.get("scope", "single") not in ["all_enemy_summons", "all_summons"]:
 				duration = battle_fx.cast(card, side, Vector2(-1, -1), _anchor(target_side))
 			for slot in owner.summons.size():
 				if owner.summons[slot] != null:

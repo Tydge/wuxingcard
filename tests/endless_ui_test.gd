@@ -178,6 +178,11 @@ func run_test() -> void:
 	await press(screen.upgrade_button)
 	check(ui.endless.state["gold"] == 30 and ui.endless.item("cards", uid)["id"].ends_with("__1"), "one paid upgrade changes one owned card once")
 	screen._close_modal(false)
+	screen._navigate("inventory")
+	await process_frame
+	var upgraded_id := str(ui.endless.item("cards", uid)["id"])
+	check(screen.workshop.row_nodes[upgraded_id].art != null and screen.workshop.row_nodes[upgraded_id].art.resource_path.ends_with(owned_id + ".webp"), "paid upgrade keeps the illustration in the warehouse deck row")
+	await shot("upgraded_deck_row")
 	ui.endless.toggle_card(uid)
 	screen._navigate("rest")
 	check(screen.next_button.disabled, "fourteen-card deck blocks continuation")

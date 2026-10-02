@@ -3144,5 +3144,514 @@
       }
     ],
     "art_prompt": "A sentient Chinese guardian lion carved from weathered ochre stone with amber eyes, cloud-scroll mane and heavy paws, a floating restraint seal above its back, full body"
+  },
+  {
+    "id": "metal_rupture",
+    "name": "裂脉诀",
+    "element": "metal",
+    "cost": 2,
+    "text": "对对手造成12点金伤害，对手获得3层出血。",
+    "art_prompt": "一柄锋锐银金飞剑的单次剑气划破古装敌人袖甲，细微暗红灵光从裂口散出，突出裂脉剑术，无血腥细节；金白剑光、深蓝山崖背景",
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 12,
+        "element": "metal",
+        "target": "opponent"
+      },
+      {
+        "type": "status",
+        "target": "opponent",
+        "status": "bleed",
+        "stacks": 3
+      }
+    ],
+    "upgrades": [
+      {
+        "cost": 2,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 14,
+            "element": "metal",
+            "target": "opponent"
+          },
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "bleed",
+            "stacks": 4
+          }
+        ]
+      },
+      {
+        "cost": 2,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 16,
+            "element": "metal",
+            "target": "opponent"
+          },
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "bleed",
+            "stacks": 5
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "water_clear_dew",
+    "name": "清露诀",
+    "element": "water",
+    "cost": 1,
+    "text": "降低自身5层中毒、2层灼伤。",
+    "art_prompt": "晶莹清露悬浮在古老石碗上方，蓝色水光净化紫绿色毒雾和橙红余火，清冷山间泉池",
+    "effects": [
+      {
+        "type": "reduce_status",
+        "target": "self",
+        "status": "poison",
+        "amount": 5
+      },
+      {
+        "type": "reduce_status",
+        "target": "self",
+        "status": "burn",
+        "amount": 2
+      }
+    ],
+    "upgrades": [
+      {
+        "cost": 1,
+        "effects": [
+          {
+            "type": "reduce_status",
+            "target": "self",
+            "status": "poison",
+            "amount": 6
+          },
+          {
+            "type": "reduce_status",
+            "target": "self",
+            "status": "burn",
+            "amount": 3
+          }
+        ]
+      },
+      {
+        "cost": 1,
+        "effects": [
+          {
+            "type": "reduce_status",
+            "target": "self",
+            "status": "poison",
+            "amount": 7
+          },
+          {
+            "type": "reduce_status",
+            "target": "self",
+            "status": "burn",
+            "amount": 4
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "wood_miasma_bloom",
+    "name": "瘴生诀",
+    "element": "wood",
+    "cost": 5,
+    "text": "对手获得10层中毒，自身获得5层再生。",
+    "art_prompt": "苍翠灵藤开出浓紫瘴花，毒雾向远方弥散，翠绿生机沿藤茎回流，古林湿润石阶，生死循环",
+    "effects": [
+      {
+        "type": "status",
+        "target": "opponent",
+        "status": "poison",
+        "stacks": 10
+      },
+      {
+        "type": "status",
+        "target": "self",
+        "status": "regen",
+        "stacks": 5
+      }
+    ],
+    "upgrades": [
+      {
+        "cost": 5,
+        "effects": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "poison",
+            "stacks": 12
+          },
+          {
+            "type": "status",
+            "target": "self",
+            "status": "regen",
+            "stacks": 6
+          }
+        ]
+      },
+      {
+        "cost": 4,
+        "effects": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "poison",
+            "stacks": 12
+          },
+          {
+            "type": "status",
+            "target": "self",
+            "status": "regen",
+            "stacks": 6
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "fire_burn_to_earth",
+    "name": "焚烬",
+    "element": "fire",
+    "cost": 2,
+    "text": "造成15点火伤害；若消灭目标，获得2点土能量。",
+    "art_prompt": "单个有生命感的狼形妖兽被炽烈橙红火焰吞没，轮廓从毛发与兽形逐渐崩解为大量细灰，灰烬随风飘散；少量陶土色灵光从余烬回流，画面突出把生物烧成灰，无血腥细节、无石质傀儡",
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 15,
+        "element": "fire",
+        "on_kill": [
+          {
+            "type": "gain_energy",
+            "target": "self",
+            "element": "earth",
+            "amount": 2
+          }
+        ]
+      }
+    ],
+    "upgrades": [
+      {
+        "cost": 2,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 18,
+            "element": "fire",
+            "on_kill": [
+              {
+                "type": "gain_energy",
+                "target": "self",
+                "element": "earth",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "cost": 2,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 20,
+            "element": "fire",
+            "on_kill": [
+              {
+                "type": "gain_energy",
+                "target": "self",
+                "element": "earth",
+                "amount": 3
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "earth_quake_summons",
+    "name": "震岳诀",
+    "element": "earth",
+    "cost": 5,
+    "text": "对所有召唤物造成30点土伤害。",
+    "art_prompt": "山巅石台震动，一道厚重陶土色震荡波横扫数个兽形灵物，岩石裂开、碎石悬浮，无人类角色",
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 30,
+        "element": "earth",
+        "scope": "all_summons"
+      }
+    ],
+    "upgrades": [
+      {
+        "cost": 5,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 35,
+            "element": "earth",
+            "scope": "all_summons"
+          }
+        ]
+      },
+      {
+        "cost": 5,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 40,
+            "element": "earth",
+            "scope": "all_summons"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "metal_cleanse",
+    "name": "净脉诀",
+    "element": "metal",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "remove_status",
+        "status": "poison",
+        "target": "self"
+      }
+    ],
+    "art_prompt": "Use case: stylized-concept. Asset type: landscape 4:3 pure card illustration for Chinese wuxing fantasy game. Primary request: 冷峻银金灵光沿一位古装修士前臂经脉流动，驱散盘绕手臂的墨紫毒雾，袖口、清澈金属光线、平静动作，净化的力量；仙山古石台. Style: high quality dark eastern fantasy digital painting, painterly detailed textures, strong readable focal subject, restrained cinematic lighting, consistent with a circular stone arena suspended among mountains. Composition: landscape 4:3, 1536x1152 preferred, focal details inside central 80%, clean crop edges. No text, letters, numerals, logos, card border, UI or watermark. One complete illustration only.",
+    "upgrades": [
+      {
+        "cost": 1,
+        "effects": [
+          {
+            "type": "remove_status",
+            "status": "poison",
+            "target": "self"
+          },
+          {
+            "type": "draw",
+            "target": "self",
+            "amount": 1
+          }
+        ]
+      },
+      {
+        "cost": 0,
+        "effects": [
+          {
+            "type": "remove_status",
+            "status": "poison",
+            "target": "self"
+          },
+          {
+            "type": "draw",
+            "target": "self",
+            "amount": 1
+          }
+        ]
+      }
+    ],
+    "text": "解除自身中毒。"
+  },
+  {
+    "id": "water_gather_tide",
+    "name": "聚潮诀",
+    "element": "water",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 12,
+        "element": "water",
+        "hand_multiplier": 2,
+        "hand_element": "water"
+      }
+    ],
+    "art_prompt": "Use case: stylized-concept. Asset type: landscape 4:3 pure card illustration for Chinese wuxing fantasy game. Primary request: 蓝色深海水流从几股涓流汇聚成一股有力的旋转潮汐，中央一弯凝聚水刃，水纹与浪花层次清晰，潮势不断聚拢，深蓝山崖与悬浮石台. Style: high quality dark eastern fantasy digital painting, painterly detailed textures, strong readable focal subject, restrained cinematic lighting, consistent with a circular stone arena suspended among mountains. Composition: landscape 4:3, 1536x1152 preferred, focal details inside central 80%, clean crop edges. No text, letters, numerals, logos, card border, UI or watermark. One complete illustration only.",
+    "upgrades": [
+      {
+        "cost": 2,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 12,
+            "element": "water",
+            "hand_multiplier": 3,
+            "hand_element": "water"
+          }
+        ]
+      },
+      {
+        "cost": 2,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 12,
+            "element": "water",
+            "hand_multiplier": 4,
+            "hand_element": "water"
+          }
+        ]
+      }
+    ],
+    "text": "造成（12＋手牌中水系卡牌数×2）点水伤害。"
+  },
+  {
+    "id": "wood_miasma_rain",
+    "name": "瘴雨",
+    "element": "wood",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 8,
+        "element": "wood",
+        "scope": "all_enemy_summons"
+      },
+      {
+        "type": "status",
+        "status": "poison",
+        "stacks": 3,
+        "target": "opponent"
+      }
+    ],
+    "art_prompt": "Use case: stylized-concept. Asset type: landscape 4:3 pure card illustration for Chinese wuxing fantasy game. Primary request: 一株苍翠灵木的枝叶散出细密翠绿刺雨与浓紫瘴雾，刺雨横扫远处数只灵兽的身影，枝叶和雾气是主体，古林湿润石阶，木系攻击与毒意象. Style: high quality dark eastern fantasy digital painting, painterly detailed textures, strong readable focal subject, restrained cinematic lighting, consistent with a circular stone arena suspended among mountains. Composition: landscape 4:3, 1536x1152 preferred, focal details inside central 80%, clean crop edges. No text, letters, numerals, logos, card border, UI or watermark. One complete illustration only.",
+    "upgrades": [
+      {
+        "cost": 3,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 8,
+            "element": "wood",
+            "scope": "all_enemy_summons"
+          },
+          {
+            "type": "status",
+            "status": "poison",
+            "stacks": 3,
+            "target": "opponent"
+          }
+        ]
+      },
+      {
+        "cost": 3,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 8,
+            "element": "wood",
+            "scope": "all_enemy_summons"
+          },
+          {
+            "type": "status",
+            "status": "poison",
+            "stacks": 3,
+            "target": "opponent"
+          }
+        ]
+      }
+    ],
+    "text": "对敌方所有召唤物造成8点木伤害，对手获得3层中毒。"
+  },
+  {
+    "id": "fire_poison_flame",
+    "name": "瘴火引",
+    "element": "fire",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "status",
+        "target": "opponent",
+        "status": "burn",
+        "stacks_from_status": "poison",
+        "stacks_divisor": 5
+      }
+    ],
+    "art_prompt": "Use case: precise-object-edit. Asset type: 4:3 landscape card illustration for Chinese five-element fantasy game. Edit target: supplied illustration of green vines and branches on fire. Primary request: shift the dominant magical event to 瘴毒生火, a luminous purple-green toxic miasma streams from the green leaves and twisted wood, visibly transforms into bright orange-red flames at its curling leading edges. Reduce the ordinary burning log pile, make a flowing arc of toxic mist becoming fire the main focal subject. Keep a few readable green leaves and woody vines as the source, eastern fantasy mountain stone altar atmosphere, high quality painterly dark fantasy textures, landscape 4:3 framing. No text, letters, numbers, logos, card border, UI or watermark.",
+    "upgrades": [
+      {
+        "cost": 1,
+        "effects": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "burn",
+            "stacks_from_status": "poison",
+            "stacks_divisor": 5
+          }
+        ]
+      },
+      {
+        "cost": 1,
+        "effects": [
+          {
+            "type": "status",
+            "target": "opponent",
+            "status": "burn",
+            "stacks_from_status": "poison",
+            "stacks_divisor": 4
+          }
+        ]
+      }
+    ],
+    "text": "对手获得（中毒层数÷5，向下取整）层灼伤。"
+  },
+  {
+    "id": "earth_heavy_peak",
+    "name": "负山咒",
+    "element": "earth",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 15,
+        "element": "earth",
+        "hand_multiplier": 1,
+        "hand_owner": "opponent"
+      }
+    ],
+    "art_prompt": "Use case: precise-object-edit. Asset type: landscape 4:3 pure card illustration. Edit target: supplied cultivator being crushed by massive stones with one raised empty hand. Change only his raised arm and hand: lower that arm completely and place that hand on the ground in front of him, both arms visibly down, both hands bracing against the stone floor while his body struggles under the heavy rocks. He is the victim receiving the spell, absolutely not the caster: no raised arm, no spellcasting hand gesture, no magic originating from his palms. Preserve his distressed face and bent posture, the huge accumulated crushing rocks on his back, earthy gold magic around the rocks, torn flowing robe, ancient mountain stone arena, eastern painterly dark fantasy style and exact 4:3 landscape framing. Natural anatomically plausible arms and hands. No cards, scrolls, talismans, text, letters, numbers, logos, card border, UI or watermark.",
+    "upgrades": [
+      {
+        "cost": 2,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 15,
+            "element": "earth",
+            "hand_multiplier": 2,
+            "hand_owner": "opponent"
+          }
+        ]
+      },
+      {
+        "cost": 2,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 15,
+            "element": "earth",
+            "hand_multiplier": 3,
+            "hand_owner": "opponent"
+          }
+        ]
+      }
+    ],
+    "text": "造成（15＋对手手牌数×1）点土伤害。"
   }
 ]

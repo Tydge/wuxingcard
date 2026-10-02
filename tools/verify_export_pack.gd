@@ -21,7 +21,7 @@ func run() -> void:
 	check(ui.theme.default_font != null, "game uses a complete portable font theme")
 	var manager := BattleManager.new()
 	root.add_child(manager)
-	check(manager.cards.size() == 210 and manager.summon_templates.size() == 78, "current card and summon pool is included")
+	check(manager.cards.size() == 240 and manager.summon_templates.size() == 78, "current card and summon pool is included")
 	var supported := GameFonts.BODY.get_supported_chars()
 	for card: Dictionary in manager.cards.values():
 		var art: Texture2D = load("res://assets/cards/generated/%s.webp" % card["art_id"])
@@ -76,7 +76,7 @@ func run() -> void:
 				check(false, "exported battle stalled: " + manager.phase)
 				break
 		check(steps < 1000, "exported random battle finishes")
-	print("Export pack verified on %s: 210 card definitions and art, 78 summons, bundled Chinese fonts, 15 complete battles; %d failures" % [OS.get_name(),failures])
+	print("Export pack verified on %s: 240 card definitions and art, 78 summons, bundled Chinese fonts, 15 complete battles; %d failures" % [OS.get_name(),failures])
 	quit(1 if failures > 0 else 0)
 
 func fund_player(manager: BattleManager) -> void:

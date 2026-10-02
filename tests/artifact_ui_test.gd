@@ -85,7 +85,8 @@ func run() -> void:
 			if child is ArtifactBadge and control.position.x > 1400: enemy_guard_badge = child
 	check(enemy_guard_badge != null and enemy_guard_badge.value == battle.manager.enemy.artifact_durability, "enemy durability badge displays its current value above the standee")
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://work/balance_20261001"))
-	await RenderingServer.frame_post_draw
+	await process_frame
+	RenderingServer.force_draw(false)
 	root.get_texture().get_image().save_png(ProjectSettings.globalize_path("res://work/balance_20261001/enemy_artifact_layer.png"))
 	var enemy_weapon: TextureRect
 	for child in battle.actor_layer.get_children():

@@ -1,0 +1,37 @@
+[
+  {
+    "id": "metal_cleanse",
+    "prompt": "Use case: stylized-concept. Asset type: landscape 4:3 pure card illustration for Chinese wuxing fantasy game. Primary request: 冷峻银金灵光沿一位古装修士前臂经脉流动，驱散盘绕手臂的墨紫毒雾，袖口、清澈金属光线、平静动作，净化的力量；仙山古石台. Style: high quality dark eastern fantasy digital painting, painterly detailed textures, strong readable focal subject, restrained cinematic lighting, consistent with a circular stone arena suspended among mountains. Composition: landscape 4:3, 1536x1152 preferred, focal details inside central 80%, clean crop edges. No text, letters, numerals, logos, card border, UI or watermark. One complete illustration only.",
+    "source_image": "/Users/wangtaizhi/.codex/generated_images/01a0fc76-5b96-7343-8287-d6304729c758/exec-427a0d1e-c4aa-4aa3-af4e-936189ff4d65.png",
+    "asset": "assets/cards/generated/metal_cleanse.webp",
+    "tool": "built-in image_gen"
+  },
+  {
+    "id": "water_gather_tide",
+    "prompt": "Use case: stylized-concept. Asset type: landscape 4:3 pure card illustration for Chinese wuxing fantasy game. Primary request: 蓝色深海水流从几股涓流汇聚成一股有力的旋转潮汐，中央一弯凝聚水刃，水纹与浪花层次清晰，潮势不断聚拢，深蓝山崖与悬浮石台. Style: high quality dark eastern fantasy digital painting, painterly detailed textures, strong readable focal subject, restrained cinematic lighting, consistent with a circular stone arena suspended among mountains. Composition: landscape 4:3, 1536x1152 preferred, focal details inside central 80%, clean crop edges. No text, letters, numerals, logos, card border, UI or watermark. One complete illustration only.",
+    "source_image": "/Users/wangtaizhi/.codex/generated_images/01a0fc76-5b96-7343-8287-d6304729c758/exec-bbde44b2-880c-4f20-9cf8-808b42bd026f.png",
+    "asset": "assets/cards/generated/water_gather_tide.webp",
+    "tool": "built-in image_gen"
+  },
+  {
+    "id": "wood_miasma_rain",
+    "prompt": "Use case: stylized-concept. Asset type: landscape 4:3 pure card illustration for Chinese wuxing fantasy game. Primary request: 一株苍翠灵木的枝叶散出细密翠绿刺雨与浓紫瘴雾，刺雨横扫远处数只灵兽的身影，枝叶和雾气是主体，古林湿润石阶，木系攻击与毒意象. Style: high quality dark eastern fantasy digital painting, painterly detailed textures, strong readable focal subject, restrained cinematic lighting, consistent with a circular stone arena suspended among mountains. Composition: landscape 4:3, 1536x1152 preferred, focal details inside central 80%, clean crop edges. No text, letters, numerals, logos, card border, UI or watermark. One complete illustration only.",
+    "source_image": "/Users/wangtaizhi/.codex/generated_images/01a0fc76-5b96-7343-8287-d6304729c758/exec-d28eeb46-0b6f-437d-b301-d1569fccb42a.png",
+    "asset": "assets/cards/generated/wood_miasma_rain.webp",
+    "tool": "built-in image_gen"
+  },
+  {
+    "id": "fire_poison_flame",
+    "prompt": "Use case: precise-object-edit. Asset type: 4:3 landscape card illustration for Chinese five-element fantasy game. Edit target: supplied illustration of green vines and branches on fire. Primary request: shift the dominant magical event to 瘴毒生火, a luminous purple-green toxic miasma streams from the green leaves and twisted wood, visibly transforms into bright orange-red flames at its curling leading edges. Reduce the ordinary burning log pile, make a flowing arc of toxic mist becoming fire the main focal subject. Keep a few readable green leaves and woody vines as the source, eastern fantasy mountain stone altar atmosphere, high quality painterly dark fantasy textures, landscape 4:3 framing. No text, letters, numbers, logos, card border, UI or watermark.",
+    "source_image": "/Users/wangtaizhi/.codex/generated_images/01a0fc76-5b96-7343-8287-d6304729c758/exec-76278747-134f-4f1d-bffc-fa49d5386231.png",
+    "asset": "assets/cards/generated/fire_poison_flame.webp",
+    "tool": "built-in image_gen"
+  },
+  {
+    "id": "earth_heavy_peak",
+    "prompt": "Use case: precise-object-edit. Asset type: landscape 4:3 pure card illustration. Edit target: supplied cultivator being crushed by massive stones with one raised empty hand. Change only his raised arm and hand: lower that arm completely and place that hand on the ground in front of him, both arms visibly down, both hands bracing against the stone floor while his body struggles under the heavy rocks. He is the victim receiving the spell, absolutely not the caster: no raised arm, no spellcasting hand gesture, no magic originating from his palms. Preserve his distressed face and bent posture, the huge accumulated crushing rocks on his back, earthy gold magic around the rocks, torn flowing robe, ancient mountain stone arena, eastern painterly dark fantasy style and exact 4:3 landscape framing. Natural anatomically plausible arms and hands. No cards, scrolls, talismans, text, letters, numbers, logos, card border, UI or watermark.",
+    "source_image": "/Users/wangtaizhi/.codex/generated_images/01a0fc76-5b96-7343-8287-d6304729c758/exec-992cce42-c6ab-4786-9f84-86e1e6748806.png",
+    "asset": "assets/cards/generated/earth_heavy_peak.webp",
+    "tool": "built-in image_gen"
+  }
+]

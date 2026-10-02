@@ -102,3 +102,7 @@ Android原生触屏发现取消召唤目标时隐藏控件会重入取消函数�
 ## 新增测试
 
 新增检查应覆盖明确的规则边界、存档风险或已发生的交互问题。先归入对应组，决定是否需要图形渲染与触屏；不要默认加入quick。低风险文案、间距与静态数值调整不为每条实现新增同构测试。发现重复检查时合并共同断言，但保留不同的结算边界与真实输入分支。
+
+2026-10-02新增五张法术：`ash_cleanse_cards_test`覆盖按层数清理、击杀回能、双方召唤物群伤及AI副本；`ash_cleanse_ui_test`／`ash_cleanse_touch_test`覆盖真实拖牌、取消、目标预览及三级卡面。分别归入cards、ui-cards，不增加默认quick。`upgrade_ui_test`截图改为主动绘制，避免窗口被遮挡时无限等待`frame_post_draw`，保留原有升级与构筑断言。
+
+2026-10-03新增`hand_scaling_cards_test`及PC／触屏`hand_scaling_ui_test`、`hand_scaling_touch_test`，覆盖打出后手牌计数、中毒转灼伤取整及仓库升级卡图。`endless_ui_test`增加实际付费升级后细条卡图断言。其余三处历史截图等待改为主动绘制，保留原有断言，避免相同的macOS遮挡停滞。

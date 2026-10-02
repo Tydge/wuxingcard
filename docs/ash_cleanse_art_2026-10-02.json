@@ -1,0 +1,41 @@
+{
+  "created_at": "2026-10-02",
+  "assets": [
+    {
+      "id": "metal_rupture",
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. Asset type: landscape 4:3 pure card illustration for Chinese wuxing fantasy game. Primary request: 一柄锋锐银金飞剑的单次剑气划破古装敌人袖甲，细微暗红灵光从裂口散出，突出裂脉剑术，无血腥细节。金白剑光、深蓝山崖背景。 Style: high quality dark eastern fantasy digital painting, painterly detailed textures, strong readable focal subject, restrained cinematic lighting, consistent with a circular stone arena suspended among mountains. Composition: landscape 4:3, 1536x1152 preferred, focal details inside central 80%, clean crop edges. No text, letters, numerals, logos, card border, UI or watermark. One complete illustration only.",
+      "source_path": "/Users/wangtaizhi/.codex/generated_images/01a0fc76-5b96-7343-8287-d6304729c758/exec-363c7112-b98d-4729-97cc-0a29dd94070c.png",
+      "game_asset_path": "assets/cards/generated/metal_rupture.webp"
+    },
+    {
+      "id": "water_clear_dew",
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. Asset type: landscape 4:3 pure card illustration for Chinese wuxing fantasy game. Primary request: 一滴巨大晶莹清露悬浮在古老石碗上方，流动的蓝色水光净化紫绿色毒雾和残留的橙红余火，清冷宁静、山间泉池。 Style: high quality dark eastern fantasy digital painting, painterly detailed textures, strong readable focal subject, restrained cinematic lighting, consistent with a circular stone arena suspended among mountains. Composition: landscape 4:3, 1536x1152 preferred, focal details inside central 80%, clean crop edges. No text, letters, numerals, logos, card border, UI or watermark. One complete illustration only.",
+      "source_path": "/Users/wangtaizhi/.codex/generated_images/01a0fc76-5b96-7343-8287-d6304729c758/exec-3c03bd8e-9611-4c15-9796-c11085291422.png",
+      "game_asset_path": "assets/cards/generated/water_clear_dew.webp"
+    },
+    {
+      "id": "wood_miasma_bloom",
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. Asset type: landscape 4:3 pure card illustration for Chinese wuxing fantasy game. Primary request: 一株苍翠灵藤开出一朵浓紫瘴花，毒雾向远方弥散而翠绿生机沿藤茎回流，古林湿润石阶、鲜明生死循环。 Style: high quality dark eastern fantasy digital painting, painterly detailed textures, strong readable focal subject, restrained cinematic lighting, consistent with a circular stone arena suspended among mountains. Composition: landscape 4:3, 1536x1152 preferred, focal details inside central 80%, clean crop edges. No text, letters, numerals, logos, card border, UI or watermark. One complete illustration only.",
+      "source_path": "/Users/wangtaizhi/.codex/generated_images/01a0fc76-5b96-7343-8287-d6304729c758/exec-e61d3ab0-54c0-4989-95ab-d46e33dbdc81.png",
+      "game_asset_path": "assets/cards/generated/wood_miasma_bloom.webp"
+    },
+    {
+      "id": "fire_burn_to_earth",
+      "tool": "built-in image_gen",
+      "prompt": "Use case: precise-object-edit. Asset type: landscape 4:3 Chinese wuxing fantasy card illustration. Edit the reference illustration: replace the rigid stone humanoid golem with a clearly living wolf-like spirit beast, recognizable organic fur, mane, paws and fierce silhouette. It is being completely incinerated by a single concentrated orange-red flame. Show its silhouette progressively disintegrating into fine pale and charcoal ash, abundant gray ash blowing away in the wind and a small blackened ash pile below; the main impression is a living creature burned to ashes, not stone exploding. Flames and flying ash dominate, no gore, blood, bones or exposed tissue. Keep the dark eastern fantasy digital painting style, suspended mountain stone arena atmosphere, cinematic readable composition and 4:3 landscape ratio. Reduce gold magical spirals to a faint earthy amber current rising from the ashes. No letters, text, numerals, logos, card border or UI.",
+      "source_path": "/Users/wangtaizhi/.codex/generated_images/01a0fc76-5b96-7343-8287-d6304729c758/exec-3acb7f80-4cce-477f-883b-17618d9140e2.png",
+      "game_asset_path": "assets/cards/generated/fire_burn_to_earth.webp",
+      "reference_image_path": "/Users/wangtaizhi/.codex/generated_images/01a0fc76-5b96-7343-8287-d6304729c758/exec-161f7ac7-4b93-4a25-b08a-2bd8d84a5401.png"
+    },
+    {
+      "id": "earth_quake_summons",
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. Asset type: landscape 4:3 pure card illustration for Chinese wuxing fantasy game. Primary request: 山巅石台震动，一道厚重陶土色震荡波横扫数个没有人类角色的灵兽形石像，岩石裂开、碎石悬浮、巨大力量感，所有角色均为兽形灵物，绝无人类。 Style: high quality dark eastern fantasy digital painting, painterly detailed textures, strong readable focal subject, restrained cinematic lighting, consistent with a circular stone arena suspended among mountains. Composition: landscape 4:3, 1536x1152 preferred, focal details inside central 80%, clean crop edges. No text, letters, numerals, logos, card border, UI or watermark. One complete illustration only.",
+      "source_path": "/Users/wangtaizhi/.codex/generated_images/01a0fc76-5b96-7343-8287-d6304729c758/exec-1477093b-7372-467c-9b15-2770b9d1f327.png",
+      "game_asset_path": "assets/cards/generated/earth_quake_summons.webp"
+    }
+  ]
+}
