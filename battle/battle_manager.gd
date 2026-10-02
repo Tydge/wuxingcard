@@ -300,6 +300,7 @@ func start_battle(enemy_id: String, deck_id: String, seed_value: int = -1, custo
 		rng.seed = seed_value
 	battle_seed = rng.seed
 	first_side = "player" if rng.randi_range(0, 1) == 0 else "enemy"
+	if options.get("first_side", "") in ["player", "enemy"]: first_side = options["first_side"]
 	var enemy_info := find_entry(enemies, enemy_id)
 	var deck_info := find_entry(decks, deck_id)
 	var testing := deck_id == "random" or not custom_deck.is_empty()

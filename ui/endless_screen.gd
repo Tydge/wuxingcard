@@ -12,6 +12,7 @@ const RED := Color("#f48177")
 const COIN = preload("res://assets/ui/spirit_coin.svg")
 
 var run: EndlessRun
+var onboarding_progress: OnboardingProgress
 var factory: Callable
 var summons: Dictionary
 var content: Control
@@ -205,7 +206,8 @@ func _feedback(okay: bool, success: String = "") -> void:
 	message.add_theme_color_override("font_color", JADE if okay else RED)
 
 func _begin() -> void:
-	if run.begin_battle(): battle_requested.emit()
+	var options := {"first_side":"player"} if onboarding_progress != null and onboarding_progress.first_battle() else {}
+	if run.begin_battle(options): battle_requested.emit()
 	else: _feedback(false)
 
 func _build_rest() -> void:

@@ -239,7 +239,7 @@ func buy(index: int) -> bool:
 	offer["sold"] = true
 	return _commit(previous)
 
-func begin_battle() -> bool:
+func begin_battle(options: Dictionary = {}) -> bool:
 	var phase := str(state.get("phase", ""))
 	if phase not in ["setup", "rest"]: return false
 	if phase == "setup" and state["draft"].size() != INITIAL_CARDS: return false
@@ -251,6 +251,7 @@ func begin_battle() -> bool:
 	var random := _random()
 	var foe := opponent().duplicate(true)
 	state["battle"] = {"seed": str(random.randi()), "enemy": foe, "commands": [], "choices": []}
+	if options.get("first_side", "") in ["player", "enemy"]: state["battle"]["first_side"] = options["first_side"]
 	_remember(random)
 	state["phase"] = "battle"
 	return _commit(previous)
@@ -260,7 +261,9 @@ func battle_deck() -> Dictionary:
 
 func battle_options() -> Dictionary:
 	var foe: Dictionary = state["battle"]["enemy"]
-	return {"player_hp": int(state["max_hp"]), "enemy_hp": enemy_hp(), "enemy_deck": foe["cards"], "enemy_artifacts": foe["artifacts"]}
+	var options := {"player_hp": int(state["max_hp"]), "enemy_hp": enemy_hp(), "enemy_deck": foe["cards"], "enemy_artifacts": foe["artifacts"]}
+	if state["battle"].has("first_side"): options["first_side"] = state["battle"]["first_side"]
+	return options
 
 func record_command(command: Dictionary) -> bool:
 	if state.get("phase", "") != "battle": return false

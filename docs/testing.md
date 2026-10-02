@@ -16,6 +16,7 @@
 | 效果文案、关键词显示 | 对照实际效果；需要检查显示时用`--group ui-cards`或单个关键词测试 | 批量随机对战 |
 | 真气、状态说明、长按操作 | `--group ui-energy`；规则变化追加core | 全部构筑流程 |
 | 开局与抽牌动画 | `--group ui-opening`；时序变化追加core | 无尽商店 |
+| 首次指引、高亮遮罩、教学进度 | `--group onboarding`；按实际改动追加开局或无尽相关项 | 无关卡牌结算、全部资源检查 |
 | 手牌拖拽、目标选择、通用触屏输入 | `--group ui-hand`，或仅受影响的`--test` | 全部资源检查 |
 | 美术替换、资源路径、图片导入 | `--suite assets`和受影响界面 | 批量对战 |
 | 正式导出Windows或Android包 | `--suite full`或复用有效完整记录，另做导出包验证 | 同一份代码为两个平台重复跑全套 |
@@ -59,7 +60,7 @@ python3 tools/check_project.py --suite full --keep-going
 
 `--suite`、`--group`、`--test`是互斥的三种选择方式。group和test各自可以重复。可用完整`res://`路径或注册的测试名指定`--test`。旧的单次排查脚本未注册时，不会被顺带执行。
 
-默认quick包含`flat_damage_test`、`settlement_regression_test`、`qi_cycle_test`、`opening_flow_test`。完整清单统一维护在`tools/test_catalog.py`，通过`--suite full --list`查看。本轮新增一项机制检查和PC／触屏各一项交互检查，未加入默认quick。
+默认quick包含`flat_damage_test`、`settlement_regression_test`、`qi_cycle_test`、`opening_flow_test`。完整清单统一维护在`tools/test_catalog.py`，通过`--suite full --list`查看。新手指引另有一项规则检查和PC／触屏各一项交互检查，属于`onboarding`组，未加入默认quick。新手检查使用独立教学进度存档；其他命名测试默认关闭指引，避免阻挡其既有操作。
 
 在非full范围内，批量模拟使用明确的`--quick`参数：
 

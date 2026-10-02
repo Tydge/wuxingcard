@@ -139,6 +139,7 @@ var endless: EndlessRun
 var endless_save_path := EndlessRun.DEFAULT_PATH
 var endless_active := false
 var endless_restoring := false
+var onboarding: OnboardingController
 
 func _ready() -> void:
 	if OS.has_feature("android"):
@@ -179,6 +180,9 @@ func _ready() -> void:
 	fx_layer.add_child(battle_fx)
 	manager.summon_presenter = _present_summon_effect
 	manager.opening_presenter = _present_opening_stage
+	onboarding = OnboardingController.new()
+	onboarding.configure(self, OnboardingProgress.game())
+	add_child(onboarding)
 	_refresh()
 
 func _box(color: Color, border: Color = Color.TRANSPARENT, radius: int = 12, border_width: int = 1) -> StyleBoxFlat:
@@ -265,7 +269,7 @@ func _refresh() -> void:
 	touch_drag_rejected = false
 	touch_warning_shown = false
 	for child in get_children():
-		if child != manager and child != artifact_layer and child != actor_layer and child != fx_layer:
+		if child != manager and child != artifact_layer and child != actor_layer and child != fx_layer and child != onboarding and (onboarding == null or child != onboarding.guide):
 			if child is CanvasItem: child.hide()
 			child.queue_free()
 	for child in artifact_layer.get_children():
@@ -278,6 +282,7 @@ func _refresh() -> void:
 		if endless_active and endless.state.get("phase", "") != "battle": _build_endless_screen()
 		else: _build_menu()
 		move_child(fx_layer, get_child_count() - 1)
+		if onboarding != null and is_instance_valid(onboarding.guide) and onboarding.guide.is_inside_tree(): move_child(onboarding.guide, get_child_count() - 1)
 		return
 	var background := ColorRect.new()
 	background.color = BG
@@ -318,6 +323,7 @@ func _refresh() -> void:
 			hover_keywords.card_rect = Rect2(preview_target, Vector2(340, 476))
 			hover_keywords.call_deferred("_place")
 	move_child(fx_layer, get_child_count() - 1)
+	if onboarding != null and is_instance_valid(onboarding.guide) and onboarding.guide.is_inside_tree(): move_child(onboarding.guide, get_child_count() - 1)
 
 func _build_menu() -> void:
 	var screen := MAIN_MENU_SCRIPT.new()
@@ -330,6 +336,7 @@ func _build_menu() -> void:
 
 func _build_endless_screen() -> void:
 	var screen := EndlessScreen.new()
+	screen.onboarding_progress = onboarding.progress
 	screen.configure(endless, _card_front, manager.summon_templates)
 	screen.back_requested.connect(_endless_home)
 	screen.battle_requested.connect(_start_endless_battle)
@@ -414,6 +421,7 @@ func _restore_endless_battle() -> void:
 		_endless_home()
 		_open_information("无尽进度", "这场对局暂时无法恢复，原存档已保留")
 		return
+	if onboarding.progress.first_battle(): onboarding.progress.claim_battle()
 	_refresh()
 	if not endless.notice.is_empty():
 		_show_floating(endless.notice, "player", GOLD)
@@ -455,13 +463,17 @@ func _start_battle() -> void:
 	_clear_drag_hints()
 	battle_fx.clear_effects()
 	manager.replay_choice_indices.clear()
+	var options := endless.battle_options() if endless_active else {}
+	if onboarding.progress.first_battle(): options["first_side"] = "player"
 	if endless_active:
-		await manager.start_battle(menu_enemy, menu_deck, int(endless.state["battle"]["seed"]), menu_custom_deck, endless.battle_options())
-	else: await manager.start_battle(menu_enemy, menu_deck, -1, menu_custom_deck)
+		await manager.start_battle(menu_enemy, menu_deck, int(endless.state["battle"]["seed"]), menu_custom_deck, options)
+	else: await manager.start_battle(menu_enemy, menu_deck, -1, menu_custom_deck, options)
 
 func _present_opening_stage(stage: String) -> void:
 	var generation := manager.battle_generation
 	if stage == "order":
+		if onboarding.progress.first_battle(): onboarding.progress.claim_battle()
+		if endless_active and onboarding.progress.pending("setup"): onboarding.progress.finish("setup")
 		opening_active = true
 		action_busy = true
 		enemy_animating = false
@@ -614,7 +626,9 @@ func _energy_gui_input(event: InputEvent, side: String, element: String) -> void
 func _convert_player_qi(element: String) -> bool:
 	if action_busy or enemy_animating or opening_active or draw_animation_active or artifact_aiming or drag_index >= 0 or is_instance_valid(back_dialog) or is_instance_valid(information_panel) or touch_inspecting or not manager.can_convert_qi(manager.player, element): return false
 	if not _endless_record({"kind":"qi", "element":element}): return false
-	return manager.convert_qi(manager.player, element)
+	var converted := manager.convert_qi(manager.player, element)
+	if converted and onboarding.guide_active() and onboarding.guide.key == "battle_convert": onboarding.complete("battle")
+	return converted
 
 func _build_status_icons(actor: Combatant, side: String) -> void:
 	for i in actor.statuses.size():
@@ -772,6 +786,7 @@ func _hide_artifact_preview(side: String, slot: String) -> void:
 
 func _on_artifact_pressed() -> void:
 	if action_busy or not manager.artifact_can_activate(manager.player): return
+	if onboarding.guide_active() and onboarding.guide.key == "battle_implement_use": onboarding.complete("battle_implement")
 	_clear_hover_preview()
 	if manager.artifact_target_mode(manager.player) == "none":
 		_activate_player_artifact({})
@@ -1571,6 +1586,14 @@ func _update_drag_hints(card: Dictionary, pointer: Vector2) -> void:
 
 func _input(event: InputEvent) -> void:
 	if endless_restoring: return
+	if onboarding != null and onboarding.guide_active():
+		if event.is_action_pressed("ui_cancel"):
+			onboarding.skip()
+			get_viewport().set_input_as_handled()
+			return
+		if manager.phase == "menu" or onboarding.guide.key not in ["battle_convert", "battle_implement_use"]: return
+		if event is InputEventScreenTouch or event is InputEventScreenDrag or event is InputEventMouseButton or event is InputEventMouseMotion:
+			if not onboarding.guide.allows(PlatformUI.local_point(self, event.position)): return
 	if not manager.pending_choice.is_empty(): return
 	if PlatformUI.is_touch():
 		# Android may synthesize mouse events after a handled touch. Consume those
@@ -1605,6 +1628,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _request_back() -> void:
 	if manager == null: return
+	if onboarding != null and onboarding.guide_active():
+		onboarding.skip()
+		return
 	if not pending_summon_selection.is_empty():
 		_cancel_summon_target()
 		return

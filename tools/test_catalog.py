@@ -2,6 +2,7 @@
 from pathlib import Path
 
 FULL_SUITE = [f"res://tests/{name}.gd" for name in [
+    "onboarding_rules_test", "onboarding_ui_test", "onboarding_touch_test",
     "high_cost_content_test", "audio_policy_test", "high_cost_ui_test", "high_cost_touch_test",
     "smoke_test", "card_expansion_test", "deck_store_test", "artifact_test",
     "flat_damage_test", "new_card_wave_test", "card_balance_test", "summon_expansion_test",
@@ -14,6 +15,7 @@ FULL_SUITE = [f"res://tests/{name}.gd" for name in [
       "res://tools/verify_touch_ui.gd", "res://tools/test_touch_interactions.gd"]
 
 GRAPHICAL = {
+    "onboarding_ui_test", "onboarding_touch_test",
     "audio_policy_test",
     "high_cost_ui_test", "high_cost_touch_test",
     "artifact_ui_test", "qi_hold_ui_test", "qi_hold_touch_test", "opening_deal_test",
@@ -21,10 +23,11 @@ GRAPHICAL = {
     "test_card_keywords", "test_drag", "test_summon_drag", "test_deck_workshop",
     "verify_touch_ui", "test_touch_interactions",
 }
-TOUCH = {"high_cost_touch_test", "qi_hold_touch_test", "endless_touch_test", "verify_touch_ui", "test_touch_interactions"}
+TOUCH = {"onboarding_touch_test", "high_cost_touch_test", "qi_hold_touch_test", "endless_touch_test", "verify_touch_ui", "test_touch_interactions"}
 QUICK_SIMULATIONS = {"smoke_test", "card_expansion_test", "upgrade_test"}
 BY_NAME = {Path(script).stem: script for script in FULL_SUITE}
 GROUPS = {
+    "onboarding": ["onboarding_rules_test", "onboarding_ui_test", "onboarding_touch_test"],
     "audio-policy": ["audio_policy_test"],
     "core": ["flat_damage_test", "settlement_regression_test", "qi_cycle_test", "opening_flow_test"],
     "cards": ["high_cost_content_test", "card_expansion_test", "new_card_wave_test", "card_balance_test", "upgrade_test"],

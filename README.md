@@ -172,6 +172,8 @@ Windows 上可使用同样的 `--headless --script 验证脚本绝对路径` 参
 
 测试按修改范围执行，完整规范见[测试规范](docs/testing.md)。普通文档或注释修改通常不启动Godot；卡牌、法宝、存档与界面改动选择对应组，不为每次提交或推送默认运行全套。
 
+首次进入组牌、战斗、休整、集市和行囊时会出现原位交互指引；非战场首次放大不同类型卡牌和首次带法器入战也分别介绍。支持PC／Android，完成记录可保存与续接。流程、保存和相关验证见[新手指引](docs/onboarding.md)，相关检查使用`--group onboarding`。
+
 ```sh
 # 默认仅4项headless规则检查
 python3 tools/check_project.py
