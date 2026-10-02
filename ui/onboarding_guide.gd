@@ -97,6 +97,9 @@ func allows(point: Vector2) -> bool:
 	return false
 
 func _has_point(point: Vector2) -> bool:
+	# The tip can overlap an allowed operation region. Its own buttons must still
+	# receive input rather than falling through that hole into the underlying UI.
+	if is_instance_valid(panel) and panel.get_rect().has_point(point): return true
 	return not allows(point)
 
 func _process(delta: float) -> void:

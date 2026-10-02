@@ -2,6 +2,7 @@
 from pathlib import Path
 
 FULL_SUITE = [f"res://tests/{name}.gd" for name in [
+    "card_layout_ui_test", "card_layout_touch_test",
     "onboarding_rules_test", "onboarding_ui_test", "onboarding_touch_test",
     "high_cost_content_test", "audio_policy_test", "high_cost_ui_test", "high_cost_touch_test",
     "smoke_test", "card_expansion_test", "deck_store_test", "artifact_test",
@@ -15,6 +16,7 @@ FULL_SUITE = [f"res://tests/{name}.gd" for name in [
       "res://tools/verify_touch_ui.gd", "res://tools/test_touch_interactions.gd"]
 
 GRAPHICAL = {
+    "card_layout_ui_test", "card_layout_touch_test",
     "onboarding_ui_test", "onboarding_touch_test",
     "audio_policy_test",
     "high_cost_ui_test", "high_cost_touch_test",
@@ -23,7 +25,7 @@ GRAPHICAL = {
     "test_card_keywords", "test_drag", "test_summon_drag", "test_deck_workshop",
     "verify_touch_ui", "test_touch_interactions",
 }
-TOUCH = {"onboarding_touch_test", "high_cost_touch_test", "qi_hold_touch_test", "endless_touch_test", "verify_touch_ui", "test_touch_interactions"}
+TOUCH = {"card_layout_touch_test", "onboarding_touch_test", "high_cost_touch_test", "qi_hold_touch_test", "endless_touch_test", "verify_touch_ui", "test_touch_interactions"}
 QUICK_SIMULATIONS = {"smoke_test", "card_expansion_test", "upgrade_test"}
 BY_NAME = {Path(script).stem: script for script in FULL_SUITE}
 GROUPS = {
@@ -36,7 +38,7 @@ GROUPS = {
     "summons": ["high_cost_content_test", "summon_expansion_test", "summon_presentation_test"],
     "decks": ["deck_store_test"],
     "endless": ["endless_run_test", "endless_recovery_test"],
-    "ui-cards": ["high_cost_ui_test", "high_cost_touch_test", "test_card_keywords", "upgrade_ui_test"],
+    "ui-cards": ["card_layout_ui_test", "card_layout_touch_test", "high_cost_ui_test", "high_cost_touch_test", "test_card_keywords", "upgrade_ui_test"],
     "ui-artifacts": ["artifact_ui_test"],
     "ui-energy": ["qi_hold_ui_test", "qi_hold_touch_test", "energy_help_ui_test"],
     "ui-opening": ["opening_deal_test"],

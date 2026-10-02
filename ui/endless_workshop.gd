@@ -47,6 +47,7 @@ func _editor_heading() -> void:
 		wallet.size = Vector2(400, 36)
 		wallet.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		wallet.tooltip_text = "灵钱"
+		wallet.set_meta("currency_amount", int(run.state["gold"]))
 		wallet.add_theme_constant_override("separation", 8)
 		content.add_child(wallet)
 		var coin := TextureRect.new()
@@ -56,7 +57,10 @@ func _editor_heading() -> void:
 		coin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		coin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		wallet.add_child(coin)
-		_text(wallet, str(int(run.state["gold"])), Rect2(0, 0, 0, 36), 24, GOLD)
+		var amount := _text(wallet, str(int(run.state["gold"])), Rect2(0, 0, 0, 36), 24, GOLD)
+		amount.name = "Amount"
+		# Containers need the full natural width; ellipsis permits a zero-width label.
+		amount.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 	_button(content, "返回山门" if initial else "收起行囊", Rect2(1340, 64, 180, 58), func(): back_requested.emit())
 
 func _editor_identity() -> void:

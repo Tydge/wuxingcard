@@ -89,6 +89,9 @@ func run() -> void:
 	check(controller.guide_active() and controller.guide.chapter == "setup" and camp.next_button.disabled, "first setup highlights library and drop zone, entry still requires fifteen cards")
 	await shot("setup")
 	await drag(camp.workshop.card_nodes[0],camp.workshop.drop_zone)
+	var drop_deadline := Time.get_ticks_msec() + 1000
+	while Time.get_ticks_msec() < drop_deadline and (ui.endless.state["draft"].size() != 1 or not controller.guide.body.text.contains("1 / 15")):
+		await tick()
 	check(ui.endless.state["draft"].size() == 1 and controller.guide.body.text.contains("1 / 15"), "real first drag updates both saved draft and guide count")
 	for card: DeckLibraryCard in camp.workshop.card_nodes:
 		for copy in 2:

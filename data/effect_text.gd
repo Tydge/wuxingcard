@@ -58,7 +58,7 @@ static func describe(effects: Array, context: String = "hero") -> String:
 		elif context == "summon" and previous.begins_with("召唤者"):
 			sentence = sentence.trim_prefix("召唤者")
 		if i > 0 and effects[i - 1].get("type") == "break_shield" and effect.get("type") == "damage" and effect.get("target") == "opponent" and not effect.has("condition") and not conditional[-1]:
-			parts[-1] += "，并" + sentence.trim_prefix("对手")
+			parts[-1] += "，并" + sentence
 			i += count
 			continue
 		if not effect.has("condition") and not parts.is_empty() and not conditional[-1]:
@@ -110,18 +110,18 @@ static func single(effect: Dictionary, context: String) -> String:
 				var multiplier := str(int(value)) if is_equal_approx(value, float(int(value))) else str(value)
 				return "造成%s点%s伤害（护盾×%s，基础最多%d点）。" % [_damage_number(effect), element, multiplier, int(effect.get("base_cap", 50))] if effect.has("display_amount") else "造成护盾×%s的%s伤害，基础最多%d点。" % [multiplier, element, int(effect.get("base_cap", 50))]
 			match str(effect.get("scope", "single")):
-				"all": text = "场上所有目标受到%s点%s伤害。" % [_damage_number(effect), element]
+				"all": text = "对场上所有目标造成%s点%s伤害。" % [_damage_number(effect), element]
 				"all_opponents": text = "对所有敌方目标造成%s点%s伤害。" % [_damage_number(effect), element]
-				"all_enemy_summons": text = "敌方所有召唤物受到%s点%s伤害。" % [_damage_number(effect), element]
+				"all_enemy_summons": text = "对敌方所有召唤物造成%s点%s伤害。" % [_damage_number(effect), element]
 				_:
 					match target:
-						"lowest_opponent": text = "生命值最低的敌方目标受到%s点%s伤害。" % [_damage_number(effect), element]
-						"highest_opponent": text = "生命值最高的敌方目标受到%s点%s伤害。" % [_damage_number(effect), element]
-						"random_opponent": text = "随机敌方目标受到%s点%s伤害。" % [_damage_number(effect), element]
-						"selected_opponent": text = "目标受到%s点%s伤害。" % [_damage_number(effect), element]
-						"self": text = "%s受到%s点%s伤害。" % [own, _damage_number(effect), element]
+						"lowest_opponent": text = "对生命值最低的敌方目标造成%s点%s伤害。" % [_damage_number(effect), element]
+						"highest_opponent": text = "对生命值最高的敌方目标造成%s点%s伤害。" % [_damage_number(effect), element]
+						"random_opponent": text = "对随机敌方目标造成%s点%s伤害。" % [_damage_number(effect), element]
+						"selected_opponent": text = "对目标造成%s点%s伤害。" % [_damage_number(effect), element]
+						"self": text = "对%s造成%s点%s伤害。" % [own, _damage_number(effect), element]
 						_:
-							text = "对手受到%s点%s伤害。" % [_damage_number(effect), element] if context in ["summon", "artifact"] or effect.get("target") == "opponent" else "造成%s点%s伤害。" % [_damage_number(effect), element]
+							text = "对对手造成%s点%s伤害。" % [_damage_number(effect), element] if context in ["summon", "artifact"] or effect.get("target") == "opponent" else "造成%s点%s伤害。" % [_damage_number(effect), element]
 		"status": text = who + "获得" + _status_amount(effect) + "。"
 		"remove_status": text = "解除%s%s。" % [who, CardKeywords.NAMES.get(effect["status"], effect["status"])]
 		"heal": text = "%s恢复%d点生命。" % [who, amount]
@@ -169,7 +169,7 @@ static func card_text(card: Dictionary, summons: Dictionary) -> String:
 
 static func artifact_text(entry: Dictionary) -> String:
 	var trigger := str(entry.get("trigger", ""))
-	var prefix: String = {"first_card_own_turn":"每个己方回合首次打出牌时，", "health_lost":"每次失去生命后，", "damage_received":"受到伤害时，", "first_energy_own_turn":"每个己方回合首次获得能量时，", "first_hit_enemy_turn":"每个敌方回合首次受到伤害后，", "battle_start":"开局：", "first_health_lost_own_turn":"每个己方回合首次失去生命时，", "summon":"每次召唤时，", "enemy_summon_death":"敌方召唤物死亡时，", "ally_summon_death":"我方召唤物死亡时，", "ally_summon_hit":"我方召唤物受到伤害时，", "first_ally_heal_own_turn":"每个己方回合首次有友方目标恢复生命时，", "zero_cost_card":"打出0费牌时，", "turn_end":"己方回合结束时，", "first_health_lost_enemy_turn":"每个敌方回合首次失去生命时，"}.get(trigger, "")
+	var prefix: String = {"first_card_own_turn":"每个己方回合首次打出牌时，", "health_lost":"每次失去生命后，", "damage_received":"受到伤害时，", "first_hit_own_turn":"每个己方回合首次受到伤害时，", "first_energy_own_turn":"每个己方回合首次获得能量时，", "first_hit_enemy_turn":"每个敌方回合首次受到伤害后，", "battle_start":"开局：", "first_health_lost_own_turn":"每个己方回合首次失去生命时，", "summon":"每次召唤时，", "enemy_summon_death":"敌方召唤物死亡时，", "ally_summon_death":"我方召唤物死亡时，", "ally_summon_hit":"我方召唤物受到伤害时，", "first_ally_heal_own_turn":"每个己方回合首次有友方目标恢复生命时，", "zero_cost_card":"打出0费牌时，", "turn_end":"己方回合结束时，", "first_health_lost_enemy_turn":"每个敌方回合首次失去生命时，"}.get(trigger, "")
 	if trigger == "element_damage":
 		return "受到火伤害时，该次伤害-%d%%。" % roundi(float(entry.get("resistances", {}).get("fire", 0.0)) * 100)
 	return prefix + describe(entry.get("effects", []), "artifact")

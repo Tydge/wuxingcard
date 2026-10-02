@@ -354,6 +354,10 @@ func _update_editor(highlight: String = "") -> void:
 			row.create_tween().tween_property(row, "modulate", Color.WHITE, 0.3)
 	if draft.is_empty():
 		_text(row_column, "点 ＋ 加入卡牌" if PlatformUI.is_touch() else "拖入第一张卡牌", Rect2(0, 0, 306, 95), 22, JADE, true, HORIZONTAL_ALIGNMENT_CENTER)
+	# There is nothing to scroll while empty. Send the first native touch drop
+	# directly to the drop zone instead of the empty scroll container.
+	row_scroll.mouse_filter = Control.MOUSE_FILTER_IGNORE if draft.is_empty() else Control.MOUSE_FILTER_PASS
+	row_column.mouse_filter = Control.MOUSE_FILTER_IGNORE if draft.is_empty() else Control.MOUSE_FILTER_PASS
 	row_scroll.set_deferred("scroll_vertical", scroll)
 
 func _row_has_remove() -> bool: return false

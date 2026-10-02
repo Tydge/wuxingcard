@@ -90,9 +90,19 @@ func test() -> void:
 	run.state["battle"]["commands"] = [{"kind":"artifact", "target":{}}]
 	run._commit(run.state.duplicate(true))
 	var balanced := EndlessRun.new(manager.cards, manager.artifacts, manager.enemies, run.path)
-	check(balanced.load_run() and balanced.state["rules_version"] == 4 and balanced.state["battle"]["commands"].is_empty() and balanced.state["owned_cards"] == assets and balanced.opponent() == foe, "balance migration preserves assets and opponent while clearing the old action journal")
+	check(balanced.load_run() and balanced.state["rules_version"] == EndlessRun.RULES_VERSION and balanced.state["battle"]["commands"].is_empty() and balanced.state["owned_cards"] == assets and balanced.opponent() == foe, "balance migration preserves assets and opponent while clearing the old action journal")
 	check(FileAccess.file_exists(run.path + ".rules-v3") and JSON.parse_string(FileAccess.get_file_as_string(run.path + ".rules-v3"))["run"]["battle"]["commands"][0]["kind"] == "artifact", "version 3 artifact journal has a recoverable backup")
 	DirAccess.remove_absolute(run.path + ".rules-v3")
+	# Version 4 recorded the old ember-ring trigger, so replay must restart safely.
+	run.state = balanced.state.duplicate(true)
+	run.state["rules_version"] = 4
+	run.state["battle"]["commands"] = [{"kind":"end_turn"}]
+	run.state["battle"]["first_side"] = "player"
+	run._commit(run.state.duplicate(true))
+	var ring_update := EndlessRun.new(manager.cards,manager.artifacts,manager.enemies,run.path)
+	check(ring_update.load_run() and ring_update.state["battle"]["commands"].is_empty() and ring_update.state["battle"]["first_side"] == "player" and ring_update.state["owned_cards"] == assets and ring_update.opponent() == foe, "ring migration preserves first initiative, opponent and owned assets")
+	check(FileAccess.file_exists(run.path + ".rules-v4"), "old ring-trigger journal has a recoverable backup")
+	DirAccess.remove_absolute(run.path + ".rules-v4")
 
 	DirAccess.remove_absolute(run.path + ".rules-v1")
 	DirAccess.remove_absolute(run.path)

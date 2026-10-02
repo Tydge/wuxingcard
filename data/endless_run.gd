@@ -8,7 +8,7 @@ const ARTIFACT_PRICE := 80
 const CARD_UPGRADE := [40, 70]
 const ARTIFACT_UPGRADE := [60, 100]
 const INITIAL_CARDS := 15
-const RULES_VERSION := 4
+const RULES_VERSION := 5
 
 var path: String
 var cards: Dictionary

@@ -48,21 +48,8 @@ func configure(card: Dictionary, card_width: float) -> void:
 	var title := _add_label(self, card["name"], Vector2(14, 204) * factor, Vector2(212, 36) * factor, maxi(8, roundi(23 * factor)), Color("#dec596"))
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF
 	title.clip_text = true
-	var description_size := 18
-	var wrapped := _wrap_text(card["text"], 11)
-	while description_size > 10 and (wrapped.count("\n") + 1) * description_size * 1.2 > 80:
-		description_size -= 1
-		wrapped = _wrap_text(card["text"], floori(206.0 / description_size))
-	var description := RichTextLabel.new()
-	description.name = "Description"
-	description.position = Vector2(17, 243) * factor
-	description.size = Vector2(206, 80) * factor
-	description.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	description.scroll_active = false
-	description.bbcode_enabled = true
-	description.add_theme_font_size_override("normal_font_size", maxi(7, roundi(description_size * factor)))
-	description.add_theme_color_override("default_color", Color("#f5f1e9"))
-	description.text = "[center]" + _wrap_rich_text(str(card.get("rich_text", card["text"])), floori(206.0 / description_size)) + "[/center]"
+	var description := CardDescription.new()
+	description.configure(str(card.get("rich_text", card["text"])), Rect2(Vector2(17,243) * factor, Vector2(206,80) * factor), maxi(7,roundi(18 * factor)), Color("#f5f1e9"))
 	add_child(description)
 
 func _ready() -> void:
@@ -141,36 +128,3 @@ func _draw() -> void:
 		draw_texture_rect_region(art_texture, art_target, art_source_region)
 	elif art_target.size != Vector2.ZERO:
 		draw_rect(art_target, fallback_color)
-
-func _wrap_text(value: String, max_chars: int) -> String:
-	var remaining := value.replace(" ", "")
-	var lines: Array[String] = []
-	while remaining.length() > max_chars:
-		var count := max_chars
-		if "，。；、".contains(remaining.substr(count, 1)):
-			count += 1
-		lines.append(remaining.substr(0, count))
-		remaining = remaining.substr(count)
-	lines.append(remaining)
-	return "\n".join(lines)
-
-func _wrap_rich_text(value: String, max_chars: int) -> String:
-	# Count visible characters only; a color tag must never split a number.
-	var result := ""
-	var visible := 0
-	var cursor := 0
-	while cursor < value.length():
-		if value[cursor] == "[":
-			var closing := value.find("]", cursor)
-			if closing >= 0:
-				result += value.substr(cursor, closing - cursor + 1)
-				cursor = closing + 1
-				continue
-		var character := value[cursor]
-		if visible >= max_chars and not "，。；、".contains(character):
-			result += "\n"
-			visible = 0
-		result += character
-		visible += 1
-		cursor += 1
-	return result

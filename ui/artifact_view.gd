@@ -41,10 +41,9 @@ func configure(data: Dictionary, view_size: Vector2, remaining: int = -1) -> voi
 	category.position = Vector2(18, 358)
 	category.size = Vector2(364, 28)
 	# Match CardView's 18 pt text at 240 px width: 30 pt at this 400 px face.
-	var description := _label(face, str(data.get("description", "")), 30, Color("#f1e9d9"))
-	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	description.position = Vector2(24, 392)
-	description.size = Vector2(352, 157)
+	var description := CardDescription.new()
+	description.configure(str(data.get("description", "")), Rect2(24,392,352,157), 30, Color("#f1e9d9"))
+	face.add_child(description)
 	if slot == "implement" or slot == "guard":
 		var amount := int(data.get("durability" if slot == "guard" else "cooldown", 0))
 		if slot == "guard" and remaining >= 0: amount = remaining

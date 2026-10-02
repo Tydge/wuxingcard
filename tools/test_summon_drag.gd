@@ -38,7 +38,7 @@ func run() -> void:
 		quit(1)
 		return
 	var description := summon_card.get_node_or_null("Description") as RichTextLabel
-	if description == null or not description.get_parsed_text().contains("回合开始") or not description.text.begins_with("[center]") or absf(description.position.x + description.size.x / 2.0 - summon_card.size.x / 2.0) > 1.0:
+	if description == null or not description.get_parsed_text().contains("回合开始") or description.horizontal_alignment != HORIZONTAL_ALIGNMENT_CENTER or description.vertical_alignment != VERTICAL_ALIGNMENT_CENTER or description.get_content_height() > description.size.y or absf(description.position.x + description.size.x / 2.0 - summon_card.size.x / 2.0) > 1.0:
 		push_error("Summon description is not centred in the card")
 		quit(1)
 		return

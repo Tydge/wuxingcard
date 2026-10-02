@@ -4,7 +4,7 @@
     "name": "鸣雷尺",
     "element": "metal",
     "slot": "implement",
-    "description": "对手受到5点金伤害。",
+    "description": "对对手造成5点金伤害。",
     "cooldown": 3,
     "effects": [
       {
@@ -78,7 +78,7 @@
     "name": "青简卷",
     "element": "wood",
     "slot": "implement",
-    "description": "抽一张牌。",
+    "description": "抽1张牌。",
     "cooldown": 3,
     "effects": [
       {
@@ -316,7 +316,7 @@
     "name": "余烬袍",
     "element": "fire",
     "slot": "guard",
-    "description": "己方回合首获能量：对对手造成2点火伤害。",
+    "description": "每个己方回合首次获得能量时，对对手造成2点火伤害。",
     "durability": 3,
     "trigger": "first_energy_own_turn",
     "effects": [
@@ -397,7 +397,7 @@
     "name": "鸣金佩",
     "element": "metal",
     "slot": "pendant",
-    "description": "开局获得1点金能量。",
+    "description": "开局：获得1点金能量。",
     "trigger": "battle_start",
     "effects": [
       {
@@ -447,7 +447,7 @@
     "name": "观澜珠",
     "element": "water",
     "slot": "pendant",
-    "description": "开局抽一张牌。",
+    "description": "开局：抽1张牌。",
     "trigger": "battle_start",
     "effects": [
       {
@@ -487,7 +487,7 @@
     "name": "青芽坠",
     "element": "wood",
     "slot": "pendant",
-    "description": "每个己方回合首次打出牌时，自身恢复1点生命。",
+    "description": "每个己方回合首次打出牌时，恢复1点生命。",
     "trigger": "first_card_own_turn",
     "effects": [
       {
@@ -522,8 +522,8 @@
     "name": "烬心环",
     "element": "fire",
     "slot": "pendant",
-    "description": "受到伤害时，获得1点火能量。",
-    "trigger": "damage_received",
+    "description": "每个己方回合首次受到伤害时，获得1点火能量。",
+    "trigger": "first_hit_own_turn",
     "effects": [
       {
         "type": "gain_energy",
@@ -606,7 +606,7 @@
     "name": "裂甲钺",
     "element": "metal",
     "slot": "implement",
-    "description": "",
+    "description": "对手失去10层护盾。",
     "effects": [
       {
         "type": "break_shield",
@@ -644,7 +644,7 @@
     "name": "百炼衣",
     "element": "metal",
     "slot": "guard",
-    "description": "",
+    "description": "受到伤害时，获得1层强攻。",
     "effects": [
       {
         "type": "status",
@@ -685,7 +685,7 @@
     "name": "游锋佩",
     "element": "metal",
     "slot": "pendant",
-    "description": "",
+    "description": "敌方召唤物死亡时，对手获得1层出血。",
     "effects": [
       {
         "type": "status",
@@ -723,7 +723,7 @@
     "name": "移澜壶",
     "element": "water",
     "slot": "implement",
-    "description": "",
+    "description": "获得1点真气。",
     "effects": [
       {
         "type": "gain_qi",
@@ -761,7 +761,7 @@
     "name": "镜湖衣",
     "element": "water",
     "slot": "guard",
-    "description": "",
+    "description": "受到伤害时，对手获得1层弱攻。",
     "effects": [
       {
         "type": "status",
@@ -802,7 +802,7 @@
     "name": "返潮珠",
     "element": "water",
     "slot": "pendant",
-    "description": "",
+    "description": "己方回合结束时，手牌≤1张时，抽1张牌。",
     "effects": [
       {
         "type": "draw",
@@ -849,7 +849,7 @@
     "name": "含露枝",
     "element": "wood",
     "slot": "implement",
-    "description": "",
+    "description": "获得1点木能量。",
     "effects": [
       {
         "type": "gain_energy",
@@ -900,7 +900,7 @@
     "name": "栖枝衣",
     "element": "wood",
     "slot": "guard",
-    "description": "",
+    "description": "我方召唤物受到伤害时，恢复2点生命。",
     "effects": [
       {
         "type": "heal",
@@ -938,7 +938,7 @@
     "name": "百花结",
     "element": "wood",
     "slot": "pendant",
-    "description": "",
+    "description": "开局：获得2点随机能量。",
     "effects": [
       {
         "type": "gain_random_energy",
@@ -975,7 +975,7 @@
     "name": "燎原幡",
     "element": "fire",
     "slot": "implement",
-    "description": "",
+    "description": "对所有敌方目标造成2点火伤害。",
     "effects": [
       {
         "type": "damage",
@@ -1019,7 +1019,7 @@
     "name": "赤鳞衣",
     "element": "fire",
     "slot": "guard",
-    "description": "",
+    "description": "受到伤害时，对手获得1层灼伤。",
     "effects": [
       {
         "type": "status",
@@ -1060,7 +1060,7 @@
     "name": "薪火坠",
     "element": "fire",
     "slot": "pendant",
-    "description": "",
+    "description": "打出0费牌时，获得1层蓄力。",
     "effects": [
       {
         "type": "status",
@@ -1110,7 +1110,7 @@
     "name": "定尘印",
     "element": "earth",
     "slot": "implement",
-    "description": "",
+    "description": "我方所有召唤物增加2点生命。",
     "effects": [
       {
         "type": "grow_all_summons",
@@ -1148,7 +1148,7 @@
     "name": "厚土袍",
     "element": "earth",
     "slot": "guard",
-    "description": "",
+    "description": "每个敌方回合首次失去生命时，获得1层坚韧。",
     "effects": [
       {
         "type": "status",
@@ -1189,7 +1189,7 @@
     "name": "归尘珏",
     "element": "earth",
     "slot": "pendant",
-    "description": "",
+    "description": "我方召唤物死亡时，获得8层护盾。",
     "effects": [
       {
         "type": "status",

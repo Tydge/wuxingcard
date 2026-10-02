@@ -125,6 +125,8 @@ var status_touch_regions: Array[Dictionary] = []
 var energy_touch_regions: Array[Dictionary] = []
 var deck_touch_regions: Array[Dictionary] = []
 var qi_touch_regions: Array[Dictionary] = []
+var qi_gain_started := {}
+var qi_change_amount := {}
 var touch_rule_control: Dictionary = {}
 var touch_rule_serial := 0
 const RULE_HOLD_SECONDS := 0.45
@@ -275,6 +277,8 @@ func _refresh() -> void:
 	for child in artifact_layer.get_children():
 		child.queue_free()
 	if manager.phase == "menu":
+		qi_gain_started.clear()
+		qi_change_amount.clear()
 		_clear_discard_animations()
 		hand_cards.clear()
 		enemy_backs.clear()
@@ -614,7 +618,9 @@ func _qi_badge(parent: Node, actor: Combatant, side: String) -> void:
 	badge.mouse_filter = Control.MOUSE_FILTER_STOP
 	parent.add_child(badge)
 	var number := _label(badge, str(actor.qi), Vector2(25, 0), Vector2(37, 34), 23, GOLD, HORIZONTAL_ALIGNMENT_LEFT)
+	number.name = "Number"
 	number.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	badge.animate_change(int(qi_gain_started.get(side,-1000)),int(qi_change_amount.get(side,1)) > 0)
 	qi_touch_regions.append({"rect":Rect2(_hud_origin(side) + local.position, local.size), "text":badge.tooltip_text, "kind":"qi", "side":side})
 
 func _energy_gui_input(event: InputEvent, side: String, element: String) -> void:
@@ -2118,8 +2124,10 @@ func _on_summon_event(side: String, slot: int, kind: String, element: String, am
 				_play_hit_feedback(summon_views.get(key), side)
 				_show_damage_number(amount, point, matchup)
 		"heal":
-			battle_fx.heal(point, element)
-			GameAudio.play_sfx("heal", 0.0, 120)
+			if amount > 0:
+				battle_fx.heal(point, element)
+				GameAudio.play_sfx("heal", 0.0, 120)
+				_show_heal_number(amount, point)
 		"destroy":
 			battle_fx.impact(element, point)
 			GameAudio.play_sfx("summon_death", -2.0, 90)
@@ -2199,6 +2207,9 @@ func _on_action_event(message: String, side: String, kind: String, element: Stri
 		return
 	if side not in ["player", "enemy"]:
 		return
+	if kind in ["qi", "qi_gain", "qi_loss", "qi_convert"] and amount > 0:
+		_show_qi_change(side,amount if kind in ["qi","qi_gain"] else -amount)
+		return
 	var target := _anchor(side)
 	var is_damage := kind in ["damage", "poison_damage"]
 	if is_damage:
@@ -2215,6 +2226,8 @@ func _on_action_event(message: String, side: String, kind: String, element: Stri
 	elif kind == "heal" and amount > 0:
 		battle_fx.heal(target, element)
 		GameAudio.play_sfx("heal", 0.0, 120)
+		_show_heal_number(amount,target)
+		return
 	elif kind in ["energy", "energy_loss", "play"] and amount > 0:
 		battle_fx.energy(_energy_point(side, element), element, kind == "energy")
 		if kind != "play": GameAudio.play_sfx("energy", -2.0, 170)
@@ -2239,6 +2252,42 @@ func _on_action_event(message: String, side: String, kind: String, element: Stri
 		# Numbers drift away from the HUD panel instead of over its own text.
 		float_point = _energy_point(side, element) + Vector2(-90, 130 if side == "enemy" else -150)
 	_show_floating(("-" if kind in ["damage", "energy_loss"] else "+") + str(amount), side, RED if kind == "damage" else BattleRules.color(element) if element != "" else GOLD, 0.0, float_point)
+
+func _show_heal_number(amount: int, point: Vector2) -> void:
+	var number := HealNumber.new()
+	number.name = "HealNumber"
+	number.configure(amount)
+	var ordinal := 0
+	for child in fx_layer.get_children():
+		if child is HealNumber and child.get_meta("heal_point",Vector2(-1,-1)) == point: ordinal += 1
+	number.position = point - Vector2(119,115) + Vector2(ordinal * 24,ordinal * 30)
+	number.set_meta("heal_point",point)
+	number.set_meta("amount",amount)
+	fx_layer.add_child(number)
+	number.play()
+
+func _show_qi_change(side: String, amount: int) -> void:
+	var started := Time.get_ticks_msec()
+	qi_gain_started[side] = started
+	qi_change_amount[side] = amount
+	var badge := find_child("QiBadge_" + side,true,false) as QiBadge
+	if badge != null: badge.animate_change(started,amount > 0)
+	var portrait := _hud_local(side,HUD_PORTRAIT)
+	var at := _hud_origin(side) + Vector2(14 if side == "player" else portrait.position.x + 5,ORB_ROW_Y + 9)
+	var feedback := Control.new()
+	feedback.name = ("QiGain_" if amount > 0 else "QiLoss_") + side
+	feedback.position = at
+	feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	feedback.set_meta("amount",amount)
+	fx_layer.add_child(feedback)
+	var amount_label := _label(feedback,("+" if amount > 0 else "") + str(amount),Vector2(-2,-35),Vector2(65,32),24,Color("#fff0bd") if amount > 0 else Color("#ffc0a6"),HORIZONTAL_ALIGNMENT_CENTER)
+	amount_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	amount_label.modulate.a = 0.0
+	var tween := feedback.create_tween().set_parallel(true)
+	tween.tween_property(amount_label,"modulate:a",1.0,0.12).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(amount_label,"position:y",-55.0,0.85).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(amount_label,"modulate:a",0.0,0.55).set_delay(0.3).set_trans(Tween.TRANS_SINE)
+	tween.chain().tween_callback(feedback.queue_free)
 
 func _energy_point(side: String, element: String) -> Vector2:
 	var index := BattleRules.ELEMENTS.find(element)

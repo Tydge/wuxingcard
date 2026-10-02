@@ -469,7 +469,7 @@ func _start_turn(actor: Combatant) -> void:
 		actor.halve_shield()
 		var shield_after := actor.status_stacks("shield")
 		if shield_after < shield_before:
-			_report("%s 护盾从 %d 减为 %d" % [actor.display_name, shield_before, shield_after], _side(actor), "status_shield", "", shield_before - shield_after)
+			_report("%s 护盾从 %d 减为 %d" % [actor.display_name, shield_before, shield_after], _side(actor), "shield_loss", "", shield_before - shield_after)
 	if _check_finish():
 		return
 	await _trigger_summons(actor, "turn_start")
@@ -993,11 +993,11 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 			var status_id: String = effect["status"]
 			var removed := target.status_stacks(status_id)
 			target.remove_status(status_id)
-			_report("%s 解除%s" % [target.display_name, STATUS_NAMES.get(status_id, status_id)], _side(target), "status_remove", card_element, removed)
+			_report("%s 解除%s" % [target.display_name, STATUS_NAMES.get(status_id, status_id)], _side(target), "shield_loss" if status_id == "shield" else "status_remove", card_element, removed)
 		"break_shield":
 			var removed := mini(amount, target.status_stacks("shield"))
 			if removed > 0: _absorb_shield(target, removed)
-			_report("%s 失去 %d 层护盾" % [target.display_name, removed], _side(target), "status_shield", card_element, removed)
+			_report("%s 失去 %d 层护盾" % [target.display_name, removed], _side(target), "shield_loss", card_element, removed)
 		"discard":
 			for i in amount:
 				if target.hand.is_empty():
@@ -1037,6 +1037,9 @@ func _apply_hero_damage(source: Combatant, target: Combatant, breakdown: Diction
 	_on_health_lost(target, dealt)
 	if raw > 0 and target.hp > 0 and phase not in FINISHED_PHASES:
 		_trigger_artifacts(target, "damage_received")
+		if not target.artifact_flags.get("own_turn_hit", false) and phase.begins_with(_side(target) + "_"):
+			target.artifact_flags["own_turn_hit"] = true
+			_trigger_artifacts(target, "first_hit_own_turn")
 	if raw > 0 and target.hp > 0 and not target.artifact_flags.get("enemy_turn_hit", false) and phase.begins_with("enemy_" if target == player else "player_"):
 		target.artifact_flags["enemy_turn_hit"] = true
 		_trigger_artifacts(target, "first_hit_enemy_turn")
