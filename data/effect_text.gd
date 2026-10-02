@@ -13,7 +13,7 @@ static func describe(effects: Array, context: String = "hero") -> String:
 		var sentence := single(effect, context).trim_suffix("。")
 		if count > 1:
 			if effect.get("type") == "damage" and effect.get("target") == "random_opponent":
-				sentence = "对随机敌方目标造成%s点%s伤害%d次（每次独立）" % [_damage_number(effect), BattleRules.element_name(str(effect["element"])), count]
+				sentence = "对敌方随机目标造成%s点%s伤害%d次" % [_damage_number(effect), BattleRules.element_name(str(effect["element"])), count]
 			else: sentence += {2:"两次", 3:"三次"}.get(count, "%d次" % count)
 		# Compact parallel effects without changing their order or trigger count.
 		if count == 1 and not effect.has("condition"):
@@ -111,7 +111,7 @@ static func single(effect: Dictionary, context: String) -> String:
 				return "造成%s点%s伤害（护盾×%s，基础最多%d点）。" % [_damage_number(effect), element, multiplier, int(effect.get("base_cap", 50))] if effect.has("display_amount") else "造成护盾×%s的%s伤害，基础最多%d点。" % [multiplier, element, int(effect.get("base_cap", 50))]
 			match str(effect.get("scope", "single")):
 				"all": text = "场上所有目标受到%s点%s伤害。" % [_damage_number(effect), element]
-				"all_opponents": text = "对手及其所有召唤物受到%s点%s伤害。" % [_damage_number(effect), element]
+				"all_opponents": text = "对所有敌方目标造成%s点%s伤害。" % [_damage_number(effect), element]
 				"all_enemy_summons": text = "敌方所有召唤物受到%s点%s伤害。" % [_damage_number(effect), element]
 				_:
 					match target:
@@ -136,6 +136,7 @@ static func single(effect: Dictionary, context: String) -> String:
 		"generate_card": text = "%s随机获得%d张%s牌。" % [who, amount, element + "系" if element != "" else ""]
 		"discard": text = "%s随机弃%d张手牌。" % [who, amount]
 		"lose_qi": text = "%s失去%d点真气。" % [who, amount]
+		"gain_qi": text = "%s获得%d点真气。" % [who, amount]
 		"shield_heal": text = "失去自身全部护盾，恢复等量生命，最多%d点。" % amount
 		"heal_lowest_ally": text = "为生命最低的友方目标恢复%d点生命。" % amount
 		"grow_all_summons": text = "我方所有召唤物增加%d点生命。" % amount

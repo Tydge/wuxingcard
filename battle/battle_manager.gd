@@ -921,6 +921,9 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 			var lost := mini(target.qi, amount)
 			target.qi -= lost
 			_report("%s 失去%d点真气" % [target.display_name, lost], _side(target), "qi_loss", "", lost)
+		"gain_qi":
+			target.qi += amount
+			_report("%s 获得%d点真气" % [target.display_name, amount], _side(target), "qi_gain", "", amount)
 		"shield_heal":
 			var shield := actor.status_stacks("shield")
 			actor.remove_status("shield")

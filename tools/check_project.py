@@ -3,6 +3,7 @@
 import argparse
 from datetime import datetime, timezone
 import json
+import os
 import re
 import subprocess
 import time
@@ -11,23 +12,25 @@ from build_support import ROOT, source_manifest, check_manifest
 from test_catalog import GROUPS, PROFILES, GRAPHICAL, select_tests, test_arguments
 
 
-def run_checks(godot, profile, scripts, output_path, keep_going=False, timeout=None):
+def run_checks(godot, profile, scripts, output_path, keep_going=False, timeout=None, enable_audio=False):
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run([godot, '--headless', '--path', str(ROOT), '--editor', '--import', '--quit'],
+    audio_arguments = [] if enable_audio else ['--audio-driver', 'Dummy']
+    environment = dict(os.environ, WUXING_TEST_AUDIO='1' if enable_audio else '0')
+    subprocess.run([godot, '--headless', '--audio-driver', 'Dummy', '--path', str(ROOT), '--editor', '--import', '--quit'],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=120)
     snapshot = source_manifest()
     checked = check_manifest(snapshot)
     results = []
     for script in scripts:
         graphical = Path(script).stem in GRAPHICAL
-        arguments = [godot] + ([] if graphical else ['--headless']) + ['--path', str(ROOT), '--script', script]
+        arguments = [godot] + ([] if graphical else ['--headless']) + audio_arguments + ['--path', str(ROOT), '--script', script]
         user_arguments = test_arguments(script, profile)
         if user_arguments:
             arguments += ['--', *user_arguments]
         limit = timeout if timeout is not None else (120 if profile == 'full' else 60 if graphical else 45)
         started = time.monotonic()
         try:
-            completed = subprocess.run(arguments, cwd=ROOT, text=True, capture_output=True, timeout=limit)
+            completed = subprocess.run(arguments, cwd=ROOT, text=True, capture_output=True, timeout=limit, env=environment)
             output = completed.stdout + completed.stderr
             code = completed.returncode
             if re.search(r'(^|\n)(SCRIPT ERROR|ERROR):', output):
@@ -53,7 +56,7 @@ def run_checks(godot, profile, scripts, output_path, keep_going=False, timeout=N
               'profile': profile, 'source_sha256': snapshot['fingerprint'],
               'check_sha256': checked['fingerprint'], 'source_unchanged': unchanged,
               'engine': subprocess.check_output([godot, '--version'], text=True).strip(),
-              'suite': scripts, 'complete': len(results) == len(scripts), 'results': results}
+              'suite': scripts, 'complete': len(results) == len(scripts), 'audio_enabled': enable_audio, 'results': results}
     output_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n')
     if not unchanged:
         print('Runtime or test source changed during the checks; this report is invalid.', flush=True)
@@ -70,6 +73,7 @@ def main():
     parser.add_argument('--list', action='store_true', help='Print selection without importing or starting Godot')
     parser.add_argument('--keep-going', action='store_true', help='Collect all failures instead of stopping at the first')
     parser.add_argument('--timeout', type=float, help='Per-test seconds; does not retry automatically')
+    parser.add_argument('--enable-audio', action='store_true', help='Enable sound only for dedicated graphical audio checks; default mutes all music, SFX and UI audio')
     parser.add_argument('--godot', default='/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot')
     parser.add_argument('--output', type=Path, help='Default: work/checks/<profile>/latest.json')
     args = parser.parse_args()
@@ -87,7 +91,7 @@ def main():
         return 0
     return run_checks(args.godot, profile, scripts,
                       args.output or ROOT / 'work/checks' / profile / 'latest.json',
-                      args.keep_going, args.timeout)
+                      args.keep_going, args.timeout, args.enable_audio)
 
 
 if __name__ == '__main__':

@@ -610,14 +610,8 @@
     "effects": [
       {
         "type": "break_shield",
-        "amount": 12,
+        "amount": 10,
         "target": "opponent"
-      },
-      {
-        "type": "status",
-        "target": "opponent",
-        "status": "weak_defense",
-        "stacks": 2
       }
     ],
     "cooldown": 3,
@@ -627,14 +621,8 @@
         "effects": [
           {
             "type": "break_shield",
-            "amount": 18,
+            "amount": 16,
             "target": "opponent"
-          },
-          {
-            "type": "status",
-            "target": "opponent",
-            "status": "weak_defense",
-            "stacks": 3
           }
         ],
         "cooldown": 3
@@ -643,14 +631,8 @@
         "effects": [
           {
             "type": "break_shield",
-            "amount": 24,
+            "amount": 22,
             "target": "opponent"
-          },
-          {
-            "type": "status",
-            "target": "opponent",
-            "status": "weak_defense",
-            "stacks": 4
           }
         ],
         "cooldown": 3
@@ -744,19 +726,19 @@
     "description": "",
     "effects": [
       {
-        "type": "shield_heal",
-        "amount": 8,
+        "type": "gain_qi",
+        "amount": 1,
         "target": "self"
       }
     ],
-    "cooldown": 3,
+    "cooldown": 4,
     "target_mode": "none",
     "upgrades": [
       {
         "effects": [
           {
-            "type": "shield_heal",
-            "amount": 12,
+            "type": "gain_qi",
+            "amount": 1,
             "target": "self"
           }
         ],
@@ -765,8 +747,8 @@
       {
         "effects": [
           {
-            "type": "shield_heal",
-            "amount": 16,
+            "type": "gain_qi",
+            "amount": 2,
             "target": "self"
           }
         ],
@@ -828,7 +810,7 @@
         "target": "self",
         "condition": {
           "type": "hand_at_most",
-          "amount": 2
+          "amount": 1
         }
       }
     ],
@@ -842,7 +824,7 @@
             "target": "self",
             "condition": {
               "type": "hand_at_most",
-              "amount": 3
+              "amount": 2
             }
           }
         ]
@@ -851,7 +833,7 @@
         "effects": [
           {
             "type": "draw",
-            "amount": 2,
+            "amount": 1,
             "target": "self",
             "condition": {
               "type": "hand_at_most",
@@ -870,14 +852,9 @@
     "description": "",
     "effects": [
       {
-        "type": "heal_lowest_ally",
-        "amount": 6,
-        "target": "self"
-      },
-      {
         "type": "gain_energy",
-        "target": "self",
         "amount": 1,
+        "target": "self",
         "element": "wood"
       }
     ],
@@ -887,15 +864,15 @@
       {
         "effects": [
           {
-            "type": "heal_lowest_ally",
-            "amount": 9,
-            "target": "self"
+            "type": "gain_energy",
+            "amount": 1,
+            "target": "self",
+            "element": "wood"
           },
           {
-            "type": "gain_energy",
-            "target": "self",
-            "amount": 1,
-            "element": "wood"
+            "type": "heal",
+            "amount": 5,
+            "target": "self"
           }
         ],
         "cooldown": 3
@@ -903,15 +880,15 @@
       {
         "effects": [
           {
-            "type": "heal_lowest_ally",
-            "amount": 12,
-            "target": "self"
+            "type": "gain_energy",
+            "amount": 2,
+            "target": "self",
+            "element": "wood"
           },
           {
-            "type": "gain_energy",
-            "target": "self",
-            "amount": 2,
-            "element": "wood"
+            "type": "heal",
+            "amount": 5,
+            "target": "self"
           }
         ],
         "cooldown": 3
@@ -965,29 +942,31 @@
     "effects": [
       {
         "type": "gain_random_energy",
-        "target": "self",
-        "amount": 1
+        "amount": 2,
+        "target": "self"
       }
     ],
-    "trigger": "first_ally_heal_own_turn",
+    "trigger": "battle_start",
     "upgrades": [
       {
         "effects": [
           {
             "type": "gain_random_energy",
-            "target": "self",
-            "amount": 1
+            "amount": 3,
+            "target": "self"
           }
-        ]
+        ],
+        "trigger": "battle_start"
       },
       {
         "effects": [
           {
             "type": "gain_random_energy",
-            "target": "self",
-            "amount": 2
+            "amount": 4,
+            "target": "self"
           }
-        ]
+        ],
+        "trigger": "battle_start"
       }
     ]
   },
@@ -1000,21 +979,10 @@
     "effects": [
       {
         "type": "damage",
-        "amount": 4,
+        "amount": 2,
+        "target": "opponent",
         "element": "fire",
-        "target": "random_opponent"
-      },
-      {
-        "type": "damage",
-        "amount": 4,
-        "element": "fire",
-        "target": "random_opponent"
-      },
-      {
-        "type": "damage",
-        "amount": 4,
-        "element": "fire",
-        "target": "random_opponent"
+        "scope": "all_opponents"
       }
     ],
     "cooldown": 3,
@@ -1024,21 +992,10 @@
         "effects": [
           {
             "type": "damage",
-            "amount": 5,
+            "amount": 3,
+            "target": "opponent",
             "element": "fire",
-            "target": "random_opponent"
-          },
-          {
-            "type": "damage",
-            "amount": 5,
-            "element": "fire",
-            "target": "random_opponent"
-          },
-          {
-            "type": "damage",
-            "amount": 5,
-            "element": "fire",
-            "target": "random_opponent"
+            "scope": "all_opponents"
           }
         ],
         "cooldown": 3
@@ -1047,21 +1004,10 @@
         "effects": [
           {
             "type": "damage",
-            "amount": 6,
+            "amount": 4,
+            "target": "opponent",
             "element": "fire",
-            "target": "random_opponent"
-          },
-          {
-            "type": "damage",
-            "amount": 6,
-            "element": "fire",
-            "target": "random_opponent"
-          },
-          {
-            "type": "damage",
-            "amount": 6,
-            "element": "fire",
-            "target": "random_opponent"
+            "scope": "all_opponents"
           }
         ],
         "cooldown": 3
@@ -1147,13 +1093,13 @@
             "type": "status",
             "target": "self",
             "status": "charge",
-            "stacks": 2
+            "stacks": 1
           },
           {
             "type": "status",
             "target": "self",
             "status": "strong_attack",
-            "stacks": 1
+            "stacks": 3
           }
         ]
       }
@@ -1167,14 +1113,8 @@
     "description": "",
     "effects": [
       {
-        "type": "status",
-        "target": "self",
-        "status": "shield",
-        "stacks": 6
-      },
-      {
         "type": "grow_all_summons",
-        "amount": 1,
+        "amount": 2,
         "target": "self"
       }
     ],
@@ -1184,14 +1124,8 @@
       {
         "effects": [
           {
-            "type": "status",
-            "target": "self",
-            "status": "shield",
-            "stacks": 9
-          },
-          {
             "type": "grow_all_summons",
-            "amount": 2,
+            "amount": 4,
             "target": "self"
           }
         ],
@@ -1200,14 +1134,8 @@
       {
         "effects": [
           {
-            "type": "status",
-            "target": "self",
-            "status": "shield",
-            "stacks": 12
-          },
-          {
             "type": "grow_all_summons",
-            "amount": 3,
+            "amount": 6,
             "target": "self"
           }
         ],
@@ -1238,10 +1166,10 @@
             "type": "status",
             "target": "self",
             "status": "tenacity",
-            "stacks": 2
+            "stacks": 1
           }
         ],
-        "durability": 4
+        "durability": 5
       },
       {
         "effects": [
@@ -1249,7 +1177,7 @@
             "type": "status",
             "target": "self",
             "status": "tenacity",
-            "stacks": 3
+            "stacks": 2
           }
         ],
         "durability": 5
@@ -1267,7 +1195,7 @@
         "type": "status",
         "target": "self",
         "status": "shield",
-        "stacks": 3
+        "stacks": 8
       }
     ],
     "trigger": "ally_summon_death",
@@ -1278,7 +1206,7 @@
             "type": "status",
             "target": "self",
             "status": "shield",
-            "stacks": 4
+            "stacks": 12
           }
         ]
       },
@@ -1288,7 +1216,7 @@
             "type": "status",
             "target": "self",
             "status": "shield",
-            "stacks": 5
+            "stacks": 16
           }
         ]
       }

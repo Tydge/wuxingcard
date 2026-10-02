@@ -24,6 +24,10 @@
 
 ## 执行入口
 
+所有测试与开发预览默认静音，包括音乐、战斗音效、界面音效。`check_project.py`默认使用Godot的`Dummy`音频驱动，并将`WUXING_TEST_AUDIO=0`传给测试进程；直接运行已命名的测试脚本也会关闭音频服务和Master总线。静音只作用于当前进程，不改写玩家保存的音量设置。
+
+只有专门检查声音时才用`--enable-audio`，让图形测试开启真实音频。直接启动游戏做静音预览时加`--audio-driver Dummy -- --mute-audio`；专门试听时用`-- --test-audio`且不使用Dummy驱动。headless规则测试始终不播放声音。`audio_policy_test`验证静音策略，不用于试听，不应搭配`--enable-audio`。
+
 ```sh
 # 默认4项规则检查，不打开图形窗口
 python3 tools/check_project.py
@@ -39,6 +43,9 @@ python3 tools/check_project.py --test artifact_ui_test
 
 # 仅检查当前关键词显示
 python3 tools/check_project.py --test test_card_keywords
+
+# 检查图形测试的默认静音，不播放声音
+python3 tools/check_project.py --test audio_policy_test
 
 # 全部规则 / 全部界面 / 美术资源
 python3 tools/check_project.py --suite rules

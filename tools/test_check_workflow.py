@@ -153,6 +153,23 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(report['results'][1]['exit_code'], 0)
             self.assertIn('partial output', (path.parent / report['results'][0]['log']).read_text())
 
+    def test_runner_audio_is_silent_by_default_with_explicit_opt_in(self):
+        for enabled in [False, True]:
+            with self.subTest(enabled=enabled), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / 'latest.json'
+                with patch.object(check_project, 'source_manifest', return_value={'fingerprint': 'source', 'files': []}), \
+                     patch.object(check_project, 'check_manifest', return_value={'fingerprint': 'runtime'}), \
+                     patch.object(check_project.subprocess, 'check_output', return_value='engine'), \
+                     patch.object(check_project.subprocess, 'run', side_effect=[
+                         subprocess.CompletedProcess([], 0), subprocess.CompletedProcess([], 0, '0 failures', '')]) as run:
+                    self.assertEqual(check_project.run_checks('godot', 'targeted', ['res://tests/artifact_ui_test.gd'], path, enable_audio=enabled), 0)
+                command = run.call_args.args[0]
+                self.assertEqual('--audio-driver' in command, not enabled)
+                if not enabled:
+                    self.assertEqual(command[command.index('--audio-driver') + 1], 'Dummy')
+                self.assertEqual(run.call_args.kwargs['env']['WUXING_TEST_AUDIO'], '1' if enabled else '0')
+                self.assertEqual(json.loads(path.read_text())['audio_enabled'], enabled)
+
 
 if __name__ == '__main__':
     unittest.main()

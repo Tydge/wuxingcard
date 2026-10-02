@@ -67,8 +67,9 @@ var next_hit_tick := 0
 var enabled := true
 
 func _ready() -> void:
-	if DisplayServer.get_name() == "headless":
+	if DisplayServer.get_name() == "headless" or should_mute_test_audio(OS.get_cmdline_args(), OS.get_cmdline_user_args(), OS.get_environment("WUXING_TEST_AUDIO")):
 		enabled = false
+		AudioServer.set_bus_mute(AudioServer.get_bus_index("Master"), true)
 		return
 	rng.randomize()
 	_ensure_buses()
@@ -89,6 +90,17 @@ func _ready() -> void:
 		player.bus = "UI"
 		add_child(player)
 		ui_players.append(player)
+
+static func should_mute_test_audio(arguments: PackedStringArray, user_arguments: PackedStringArray, audio_mode: String = "") -> bool:
+	# Session switches never write the player's saved audio levels.
+	if "--mute-audio" in user_arguments or audio_mode == "0": return true
+	if "--test-audio" in user_arguments or audio_mode == "1": return false
+	for index in arguments.size() - 1:
+		if arguments[index] not in ["--script", "-s"]: continue
+		var path := arguments[index + 1].replace("\\", "/")
+		var name := path.get_file().get_basename()
+		return "/tests/" in path or path.begins_with("tests/") or name.begins_with("test_") or name.ends_with("_test") or name.begins_with("verify_")
+	return false
 
 func _notification(what: int) -> void:
 	if not enabled: return

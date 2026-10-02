@@ -84,6 +84,15 @@ func test() -> void:
 	check(expanded.load_run() and expanded.state["battle"]["commands"].is_empty() and expanded.state["owned_cards"] == assets and expanded.opponent() == foe, "expansion migration preserves physical assets and the same opponent")
 	check(FileAccess.file_exists(run.path + ".rules-v2"), "version 2 has its own recoverable journal backup")
 	DirAccess.remove_absolute(run.path + ".rules-v2")
+	# Rebalanced active and opening artifacts cannot replay the version 3 journal.
+	run.state = expanded.state.duplicate(true)
+	run.state["rules_version"] = 3
+	run.state["battle"]["commands"] = [{"kind":"artifact", "target":{}}]
+	run._commit(run.state.duplicate(true))
+	var balanced := EndlessRun.new(manager.cards, manager.artifacts, manager.enemies, run.path)
+	check(balanced.load_run() and balanced.state["rules_version"] == 4 and balanced.state["battle"]["commands"].is_empty() and balanced.state["owned_cards"] == assets and balanced.opponent() == foe, "balance migration preserves assets and opponent while clearing the old action journal")
+	check(FileAccess.file_exists(run.path + ".rules-v3") and JSON.parse_string(FileAccess.get_file_as_string(run.path + ".rules-v3"))["run"]["battle"]["commands"][0]["kind"] == "artifact", "version 3 artifact journal has a recoverable backup")
+	DirAccess.remove_absolute(run.path + ".rules-v3")
 
 	DirAccess.remove_absolute(run.path + ".rules-v1")
 	DirAccess.remove_absolute(run.path)

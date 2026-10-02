@@ -35,6 +35,7 @@ func run() -> void:
 	check(m.cards.size() == 210 and m.summon_templates.size() == 78 and m.artifacts.size() == 90, "all new families have three grades")
 	for level in 3:
 		var suffix := "" if level == 0 else "__%d" % level
+		check(m.cards["metal_four_thunders" + suffix]["text"] == "对敌方随机目标造成%d点金伤害4次。" % [10,12,14][level], "random spell keeps its concise grade description")
 		for id in NEW_SUMMONS:
 			clean()
 			var selection := {"kind":"slot", "slot":0}
@@ -127,20 +128,41 @@ func run() -> void:
 func test_artifacts() -> void:
 	for level in 3:
 		var suffix := "" if level == 0 else "__%d" % level
+		m.random_artifacts_enabled = false
+		var configured := {"id":"flower_opening", "name":"开局测试", "cards":m.decks[0]["cards"], "artifacts":{"pendant":"wood_flower_knot" + suffix}}
+		for seed_value in [2,0]:
+			await m.start_battle("ember", "balanced", seed_value, configured)
+			var opening_energy := 0
+			var opening_elements := 0
+			for amount in m.player.energy.values():
+				opening_energy += int(amount)
+				if int(amount) > 0: opening_elements += 1
+			check(opening_energy == [2,3,4][level] and opening_elements == 1, "flower opening gives its grade's energy in both first-side orders")
 		for id in ["metal_rift_axe", "water_shift_pot", "wood_dew_branch", "fire_wild_banner", "earth_settle_seal"]:
 			clean()
 			m.player.hp = 450; m.player.add_status("shield", 20, 0)
 			creature(m.player, 0, "wood_seedling").hp = 8
 			m.enemy.add_status("shield", 30, 0)
+			var enemy_creature := creature(m.enemy, 0, "earth_law_lion")
+			enemy_creature.enemy_cost_aura = 0; m._sync_cost_auras()
 			m._equip_loadout(m.player, {"implement":id + suffix})
 			check(m.activate_artifact(m.player), "new implement activates: " + id + suffix)
 			check(not m.artifact_can_activate(m.player), "new implement enters its documented cooldown")
+			var cooldown: int = [4,3,3][level] if id == "water_shift_pot" else 3
+			check(m.player.artifact_ready_turn == m.player.own_turn_count + cooldown, "implement uses its grade's cooldown: " + id)
+			m.player.own_turn_count = m.player.artifact_ready_turn - 1
+			check(not m.artifact_can_activate(m.player), "cannot activate one turn before ready: " + id)
+			m.player.own_turn_count += 1
+			check(m.artifact_can_activate(m.player), "can activate exactly when ready: " + id)
 			match id:
-				"metal_rift_axe": check(m.enemy.status_stacks("shield") == 30 - [12,18,24][level] and m.enemy.status_stacks("weak_defense") == [2,3,4][level], "axe breaks shield and opens defense")
-				"water_shift_pot": check(m.player.status_stacks("shield") == 0 and m.player.hp == 450 + [8,12,16][level], "pot spends all shield and caps healing")
-				"wood_dew_branch": check(m.player.summons[0].hp == mini(15, 8 + [6,9,12][level]) and m.player.hp == 450 and m.player.energy["wood"] == [1,1,2][level], "dew branch heals the lowest allied target and grants wood")
-				"fire_wild_banner": check(m.enemy.status_stacks("shield") == 30 - 3 * [4,5,6][level], "banner resolves all three random segments")
-				"earth_settle_seal": check(m.player.status_stacks("shield") == 20 + [6,9,12][level] and m.player.summons[0].max_hp == 15 + [1,2,3][level] and m.player.summons[0].hp == 8 + [1,2,3][level], "seal raises shield and all summon life")
+				"metal_rift_axe": check(m.enemy.status_stacks("shield") == 30 - [10,16,22][level] and m.enemy.status_stacks("weak_defense") == 0, "axe only breaks the opposing hero's shield")
+				"water_shift_pot": check(m.player.qi == 3 + [1,1,2][level] and m.player.status_stacks("shield") == 20 and m.player.hp == 450 and m.enemy.qi == 3, "pot grants own qi without healing or spending shield")
+				"wood_dew_branch": check(m.player.summons[0].hp == 8 and m.player.hp == 450 + [0,5,5][level] and m.player.energy["wood"] == [1,1,2][level], "dew branch grants wood then heals only the caster in upgraded grades")
+				"fire_wild_banner": check(m.enemy.status_stacks("shield") == 30 - [2,3,4][level] and enemy_creature.hp == 28 - [2,3,4][level] and m.player.hp == 450 and m.player.summons[0].hp == 8, "banner deals one segment to every enemy and excludes allies")
+				"earth_settle_seal": check(m.player.status_stacks("shield") == 20 and m.player.summons[0].max_hp == 15 + [2,4,6][level] and m.player.summons[0].hp == 8 + [2,4,6][level] and enemy_creature.max_hp == 28, "seal only grows allied summon current and maximum life")
+		clean(); m._equip_loadout(m.enemy, {"implement":"water_shift_pot" + suffix}); m.phase = "enemy_action"
+		m.enemy.qi = 30; m.enemy.add_status("poison", 3, 0)
+		check(m.activate_artifact(m.enemy) and m.enemy.qi == 30 + [1,1,2][level] and m.player.qi == 3 and m.enemy.hp == 500 and m.enemy.status_stacks("poison") == 3, "qi gain has no energy cap or poison trigger and supports the opposing caster")
 		clean(); m._equip_loadout(m.player, {"pendant":"metal_roaming_pendant" + suffix})
 		creature(m.enemy, 0, "wood_seedling")
 		m.apply_summon_damage(m.player, m.enemy, 0, 999, "water")
@@ -148,23 +170,28 @@ func test_artifacts() -> void:
 		clean(); m._equip_loadout(m.player, {"pendant":"earth_return_jade" + suffix})
 		creature(m.player, 0, "wood_seedling")
 		m.apply_summon_damage(m.enemy, m.player, 0, 999, "water")
-		check(m.player.status_stacks("shield") == [3,4,5][level], "return jade reacts to allied summon death")
+		check(m.player.status_stacks("shield") == [8,12,16][level], "return jade reacts to allied summon death")
 		clean(); m._equip_loadout(m.player, {"pendant":"wood_flower_knot" + suffix})
+		m._trigger_battle_start_artifacts(m.player)
 		m.player.hp = 490
 		m._resolve_effect(m.player, m.enemy, {"type":"heal", "target":"self", "amount":1}, "wood")
 		m._resolve_effect(m.player, m.enemy, {"type":"heal", "target":"self", "amount":1}, "wood")
 		var total := 0
 		for amount in m.player.energy.values(): total += int(amount)
-		check(total == [1,1,2][level], "flower knot uses only first allied heal of own turn")
+		check(total == [2,3,4][level], "flower knot gains random energy at opening and never triggers on later heals")
 		clean(); m._equip_loadout(m.player, {"pendant":"fire_kindling_pendant" + suffix})
-		check(cast("metal_forge") and m.player.status_stacks("charge") == [1,1,2][level], "kindling reacts to an actually zero-cost play")
+		check(cast("metal_forge") and m.player.status_stacks("charge") == 1 and m.player.status_stacks("strong_attack") == [0,1,3][level], "kindling reacts to an actually zero-cost play with the documented attack states")
 		clean(); m._equip_loadout(m.player, {"pendant":"fire_kindling_pendant" + suffix})
 		creature(m.enemy, 0, "earth_law_lion")
 		check(cast("metal_forge") and m.player.status_stacks("charge") == 0, "printed zero with an active tax does not trigger kindling")
 		clean(); m._equip_loadout(m.player, {"pendant":"water_return_pearl" + suffix})
-		m.player.hand.assign(["metal_strike", "metal_strike"])
+		for count in [1,2,3][level]: m.player.hand.append("metal_strike")
 		await m._end_turn(m.player)
-		check(m.player.hand.size() == 2 + [1,1,2][level], "return pearl checks hand count at turn end")
+		check(m.player.hand.size() == [1,2,3][level] + 1, "return pearl draws exactly one at its grade's hand threshold")
+		clean(); m._equip_loadout(m.player, {"pendant":"water_return_pearl" + suffix})
+		for count in [2,3,4][level]: m.player.hand.append("metal_strike")
+		await m._end_turn(m.player)
+		check(m.player.hand.size() == [2,3,4][level], "return pearl does not draw above its hand threshold")
 		for id in ["metal_tempered_robe", "water_mirror_robe", "fire_scale_robe", "earth_thick_robe", "wood_nesting_robe"]:
 			clean(); m.phase = "enemy_action"; m.player.hp = 450
 			m._equip_loadout(m.player, {"guard":id + suffix})
@@ -180,7 +207,7 @@ func test_artifacts() -> void:
 				"water_mirror_robe": check(m.enemy.status_stacks("weak_attack") == [1,1,2][level], "mirror robe's new weakness survives the triggering attack")
 				"fire_scale_robe": check(m.enemy.status_stacks("burn") == [1,1,2][level], "scale robe marks the opposing hero")
 				"earth_thick_robe":
-					check(m.player.status_stacks("tenacity") == [1,2,3][level], "thick robe gains tenacity on actual first loss")
+					check(before == [3,5,5][level] and m.player.status_stacks("tenacity") == [1,1,2][level], "thick robe uses the documented durability and first-loss tenacity")
 					m.apply_damage(m.enemy, m.player, 10, "water")
 					check(m.player.artifact_durability == before - 1, "thick robe cannot trigger twice during the same opposing turn")
 				"wood_nesting_robe": check(m.player.hp == 450 + [2,3,4][level], "nesting robe heals the caster after a summon hit")

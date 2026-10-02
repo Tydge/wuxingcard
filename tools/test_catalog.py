@@ -2,7 +2,7 @@
 from pathlib import Path
 
 FULL_SUITE = [f"res://tests/{name}.gd" for name in [
-    "high_cost_content_test", "high_cost_ui_test", "high_cost_touch_test",
+    "high_cost_content_test", "audio_policy_test", "high_cost_ui_test", "high_cost_touch_test",
     "smoke_test", "card_expansion_test", "deck_store_test", "artifact_test",
     "flat_damage_test", "new_card_wave_test", "card_balance_test", "summon_expansion_test",
     "summon_presentation_test", "settlement_regression_test", "artifact_ui_test",
@@ -14,6 +14,7 @@ FULL_SUITE = [f"res://tests/{name}.gd" for name in [
       "res://tools/verify_touch_ui.gd", "res://tools/test_touch_interactions.gd"]
 
 GRAPHICAL = {
+    "audio_policy_test",
     "high_cost_ui_test", "high_cost_touch_test",
     "artifact_ui_test", "qi_hold_ui_test", "qi_hold_touch_test", "opening_deal_test",
     "energy_help_ui_test", "upgrade_ui_test", "endless_ui_test", "endless_touch_test",
@@ -24,6 +25,7 @@ TOUCH = {"high_cost_touch_test", "qi_hold_touch_test", "endless_touch_test", "ve
 QUICK_SIMULATIONS = {"smoke_test", "card_expansion_test", "upgrade_test"}
 BY_NAME = {Path(script).stem: script for script in FULL_SUITE}
 GROUPS = {
+    "audio-policy": ["audio_policy_test"],
     "core": ["flat_damage_test", "settlement_regression_test", "qi_cycle_test", "opening_flow_test"],
     "cards": ["high_cost_content_test", "card_expansion_test", "new_card_wave_test", "card_balance_test", "upgrade_test"],
     "damage": ["flat_damage_test", "settlement_regression_test"],
