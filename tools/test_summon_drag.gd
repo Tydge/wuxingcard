@@ -11,6 +11,7 @@ func run() -> void:
 	await process_frame
 	await process_frame
 	var ui: Control = current_scene
+	ui.manager.random_artifacts_enabled = false
 	ui.manager.start_battle("ember", "balanced", 2)
 	await create_timer(0.2).timeout
 	if not is_instance_valid(ui.get("turn_notice")):
@@ -36,12 +37,8 @@ func run() -> void:
 		push_error("Summon health badge is not hanging outside the card frame")
 		quit(1)
 		return
-	var description: Label
-	for child in summon_card.get_children():
-		if child is Label and child.text.contains("回合开始"):
-			description = child
-			break
-	if description == null or absf(description.position.x + description.size.x / 2.0 - summon_card.size.x / 2.0) > 1.0:
+	var description := summon_card.get_node_or_null("Description") as RichTextLabel
+	if description == null or not description.get_parsed_text().contains("回合开始") or not description.text.begins_with("[center]") or absf(description.position.x + description.size.x / 2.0 - summon_card.size.x / 2.0) > 1.0:
 		push_error("Summon description is not centred in the card")
 		quit(1)
 		return
@@ -214,7 +211,8 @@ func _drag(ui: Control, index: int, destination: Vector2, read_preview: bool = f
 	return preview
 
 func _shot(path: String) -> void:
-	await RenderingServer.frame_post_draw
+	await process_frame
+	RenderingServer.force_draw(false)
 	root.get_texture().get_image().save_png(path)
 
 func _latest_damage_number(layer: Control) -> DamageNumber:

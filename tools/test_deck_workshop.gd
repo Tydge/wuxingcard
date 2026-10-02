@@ -17,7 +17,8 @@ func check(condition: bool, message: String) -> void:
 		push_error(message)
 
 func shot(name: String) -> void:
-	await RenderingServer.frame_post_draw
+	await process_frame
+	RenderingServer.force_draw(false)
 	root.get_texture().get_image().save_png(output.path_join(name + ".png"))
 
 func screen_point(control: Control, local: Vector2) -> Vector2:
@@ -143,7 +144,8 @@ func run() -> void:
 	showcase_button("编修").pressed.emit()
 	check(workshop.view_mode == "editor" and workshop.draft.size() == 1, "explicit edit action opens the selected deck")
 	workshop.filter_buttons["wood"].pressed.emit()
-	check(workshop.filtered_cards.size() == 12 and workshop.draft.size() == 1, "element filtering preserves the current deck")
+	var wood_cards := ContentCatalog.base_entries(manager.cards).filter(func(entry): return entry["element"] == "wood")
+	check(workshop.filtered_cards.size() == wood_cards.size() and workshop.filtered_cards.all(func(entry): return entry["element"] == "wood") and workshop.draft.size() == 1, "element filtering includes the current base card pool and preserves the deck")
 	for candidate in workshop.card_nodes:
 		if candidate.card["id"] == "wood_regen": card = candidate
 	var point := screen_point(card, Vector2(70, 70))

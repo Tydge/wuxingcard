@@ -94,7 +94,9 @@ python3 tools/check_project.py --suite full --keep-going
 
 `tools/test_card_expansion_ui.gd`按旧焚阵3费、仅敌方群攻编写，已标记LEGACY，不属于注册清单，也不作为推荐检查命令。旧演示、截图、启动排查脚本保留为参考；使用前需核对现行规则，不能因文件名包含test就全部执行。
 
-2026-10-01既有重试记录中，`test_deck_workshop`有点击移牌及后续构筑断言失败，`endless_ui_test`有升级预览断言失败。两项仍保留在完整回归，不因耗时或失败删除。原因尚未确认，本次测试规范调整不宣称已修复；相关功能修改或正式导出时需要处理。原日志在`work/balance_20261001/`。
+2026-10-01既有重试记录保存在`work/balance_20261001/`。2026-10-02导出检查已核对现行行为：`test_deck_workshop`更新木系原版牌池数量断言，`test_summon_drag`改为检查当前RichTextLabel描述；两项与`endless_ui_test`截图改为主动绘制，避免macOS窗口遮挡时等待渲染信号停滞。无尽升级预览及构筑移牌保留原有有效断言，相关PC／触屏检查已通过，未删除检查项。
+
+Android原生触屏发现取消召唤目标时隐藏控件会重入取消函数。释放控件前先解除共享引用；`high_cost_ui_test`及继承的触屏检查通过隐藏信号重入复现并验证此边界。原生模拟器回归与正式APK安装验证另存发布交付目录，不替代full记录。
 
 ## 新增测试
 

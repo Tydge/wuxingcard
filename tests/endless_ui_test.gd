@@ -69,7 +69,8 @@ func drag_card(source: Control, destination: Control) -> void:
 
 func shot(name: String) -> void:
 	await create_timer(0.22).timeout
-	await RenderingServer.frame_post_draw
+	await process_frame
+	RenderingServer.force_draw(false)
 	root.get_texture().get_image().save_png(ProjectSettings.globalize_path(output.path_join(("touch_" if PlatformUI.is_touch() else "") + name + ".png")))
 
 func fast_opening(stage: String) -> void:

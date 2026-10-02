@@ -55,6 +55,10 @@ func run() -> void:
 	await process_frame
 	check(is_instance_valid(ui.summon_target_layer) and ui.action_busy and ui.manager.player.summons[0] == null and ui.manager.player.energy["metal"] == 4, "slot drop opens entrance aim before spending")
 	await shot("entrance_target")
+	# Native Android may re-enter cancellation while hiding the touch overlay.
+	var target_layer: Control = ui.summon_target_layer
+	target_layer.visibility_changed.connect(func():
+		if not target_layer.visible: ui._cancel_summon_target(false))
 	await tap(Vector2(800, 820))
 	check(ui.pending_summon_selection.is_empty() and not ui.action_busy and ui.manager.player.hand == ["metal_rift_mantis_card"] and ui.manager.player.energy["metal"] == 4 and ui.manager.player.summons[0] == null, "real mouse/touch cancellation does not summon or spend")
 	ui._confirm_summon_target({"kind":"hero", "side":"enemy"})

@@ -1697,10 +1697,12 @@ func _begin_summon_target(card_index: int, source: Vector2, selection: Dictionar
 func _cancel_summon_target(refresh: bool = true) -> void:
 	var active := not pending_summon_selection.is_empty()
 	pending_summon_selection.clear()
-	if is_instance_valid(summon_target_layer):
-		summon_target_layer.hide()
-		summon_target_layer.queue_free()
+	# Hiding can synchronously dispatch emulated input and re-enter cancellation.
+	var closing_layer := summon_target_layer
 	summon_target_layer = null
+	if is_instance_valid(closing_layer):
+		closing_layer.hide()
+		closing_layer.queue_free()
 	if active:
 		action_busy = false
 		if refresh: _refresh()
