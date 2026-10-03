@@ -3653,5 +3653,243 @@
       }
     ],
     "text": "造成（15＋对手手牌数×1）点土伤害。"
+  },
+  {
+    "id": "metal_forge_edge",
+    "name": "铸锋诀",
+    "element": "metal",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "status",
+        "target": "self",
+        "status": "strong_attack",
+        "stacks_from_status": "strong_defense"
+      }
+    ],
+    "text": "获得等同于自身强防层数的强攻。",
+    "art_prompt": "金色坚固护甲汇聚成凌厉金色剑气，不消耗护甲。",
+    "upgrades": [
+      {
+        "cost": 1,
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "strong_attack",
+            "stacks_from_status": "strong_defense"
+          },
+          {
+            "type": "draw",
+            "target": "self",
+            "amount": 1
+          }
+        ],
+        "text": "获得等同于自身强防层数的强攻，抽1张牌。"
+      },
+      {
+        "cost": 0,
+        "effects": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "strong_attack",
+            "stacks_from_status": "strong_defense"
+          },
+          {
+            "type": "draw",
+            "target": "self",
+            "amount": 1
+          }
+        ],
+        "text": "获得等同于自身强防层数的强攻，抽1张牌。"
+      }
+    ]
+  },
+  {
+    "id": "water_breath_wisp_card",
+    "name": "缚息灵魄",
+    "element": "water",
+    "cost": 8,
+    "effects": [
+      {
+        "type": "summon",
+        "summon": "water_breath_wisp"
+      }
+    ],
+    "text": "对手回合开始时获得的真气−1。",
+    "art_prompt": "轻薄水膜与细长游丝凝成的幽蓝水系灵魄，缚住对手吐纳的气流，无甲无壳。",
+    "upgrades": [
+      {
+        "cost": 8,
+        "effects": [
+          {
+            "type": "summon",
+            "summon": "water_breath_wisp__1"
+          }
+        ],
+        "text": "对手回合开始时获得的真气−1。"
+      },
+      {
+        "cost": 8,
+        "effects": [
+          {
+            "type": "summon",
+            "summon": "water_breath_wisp__2"
+          }
+        ],
+        "text": "对手回合开始时获得的真气−1。"
+      }
+    ]
+  },
+  {
+    "id": "wood_rain_slash",
+    "name": "青霖斩",
+    "element": "wood",
+    "cost": 4,
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 30,
+        "element": "wood"
+      },
+      {
+        "type": "heal",
+        "target": "self",
+        "amount": 15,
+        "condition": {
+          "type": "energy_at_least",
+          "element": "water",
+          "amount": 3
+        }
+      }
+    ],
+    "text": "造成30点木伤害。水能量≥3时，恢复15点生命。",
+    "art_prompt": "翠绿藤叶刀芒，蓝色雨珠化为清润生命光。",
+    "upgrades": [
+      {
+        "cost": 4,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 34,
+            "element": "wood"
+          },
+          {
+            "type": "heal",
+            "target": "self",
+            "amount": 18,
+            "condition": {
+              "type": "energy_at_least",
+              "element": "water",
+              "amount": 3
+            }
+          }
+        ],
+        "text": "造成34点木伤害。水能量≥3时，恢复18点生命。"
+      },
+      {
+        "cost": 4,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 38,
+            "element": "wood"
+          },
+          {
+            "type": "heal",
+            "target": "self",
+            "amount": 21,
+            "condition": {
+              "type": "energy_at_least",
+              "element": "water",
+              "amount": 3
+            }
+          }
+        ],
+        "text": "造成38点木伤害。水能量≥3时，恢复21点生命。"
+      }
+    ]
+  },
+  {
+    "id": "fire_kindling",
+    "name": "薪火诀",
+    "element": "fire",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "damage",
+        "element": "fire",
+        "energy_element": "wood",
+        "energy_multiplier": 2
+      }
+    ],
+    "text": "造成（自身木能量×2.0）点火伤害。",
+    "art_prompt": "葱绿灵木的生机化为猛烈橙红火焰，木生火。",
+    "upgrades": [
+      {
+        "cost": 1,
+        "effects": [
+          {
+            "type": "damage",
+            "element": "fire",
+            "energy_element": "wood",
+            "energy_multiplier": 2.5
+          }
+        ],
+        "text": "造成（自身木能量×2.5）点火伤害。"
+      },
+      {
+        "cost": 1,
+        "effects": [
+          {
+            "type": "damage",
+            "element": "fire",
+            "energy_element": "wood",
+            "energy_multiplier": 3
+          }
+        ],
+        "text": "造成（自身木能量×3.0）点火伤害。"
+      }
+    ]
+  },
+  {
+    "id": "earth_seek_treasure",
+    "name": "寻珍诀",
+    "element": "earth",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "discover",
+        "target": "self",
+        "amount": 2
+      }
+    ],
+    "text": "发现2：一张卡牌。",
+    "art_prompt": "石匣中浮起无文字仙家玉简，其中一枚被暖金光照亮。",
+    "upgrades": [
+      {
+        "cost": 1,
+        "effects": [
+          {
+            "type": "discover",
+            "target": "self",
+            "amount": 3
+          }
+        ],
+        "text": "发现3：一张卡牌。"
+      },
+      {
+        "cost": 1,
+        "effects": [
+          {
+            "type": "discover",
+            "target": "self",
+            "amount": 4
+          }
+        ],
+        "text": "发现4：一张卡牌。"
+      }
+    ]
   }
 ]

@@ -34,6 +34,28 @@ static func base_entries(known: Dictionary) -> Array[Dictionary]:
 		if int(entry.get("level", 0)) == 0: result.append(entry)
 	return result
 
+# Discover pools are declarative: omitted fields impose no restriction, except
+# levels default to original cards. IDs refer to families across selected levels.
+static func card_pool(known: Dictionary, filters: Dictionary = {}) -> Array[String]:
+	var result: Array[String] = []
+	for entry: Dictionary in known.values():
+		if int(entry.get("level", 0)) not in filters.get("levels", [0]): continue
+		if filters.has("elements") and entry["element"] not in filters["elements"]: continue
+		var family := base_id(entry)
+		if filters.has("include_ids") and family not in filters["include_ids"]: continue
+		if family in filters.get("exclude_ids", []): continue
+		var cost := int(entry["cost"])
+		if cost < int(filters.get("min_cost", 0)) or cost > int(filters.get("max_cost", 2147483647)): continue
+		var types: Array = []
+		for effect: Dictionary in entry.get("effects", []): types.append(str(effect["type"]))
+		var kind := "summon" if "summon" in types else "spell"
+		if filters.has("card_types") and kind not in filters["card_types"]: continue
+		var matches_effect := not filters.has("effect_types")
+		for type: String in filters.get("effect_types", []):
+			if type in types: matches_effect = true
+		if matches_effect: result.append(str(entry["id"]))
+	return result
+
 static func family_count(ids: Array, id: String, known: Dictionary) -> int:
 	var family := base_id(known.get(id, {"id": id}))
 	var count := 0

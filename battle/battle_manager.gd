@@ -170,7 +170,7 @@ func display_card(actor: Combatant, card: Dictionary) -> Dictionary:
 		if effect.get("type") != "damage": continue
 		var base := _effect_damage_amount(actor, effect, str(card["id"]))
 		var modified: int = BattleRules.damage_breakdown(neutral, base, str(effect.get("element", card["element"])), source)["raw"]
-		if effect.has("shield_multiplier") or effect.has("hand_multiplier"): effect["display_amount"] = modified
+		if effect.has("shield_multiplier") or effect.has("hand_multiplier") or effect.has("energy_multiplier"): effect["display_amount"] = modified
 		else: effect["amount"] = modified
 		if modified != base:
 			effect["display_color"] = "#79df8a" if modified > base else "#ff817a"
@@ -477,8 +477,9 @@ func _start_turn(actor: Combatant) -> void:
 		return
 	if _check_finish():
 		return
-	actor.qi += 1
-	_report("%s 获得1点真气 · 现有%d" % [actor.display_name, actor.qi], _side(actor), "qi", "", 1)
+	var qi_gain := turn_start_qi_gain(actor)
+	actor.qi += qi_gain
+	_report("%s 获得%d点真气 · 现有%d" % [actor.display_name, qi_gain, actor.qi], _side(actor), "qi", "", qi_gain)
 	if _check_finish():
 		return
 	draw_card(actor)
@@ -486,6 +487,13 @@ func _start_turn(actor: Combatant) -> void:
 		return
 	phase = "player_action" if actor == player else "enemy_action"
 	changed.emit()
+
+func turn_start_qi_gain(actor: Combatant) -> int:
+	var opponent := enemy if actor == player else player
+	var reduction := 0
+	for summoned: Summon in opponent.summons:
+		if summoned != null and summoned.hp > 0: reduction += summoned.enemy_qi_gain_reduction
+	return maxi(0, 1 - reduction)
 
 func _trigger_summons(actor: Combatant, timing: String = "turn_start") -> void:
 	var generation := battle_generation
@@ -621,6 +629,8 @@ func _effect_damage_amount(actor: Combatant, effect: Dictionary, exclude_card_id
 	if effect.has("shield_multiplier"):
 		return mini(int(effect.get("base_cap", 50)), floori(actor.status_stacks("shield") * float(effect["shield_multiplier"])))
 	var amount := int(effect.get("amount", 0))
+	if effect.has("energy_multiplier"):
+		amount += floori(int(actor.energy.get(str(effect["energy_element"]), 0)) * float(effect["energy_multiplier"]))
 	if effect.has("hand_multiplier"):
 		var count := 0
 		var excluded := false
@@ -636,7 +646,7 @@ func _effect_damage_amount(actor: Combatant, effect: Dictionary, exclude_card_id
 
 func _effect_status_stacks(target: Combatant, effect: Dictionary) -> int:
 	if effect.has("stacks_from_status"):
-		return floori(float(target.status_stacks(str(effect["stacks_from_status"]))) / maxi(1, int(effect["stacks_divisor"])))
+		return floori(float(target.status_stacks(str(effect["stacks_from_status"]))) / maxi(1, int(effect.get("stacks_divisor", 1))))
 	return int(effect.get("stacks", 0))
 
 func _damage_plan(actor: Combatant, opponent: Combatant, effect: Dictionary, card_element: String, selection: Dictionary) -> Array[Dictionary]:
@@ -802,17 +812,34 @@ func _contemplate(actor: Combatant, amount: int) -> void:
 	else:
 		_take_choice_card(actor, _choose_contemplation(actor, candidates))
 
+func _discover(actor: Combatant, amount: int, filters: Dictionary = {}) -> void:
+	var pool: Array[String] = ContentCatalog.card_pool(cards, filters)
+	var candidates: Array = []
+	for i in mini(maxi(0, amount), pool.size()):
+		candidates.append(pool.pop_at(rng.randi_range(0, pool.size() - 1)))
+	if candidates.is_empty(): return
+	if actor == player and candidates.size() > 1 and not replay_choice_indices.is_empty():
+		_receive_card(actor, candidates[clampi(replay_choice_indices.pop_front(), 0, candidates.size() - 1)], "发现")
+	elif actor == player and interactive_choices and candidates.size() > 1:
+		pending_choice = {"generation":battle_generation, "kind":"discover", "candidates":candidates}
+		call_deferred("_announce_choice")
+	else:
+		_receive_card(actor, candidates[_choose_contemplation(actor, candidates)], "发现")
+
 func _announce_choice() -> void:
 	if pending_choice.is_empty() or int(pending_choice["generation"]) != battle_generation: return
 	choice_requested.emit(pending_choice["candidates"], player.hand.size() >= 8)
 	changed.emit()
 
 func choose_card(index: int) -> bool:
-	if pending_choice.is_empty() or int(pending_choice["generation"]) != battle_generation: return false
+	if pending_choice.is_empty() or int(pending_choice["generation"]) != battle_generation or phase in FINISHED_PHASES or phase == "menu": return false
 	if index < 0 or index >= pending_choice["candidates"].size(): return false
 	var continuation: Dictionary = pending_choice.get("continuation", {})
+	var kind := str(pending_choice.get("kind", "contemplate"))
+	var id: String = pending_choice["candidates"][index]
 	pending_choice.clear()
-	_take_choice_card(player, index)
+	if kind == "discover": _receive_card(player, id, "发现")
+	else: _take_choice_card(player, index)
 	if not continuation.is_empty():
 		_resolve_sequence(continuation["actor"], continuation["opponent"], continuation["effects"], continuation["element"], continuation["selection"], continuation["energy"], continuation["complete"])
 	choice_completed.emit()
@@ -827,7 +854,7 @@ func _choose_contemplation(actor: Combatant, candidates: Array) -> int:
 		var score := 1.0 - float(actor.card_cost(card)) * 0.15
 		for effect in card["effects"]:
 			match str(effect["type"]):
-				"gain_energy", "gain_random_energy", "draw", "contemplate", "generate_card": score += 2.0
+				"gain_energy", "gain_random_energy", "draw", "contemplate", "discover", "generate_card": score += 2.0
 				"heal": score += minf(float(effect["amount"]), float(actor.max_hp - actor.hp)) * 0.25
 				"summon": score += 1.0 if actor.first_free_summon_slot() >= 0 else -2.0
 		if actor.can_pay(card): score += 2.0
@@ -970,6 +997,7 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 					break
 				draw_card(target)
 		"contemplate": _contemplate(target, amount)
+		"discover": _discover(target, amount, effect.get("pool", {}))
 		"generate_card":
 			var pool: Array[String] = []
 			for entry: Dictionary in ContentCatalog.base_entries(cards):

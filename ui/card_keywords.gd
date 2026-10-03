@@ -42,18 +42,29 @@ static func entries(card: Dictionary, summons: Dictionary) -> Array[Dictionary]:
 			result.append({"title":"恢复生命", "text":"双方角色与召唤物实际恢复生命才触发；满血治疗不触发，多只各自触发。"})
 		if int(summon.get("enemy_cost_aura", 0)) > 0:
 			result.append({"title":"费用光环", "text":"多只可叠加，0费牌也增加费用；此召唤物死亡后解除。"})
+		if int(summon.get("enemy_qi_gain_reduction", 0)) > 0:
+			result.append({"title":"锁息", "text":"仅减少对手回合开始时自然获得的真气，最低为0；不扣除已有真气。多只可叠加，死亡后解除。"})
 	for effect in effects:
 		if effect.has("hand_multiplier") and not seen.has("hand_scaling"):
 			seen["hand_scaling"] = true
 			var description := "按对手当前全部手牌计数，不查看或公开牌的内容；选择召唤物时仍按其持有者手牌计数。" if effect.get("hand_owner") == "opponent" else "打出本牌后计数，不含本牌；水系计数包含原、精、玄各等级水系牌。"
 			result.append({"title":"手牌计数", "text":description})
-		if effect.has("stacks_from_status") and not seen.has("poison"):
+		if effect.has("energy_multiplier") and not seen.has("energy_scaling"):
+			seen["energy_scaling"] = true
+			result.append({"title":"能量伤害", "text":"按自身当前能量计算基础伤害，向下取整；再结算强攻、抗性等修正，不消耗对应能量。"})
+		if effect.get("stacks_from_status") == "strong_defense" and not seen.has("defense_copy"):
+			seen["defense_copy"] = true
+			result.append({"title":"铸锋", "text":"按自身当前强防层数获得强攻，不消耗强防；获得的强攻照常与弱攻抵消。"})
+		if effect.get("stacks_from_status") == "poison" and not seen.has("poison"):
 			seen["poison"] = true
 			result.append({"title":"木生火", "text":"以对手当前中毒层数除以指定值，向下取整，施加灼伤；不会消耗中毒。"})
 			result.append({"title":"中毒 X", "text":status_description("poison")})
 		if effect.get("type") == "contemplate" and not seen.has("contemplate"):
 			seen["contemplate"] = true
 			result.append({"title":"观想N", "text":"查看牌堆顶至多N张，选1张入手，其余顺序不变。"})
+		if effect.get("type") == "discover" and not seen.has("discover"):
+			seen["discover"] = true
+			result.append({"title":"发现N", "text":"从指定范围随机提供至多N张不同卡牌，选1张加入手牌；不消耗牌堆。未限定时从全部原级卡牌中选择。"})
 		if effect.get("type") not in ["status", "remove_status", "reduce_status"]: continue
 		var id: String = effect["status"]
 		var element: String = effect.get("element", "")

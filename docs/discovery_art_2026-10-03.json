@@ -1,0 +1,42 @@
+{
+  "tool": "built-in image_gen",
+  "jobs": [
+    {
+      "id": "metal_forge_edge",
+      "prompt": "Use case: stylized-concept. Asset type: 4:3 landscape pure card illustration for a Chinese wuxing fantasy game. High quality eastern dark fantasy digital painting, painterly detailed textures, cinematic light, central focal subject within central 80%, stone mountain arena atmosphere. One complete illustration, no text, lettering, numbers, card borders, UI, logo or watermark. Primary request: 铸锋诀，金色护身鳞甲环绕的修士，把周身坚固护甲散发的金芒汇聚成凌厉剑气，护甲保持完整，金黄银白金属光与发亮的长剑为主体。",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-e4fb0be1-5be3-4589-a68e-ec43429ba015.png",
+      "output": "assets/cards/generated/metal_forge_edge.webp"
+    },
+    {
+      "id": "wood_rain_slash",
+      "prompt": "Use case: stylized-concept. Asset type: 4:3 landscape pure card illustration for a Chinese wuxing fantasy game. High quality eastern dark fantasy digital painting, painterly detailed textures, cinematic light, central focal subject within central 80%, stone mountain arena atmosphere. One complete illustration, no text, lettering, numbers, card borders, UI, logo or watermark. Primary request: 青霖斩，一道巨大的翠绿藤叶刀芒划过山中石台，晶莹蓝色雨珠沿叶片流下化成清润生命光，木系攻击和水滋养生机，叶刃为主体。",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-76d5bfa2-dbce-4204-a3d2-5d9034606b02.png",
+      "output": "assets/cards/generated/wood_rain_slash.webp"
+    },
+    {
+      "id": "fire_kindling",
+      "prompt": "Use case: stylized-concept. Asset type: 4:3 landscape pure card illustration for a Chinese wuxing fantasy game. High quality eastern dark fantasy digital painting, painterly detailed textures, cinematic light, central focal subject within central 80%, stone mountain arena atmosphere. One complete illustration, no text, lettering, numbers, card borders, UI, logo or watermark. Primary request: 薪火诀，葱绿灵木枝条与叶片积蓄的生机化为猛烈橙红火焰，火焰从枝条末端升腾形成弯曲火刃，木生火的转化过程清楚，绿色灵木与橙红火焰主体。",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-70552d8d-399a-4954-877b-99427841a7b2.png",
+      "output": "assets/cards/generated/fire_kindling.webp"
+    },
+    {
+      "id": "earth_seek_treasure",
+      "prompt": "Use case: stylized-concept. Asset type: 4:3 landscape pure card illustration for a Chinese wuxing fantasy game. High quality eastern dark fantasy digital painting, painterly detailed textures, cinematic light, central focal subject within central 80%, stone mountain arena atmosphere. One complete illustration, no text, lettering, numbers, card borders, UI, logo or watermark. Primary request: 寻珍诀，古老山岩裂开的石匣中浮起几枚无文字的仙家玉简，其中一枚被暖金光照亮，砂土旋流与陶土褐色岩石环绕，寻找并择取灵诀的意象。",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-e7d71323-01f2-4b2e-a71e-471f9588ede1.png",
+      "output": "assets/cards/generated/earth_seek_treasure.webp"
+    },
+    {
+      "id": "water_breath_wisp_card",
+      "prompt": "Use case: stylized-concept. High quality eastern dark fantasy painterly digital art, luminous cool blue water palette. Primary request: 锁息水母，轻薄透明的幽蓝灵水母，纤细长水丝盘绕并勒住一缕白色吐纳气流，晶莹脆弱的半透明钟形躯体，无硬甲，无坚硬壳，无盾。它是珍贵的干扰型召唤物而不是防御肉盾。No turtles, tortoise, armor, shell, bulky or tank-like creature. No text, letters, numerals, border, UI, logo or watermark. Asset type: 4:3 landscape pure card illustration. Floating above a damp ancient stone arena among misty mountains, one dominant airy translucent jellyfish and slender tendrils, magical constriction of breath, not attacking physically. Entire subject inside central 80%, tasteful cinematic light.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-cb3c7c5d-6b3f-419c-9c34-b5d383d77439.png",
+      "output": "assets/cards/generated/water_breath_wisp_card.webp"
+    },
+    {
+      "id": "water_breath_wisp",
+      "prompt": "Use case: stylized-concept. High quality eastern dark fantasy painterly digital art, luminous cool blue water palette. Primary request: 锁息水母，轻薄透明的幽蓝灵水母，纤细长水丝盘绕并勒住一缕白色吐纳气流，晶莹脆弱的半透明钟形躯体，无硬甲，无坚硬壳，无盾。它是珍贵的干扰型召唤物而不是防御肉盾。No turtles, tortoise, armor, shell, bulky or tank-like creature. No text, letters, numerals, border, UI, logo or watermark. Asset type: transparent battlefield summon cutout. Single entire floating jellyfish, all long slender tendrils visible, airy readable silhouette, full body centered with safe margins. Genuine transparent background, no scenery, stone platform or ground.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-1aaf34b0-8f78-4cb1-a162-a2986d168732.png",
+      "output": "assets/summons/standee/water_breath_wisp.webp"
+    }
+  ],
+  "note": "水系卡图与立绘生成时使用水母形态提示词，最终命名缚息灵魄，表现轻薄水膜与游丝凝成的仙侠水系灵体；龟形候选未入库。"
+}

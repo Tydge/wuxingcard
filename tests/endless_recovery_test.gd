@@ -117,7 +117,7 @@ func test() -> void:
 	run.state["battle"]["commands"] = [{"kind":"end_turn"}]
 	run._commit(run.state.duplicate(true))
 	var hand_update := EndlessRun.new(manager.cards, manager.artifacts, manager.enemies, run.path)
-	check(hand_update.load_run() and hand_update.state["rules_version"] == 7 and hand_update.state["owned_cards"] == assets and hand_update.opponent() == foe and hand_update.state["battle"]["commands"].is_empty(), "hand scaling pool migration preserves assets and opponent")
+	check(hand_update.load_run() and hand_update.state["rules_version"] == EndlessRun.RULES_VERSION and hand_update.state["owned_cards"] == assets and hand_update.opponent() == foe and hand_update.state["battle"]["commands"].is_empty(), "hand scaling pool migration preserves assets and opponent")
 	check(FileAccess.file_exists(run.path + ".rules-v6"), "version 6 journal has a recoverable backup")
 	DirAccess.remove_absolute(run.path + ".rules-v6")
 

@@ -103,7 +103,11 @@ static func _status_amount(effect: Dictionary) -> String:
 	var name: String = CardKeywords.NAMES.get(effect["status"], effect["status"])
 	if effect.get("status") == "lock": name += "·" + BattleRules.element_name(str(effect.get("element", "")))
 	if effect.has("stacks_from_status"):
-		var formula := "%s层数÷%d，向下取整" % [CardKeywords.NAMES.get(effect["stacks_from_status"], effect["stacks_from_status"]), int(effect["stacks_divisor"])]
+		var source: String = CardKeywords.NAMES.get(effect["stacks_from_status"], effect["stacks_from_status"])
+		var divisor := int(effect.get("stacks_divisor", 1))
+		if divisor == 1:
+			return "%d层%s（等同于自身%s层数）" % [int(effect["display_stacks"]), name, source] if effect.has("display_stacks") else "等同于自身%s层数的%s" % [source, name]
+		var formula := "%s层数÷%d，向下取整" % [source, divisor]
 		return "%d层%s（%s）" % [int(effect["display_stacks"]), name, formula] if effect.has("display_stacks") else "（%s）层%s" % [formula, name]
 	return "%d层%s" % [int(effect["stacks"]), name]
 
@@ -116,6 +120,9 @@ static func single(effect: Dictionary, context: String) -> String:
 	var text := ""
 	match str(effect["type"]):
 		"damage":
+			if effect.has("energy_multiplier"):
+				var formula := "自身%s能量×%s" % [BattleRules.element_name(str(effect["energy_element"])), str(float(effect["energy_multiplier"]))]
+				return "造成%s点%s伤害（%s）。" % [_damage_number(effect), element, formula] if effect.has("display_amount") else "造成（%s）点%s伤害。" % [formula, element]
 			if effect.has("hand_multiplier"):
 				var hand := "手牌中%s系卡牌数" % BattleRules.element_name(str(effect["hand_element"])) if effect.has("hand_element") else "手牌数"
 				if effect.get("hand_owner") == "opponent": hand = "对手" + hand
@@ -151,6 +158,7 @@ static func single(effect: Dictionary, context: String) -> String:
 		"lose_energy": text = "%s失去%d点%s能量。" % [who, amount, element]
 		"draw": text = "%s抽%d张牌。" % [who, amount]
 		"contemplate": text = "%s观想%d。" % [who, amount]
+		"discover": text = "%s发现%d：一张%s卡牌。" % [who, amount, str(effect.get("pool_label", ""))]
 		"generate_card": text = "%s随机获得%d张%s牌。" % [who, amount, element + "系" if element != "" else ""]
 		"discard": text = "%s随机弃%d张手牌。" % [who, amount]
 		"lose_qi": text = "%s失去%d点真气。" % [who, amount]
@@ -184,6 +192,7 @@ static func card_text(card: Dictionary, summons: Dictionary) -> String:
 			parts.append(label + "：" + describe(effects, "summon"))
 		if not template.get("on_heal", []).is_empty(): parts.append("场上目标恢复生命时，" + describe(template["on_heal"], "summon"))
 		if int(template.get("enemy_cost_aura", 0)) > 0: parts.append("光环：敌方所有卡牌费用+%d。" % int(template["enemy_cost_aura"]))
+		if int(template.get("enemy_qi_gain_reduction", 0)) > 0: parts.append("对手回合开始时获得的真气−%d。" % int(template["enemy_qi_gain_reduction"]))
 		return "".join(parts)
 	return describe(card.get("effects", []))
 

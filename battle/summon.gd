@@ -14,6 +14,7 @@ var turn_start_effects: Array = []
 var turn_end_effects: Array = []
 var heal_effects: Array = []
 var enemy_cost_aura := 0
+var enemy_qi_gain_reduction := 0
 var printed_hp := 15
 var art_flip_h := false
 
@@ -34,10 +35,11 @@ func setup(data: Dictionary) -> void:
 	turn_end_effects = data.get("turn_end", []).duplicate(true)
 	heal_effects = data.get("on_heal", []).duplicate(true)
 	enemy_cost_aura = int(data.get("enemy_cost_aura", 0))
+	enemy_qi_gain_reduction = maxi(0, int(data.get("enemy_qi_gain_reduction", 0)))
 
 func snapshot() -> Summon:
 	var copy := Summon.new()
-	for property in ["id", "art_id", "card_id", "display_name", "element", "max_hp", "hp", "art_scale", "enemy_cost_aura", "printed_hp", "art_flip_h"]:
+	for property in ["id", "art_id", "card_id", "display_name", "element", "max_hp", "hp", "art_scale", "enemy_cost_aura", "enemy_qi_gain_reduction", "printed_hp", "art_flip_h"]:
 		copy.set(property, get(property))
 	copy.spawn_effects = spawn_effects.duplicate(true)
 	copy.turn_start_effects = turn_start_effects.duplicate(true)

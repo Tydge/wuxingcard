@@ -863,7 +863,7 @@ func _show_contemplation(candidates: Array, full: bool) -> void:
 	var generation := manager.battle_generation
 	choice_dialog = ContemplationDialog.new()
 	fx_layer.add_child(choice_dialog)
-	choice_dialog.configure(candidates, manager.cards, _card_front, full)
+	choice_dialog.configure(candidates, manager.cards, _card_front, full, str(manager.pending_choice.get("kind", "contemplate")))
 	choice_dialog.confirmed.connect(func(index: int):
 		if generation == manager.battle_generation:
 			if endless_active and not endless.record_choice(index):

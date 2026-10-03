@@ -1316,5 +1316,25 @@
       }
     ],
     "art_flip_h": true
+  },
+  {
+    "id": "water_breath_wisp",
+    "card_id": "water_breath_wisp_card",
+    "name": "缚息灵魄",
+    "element": "water",
+    "hp": 20,
+    "on_spawn": [],
+    "turn_start": [],
+    "turn_end": [],
+    "enemy_qi_gain_reduction": 1,
+    "art_flip_h": true,
+    "upgrades": [
+      {
+        "hp": 24
+      },
+      {
+        "hp": 28
+      }
+    ]
   }
 ]

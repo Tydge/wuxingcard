@@ -106,3 +106,5 @@ Android原生触屏发现取消召唤目标时隐藏控件会重入取消函数�
 2026-10-02新增五张法术：`ash_cleanse_cards_test`覆盖按层数清理、击杀回能、双方召唤物群伤及AI副本；`ash_cleanse_ui_test`／`ash_cleanse_touch_test`覆盖真实拖牌、取消、目标预览及三级卡面。分别归入cards、ui-cards，不增加默认quick。`upgrade_ui_test`截图改为主动绘制，避免窗口被遮挡时无限等待`frame_post_draw`，保留原有升级与构筑断言。
 
 2026-10-03新增`hand_scaling_cards_test`及PC／触屏`hand_scaling_ui_test`、`hand_scaling_touch_test`，覆盖打出后手牌计数、中毒转灼伤取整及仓库升级卡图。`endless_ui_test`增加实际付费升级后细条卡图断言。其余三处历史截图等待改为主动绘制，保留原有断言，避免相同的macOS遮挡停滞。
+
+2026-10-03新增`discovery_cards_test`与PC／触屏`discovery_ui_test`、`discovery_touch_test`，分别归入cards及ui-cards，不增加默认quick。规则检查覆盖候选范围组合筛选、无重复抽样、牌堆与疲劳独立、满手牌、效果继续、固定种子重放、AI隔离、真气抑制光环和能量倍率伤害；界面覆盖真实2／3／4选一与确认、原生触摸释放、观想兼容、三级卡面、伤害预览及召唤落点。本轮仅运行上述3项以及qi_cycle_test、upgrade_test --quick、endless_recovery_test，六项分别通过；不构成完整回归，不导出APK或Windows包。
