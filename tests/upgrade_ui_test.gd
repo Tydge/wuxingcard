@@ -41,7 +41,7 @@ func run() -> void:
 	menu = find_menu()
 	menu.deck_store_path = "res://work/upgrade_ui_decks.json"
 	menu._show_collection()
-	check(menu.filtered_cards.size() == 85, "collection groups the 240 versions into 85 families")
+	check(menu.filtered_cards.size() == 95, "collection groups the 285 versions into 95 families")
 	menu._open_inspector(ui.manager.cards["metal_forge"], menu.card_nodes[0])
 	await create_timer(0.46).timeout
 	await switch_level(1)

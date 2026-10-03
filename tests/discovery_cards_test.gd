@@ -4,7 +4,7 @@ const EXPANSION := ["metal_forge_edge", "water_breath_wisp_card", "wood_rain_sla
 
 func run() -> void:
 	m = BattleManager.new(); m.random_artifacts_enabled = false; root.add_child(m)
-	check(m.cards.size() == 255 and m.summon_templates.size() == 81, "85 card families and 27 summons have all three grades")
+	check(m.cards.size() == 285 and m.summon_templates.size() == 96, "95 card families and 32 summons have all three grades")
 	for level in 3:
 		var metal := ContentCatalog.variant_id(EXPANSION[0], level)
 		for defense in [0, 7]:

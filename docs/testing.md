@@ -108,3 +108,9 @@ Android原生触屏发现取消召唤目标时隐藏控件会重入取消函数�
 2026-10-03新增`hand_scaling_cards_test`及PC／触屏`hand_scaling_ui_test`、`hand_scaling_touch_test`，覆盖打出后手牌计数、中毒转灼伤取整及仓库升级卡图。`endless_ui_test`增加实际付费升级后细条卡图断言。其余三处历史截图等待改为主动绘制，保留原有断言，避免相同的macOS遮挡停滞。
 
 2026-10-03新增`discovery_cards_test`与PC／触屏`discovery_ui_test`、`discovery_touch_test`，分别归入cards及ui-cards，不增加默认quick。规则检查覆盖候选范围组合筛选、无重复抽样、牌堆与疲劳独立、满手牌、效果继续、固定种子重放、AI隔离、真气抑制光环和能量倍率伤害；界面覆盖真实2／3／4选一与确认、原生触摸释放、观想兼容、三级卡面、伤害预览及召唤落点。本轮仅运行上述3项以及qi_cycle_test、upgrade_test --quick、endless_recovery_test，六项分别通过；不构成完整回归，不导出APK或Windows包。
+
+### 用户明确指定较小导出范围
+
+2026-10-04本轮用户明确要求：导出也只测新增内容与可能冲突，不跑不相关的完整回归。Android构建新增可重复的`--required-test`，必须同时传入`--checks-report`。报告仍须schema 2、targeted范围、所列测试身份与参数完全一致、全部通过、运行代码与测试指纹一致、Godot版本一致及测试期间源码未改变；不会自动回退full或将局部记录标成full。未显式选择该例外时继续执行既有full发布门槛。资源包探针保留资源、字体、授权检查，把重复随机对战样本缩为2场。
+
+本轮所选7项已通过：wuxing_spirits_cards_test（120项断言）、PC／触屏wuxing_spirits_ui_test（各88项）、discovery_cards_test（109项）、settlement_regression_test、upgrade_test --quick及endless_recovery_test。Python发布工作流11项通过。未运行full，报告位于`work/checks/wuxing_spirits_release/latest.json`。

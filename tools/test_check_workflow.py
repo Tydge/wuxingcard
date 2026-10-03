@@ -100,6 +100,26 @@ class WorkflowTests(unittest.TestCase):
                 with self.assertRaises(RuntimeError): build_support.ensure_checks('godot', path)
                 run.assert_not_called()
 
+    def test_explicit_targeted_release_preserves_scope_and_failure_gate(self):
+        names = ['wuxing_spirits_cards_test', 'wuxing_spirits_ui_test', 'wuxing_spirits_touch_test', 'upgrade_test']
+        profile, scripts = select_tests(tests=names)
+        report = full_report()
+        report.update(profile=profile, suite=scripts, results=[{'script': script, 'exit_code': 0, 'arguments': test_arguments(script, profile)} for script in scripts])
+        self.assertTrue(build_support.validate_checks(report, 'runtime', 'engine', names))
+        self.assertFalse(build_support.validate_checks(report, 'runtime', 'engine'))
+        self.assertFalse(build_support.validate_checks(report, 'runtime', 'engine', names[:-1]))
+        for key, value in [('complete', False), ('source_unchanged', False), ('check_sha256', 'old')]:
+            bad = copy.deepcopy(report); bad[key] = value
+            self.assertFalse(build_support.validate_checks(bad, 'runtime', 'engine', names))
+        bad = copy.deepcopy(report); bad['results'][0]['exit_code'] = 1
+        self.assertFalse(build_support.validate_checks(bad, 'runtime', 'engine', names))
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'targeted.json'; path.write_text(json.dumps(report))
+            with patch.object(build_support, 'source_manifest', return_value={'fingerprint':'source','files':[]}), patch.object(build_support, 'check_manifest', return_value={'fingerprint':'runtime'}), patch.object(build_support.subprocess, 'check_output', return_value='engine'), patch.object(build_support.subprocess, 'run') as run:
+                self.assertEqual(build_support.ensure_checks('godot', path, names)[1]['profile'], 'targeted')
+                with self.assertRaises(RuntimeError): build_support.ensure_checks('godot', None, names)
+                run.assert_not_called()
+
     def test_missing_cache_requests_full_once(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

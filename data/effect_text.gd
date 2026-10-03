@@ -59,9 +59,10 @@ static func describe(effects: Array, context: String = "hero") -> String:
 					names.append(CardKeywords.NAMES.get(next["status"], next["status"]))
 					count += 1
 				if count > 1: sentence = "解除" + _subject(effect, context) + "、".join(names)
-		# Omit an obvious caster subject, but retain it after an enemy clause.
+		# Discard keeps the caster subject so the affected hand is explicit.
+		# Other effects omit it unless following an enemy clause.
 		var previous := parts[-1] if not parts.is_empty() else ""
-		if context != "summon" and (parts.is_empty() or not (previous.contains("对手") or previous.contains("敌方") or previous.contains("所有目标") or previous.contains("双方"))):
+		if context != "summon" and effect.get("type") != "discard" and (parts.is_empty() or not (previous.contains("对手") or previous.contains("敌方") or previous.contains("所有目标") or previous.contains("双方"))):
 			sentence = sentence.trim_prefix("自身").replace("，自身", "，")
 		elif context == "summon" and previous.begins_with("召唤者"):
 			sentence = sentence.trim_prefix("召唤者")
@@ -146,6 +147,8 @@ static func single(effect: Dictionary, context: String) -> String:
 						"self": text = "对%s造成%s点%s伤害。" % [own, _damage_number(effect), element]
 						_:
 							text = "对对手造成%s点%s伤害。" % [_damage_number(effect), element] if context in ["summon", "artifact"] or effect.get("target") == "opponent" else "造成%s点%s伤害。" % [_damage_number(effect), element]
+		"return_summon": text = "将一个我方召唤物移回手牌，其费用降低%d（最低0）。" % int(effect.get("cost_reduction", 0))
+		"sacrifice_summon": text = "摧毁一个我方召唤物，对对手造成其最大生命×%s的火伤害，基础最多%d点。" % [str(float(effect["multiplier"])), int(effect["base_cap"])]
 		"status": text = who + "获得" + _status_amount(effect) + "。"
 		"remove_status": text = "解除%s%s。" % [who, CardKeywords.NAMES.get(effect["status"], effect["status"])]
 		"reduce_status": text = "降低%s%d层%s。" % [who, amount, CardKeywords.NAMES.get(effect["status"], effect["status"])]
@@ -158,7 +161,9 @@ static func single(effect: Dictionary, context: String) -> String:
 		"lose_energy": text = "%s失去%d点%s能量。" % [who, amount, element]
 		"draw": text = "%s抽%d张牌。" % [who, amount]
 		"contemplate": text = "%s观想%d。" % [who, amount]
-		"discover": text = "%s发现%d：一张%s卡牌。" % [who, amount, str(effect.get("pool_label", ""))]
+		"discover":
+			text = "%s发现%d：一张%s。" % [who, amount, str(effect.get("pool_label", "卡牌"))]
+			if int(effect.get("cost_reduction", 0)) > 0: text += "该牌本回合费用−%d（最低0）。" % int(effect["cost_reduction"])
 		"generate_card": text = "%s随机获得%d张%s牌。" % [who, amount, element + "系" if element != "" else ""]
 		"discard": text = "%s随机弃%d张手牌。" % [who, amount]
 		"lose_qi": text = "%s失去%d点真气。" % [who, amount]
@@ -171,7 +176,9 @@ static func single(effect: Dictionary, context: String) -> String:
 		text = text.trim_suffix("。") + "；若消灭目标，" + describe(effect["on_kill"], context)
 	if effect.has("condition"):
 		var condition: Dictionary = effect["condition"]
-		if condition.get("type") == "hand_at_most": text = "手牌≤%d张时，%s" % [int(condition["amount"]), text]
+		if condition.get("type") == "previous_card_element": text = "若本回合上一张使用的是%s系卡牌，%s" % [BattleRules.element_name(condition["element"]), text]
+		elif condition.get("type") == "spell_elements_at_least": text = "若本回合使用过至少%d种属性的法术，%s" % [int(condition["amount"]), text]
+		elif condition.get("type") == "hand_at_most": text = "手牌≤%d张时，%s" % [int(condition["amount"]), text]
 		elif condition.get("type", "") == "energy_at_least":
 			text = "%s能量≥%d时，%s" % [BattleRules.element_name(condition["element"]), int(condition["amount"]), text]
 	return text
@@ -193,6 +200,11 @@ static func card_text(card: Dictionary, summons: Dictionary) -> String:
 		if not template.get("on_heal", []).is_empty(): parts.append("场上目标恢复生命时，" + describe(template["on_heal"], "summon"))
 		if int(template.get("enemy_cost_aura", 0)) > 0: parts.append("光环：敌方所有卡牌费用+%d。" % int(template["enemy_cost_aura"]))
 		if int(template.get("enemy_qi_gain_reduction", 0)) > 0: parts.append("对手回合开始时获得的真气−%d。" % int(template["enemy_qi_gain_reduction"]))
+		if not template.get("after_spell", {}).is_empty():
+			var trigger: Dictionary = template["after_spell"]
+			parts.append("每个己方回合首次使用%s系法术后，" % BattleRules.element_name(trigger["element"]) + describe(trigger["effects"], "summon"))
+		if not template.get("on_death", []).is_empty(): parts.append("死亡：" + describe(template["on_death"], "summon"))
+		if template.get("intercept_spell", false): parts.append("每个对手回合，首次指定召唤者为伤害目标的单体法术，改由此召唤物承受。")
 		return "".join(parts)
 	return describe(card.get("effects", []))
 

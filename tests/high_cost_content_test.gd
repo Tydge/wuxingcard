@@ -32,7 +32,7 @@ func cast(id: String, selection: Dictionary = {}) -> bool:
 func run() -> void:
 	m = BattleManager.new()
 	root.add_child(m)
-	check(m.cards.size() == 255 and m.summon_templates.size() == 81 and m.artifacts.size() == 90, "all new families have three grades")
+	check(m.cards.size() == 285 and m.summon_templates.size() == 96 and m.artifacts.size() == 90, "all new families have three grades")
 	for level in 3:
 		var suffix := "" if level == 0 else "__%d" % level
 		check(m.cards["metal_four_thunders" + suffix]["text"] == "对敌方随机目标造成%d点金伤害4次。" % [10,12,14][level], "random spell keeps its concise grade description")

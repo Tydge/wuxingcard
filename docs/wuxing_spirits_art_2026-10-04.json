@@ -1,0 +1,111 @@
+{
+  "tool": "built-in image_gen.imagegen",
+  "date": "2026-10-04",
+  "assets": [
+    {
+      "id": "metal_mountain_sword",
+      "kind": "card",
+      "prompt": "Use case: stylized-concept. Asset type: landscape card art for Chinese xianxia Five Elements card game. Primary request: 厚土山岳托起一柄金色飞剑，两道凌厉金色剑光从岩壁中的地脉升起，土生金；没有人物。Style: refined painterly Chinese fantasy illustration, subtle ink brush textures, clear readable central silhouette, rich atmospheric depth, restrained warm glow, elegant ancient aesthetic. Composition: landscape 4:3, main subject within central 75%, no card frame, no UI, no letters, no words, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-a7de39cb-b89f-4be8-baf2-89583a2f0fcc.png",
+      "destination": "assets/cards/generated/metal_mountain_sword.webp"
+    },
+    {
+      "id": "metal_oath_sword_card",
+      "kind": "card",
+      "prompt": "Use case: stylized-concept. Asset type: landscape card art for Chinese xianxia Five Elements card game. Primary request: 悬空古残剑化为修长金色剑灵，剑身如躯体，数枚未出鞘剑胚环绕，仙家剑誓。Style: refined painterly Chinese fantasy illustration, subtle ink brush textures, clear readable central silhouette, rich atmospheric depth, restrained warm glow, elegant ancient aesthetic. Composition: landscape 4:3, main subject within central 75%, no card frame, no UI, no letters, no words, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-d0d0b0c9-3235-4014-97c9-ee3a98611fa1.png",
+      "destination": "assets/cards/generated/metal_oath_sword_card.webp"
+    },
+    {
+      "id": "water_return_tide",
+      "kind": "card",
+      "prompt": "Use case: stylized-concept. Asset type: landscape card art for Chinese xianxia Five Elements card game. Primary request: 一道清澈水环将小巧仙兽化成蓝白水雾，雾中凝回一枚完整无字灵契，回收和重召。Style: refined painterly Chinese fantasy illustration, subtle ink brush textures, clear readable central silhouette, rich atmospheric depth, restrained warm glow, elegant ancient aesthetic. Composition: landscape 4:3, main subject within central 75%, no card frame, no UI, no letters, no words, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-2e687491-c2c7-492d-80a1-92d73c64b5d8.png",
+      "destination": "assets/cards/generated/water_return_tide.webp"
+    },
+    {
+      "id": "water_mirror_spirit_card",
+      "kind": "card",
+      "prompt": "Use case: stylized-concept. Asset type: landscape card art for Chinese xianxia Five Elements card game. Primary request: 薄纱状水蜃灵如空灵贝壳与流云的融合，托起圆形水镜，镜面折射多色灵光，汇成蓝色灵诀。Style: refined painterly Chinese fantasy illustration, subtle ink brush textures, clear readable central silhouette, rich atmospheric depth, restrained warm glow, elegant ancient aesthetic. Composition: landscape 4:3, main subject within central 75%, no card frame, no UI, no letters, no words, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-9337d38d-3c6b-4a37-bcef-25d30eeba9aa.png",
+      "destination": "assets/cards/generated/water_mirror_spirit_card.webp"
+    },
+    {
+      "id": "wood_spring_blessing",
+      "kind": "card",
+      "prompt": "Use case: stylized-concept. Asset type: landscape card art for Chinese xianxia Five Elements card game. Primary request: 温柔春雨和翠绿灵光同时滋养三只小巧仙家灵物：树灵、石灵和灵禽，草木枝芽抽生，群体生机赐福。Style: refined painterly Chinese fantasy illustration, subtle ink brush textures, clear readable central silhouette, rich atmospheric depth, restrained warm glow, elegant ancient aesthetic. Composition: landscape 4:3, main subject within central 75%, no card frame, no UI, no letters, no words, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-8c9563a5-23e5-4aa3-910e-f9fe57d796b9.png",
+      "destination": "assets/cards/generated/wood_spring_blessing.webp"
+    },
+    {
+      "id": "wood_spring_mulberry_card",
+      "kind": "card",
+      "prompt": "Use case: stylized-concept. Asset type: landscape card art for Chinese xianxia Five Elements card game. Primary request: 一株古雅小灵桑，树干有温柔含蓄的面容，枝叶温润，碧绿灵露源源流向树外，持续回春。Style: refined painterly Chinese fantasy illustration, subtle ink brush textures, clear readable central silhouette, rich atmospheric depth, restrained warm glow, elegant ancient aesthetic. Composition: landscape 4:3, main subject within central 75%, no card frame, no UI, no letters, no words, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-2754e19f-de7f-4edf-aea1-a7e08533cb7a.png",
+      "destination": "assets/cards/generated/wood_spring_mulberry_card.webp"
+    },
+    {
+      "id": "fire_burn_pact",
+      "kind": "card",
+      "prompt": "Use case: stylized-concept. Asset type: landscape card art for Chinese xianxia Five Elements card game. Primary request: 赤红无文字契印燃烧，一只仙家灵物轮廓散成流火，沿断裂契线扑向远方，献祭灵契转为火势。Style: refined painterly Chinese fantasy illustration, subtle ink brush textures, clear readable central silhouette, rich atmospheric depth, restrained warm glow, elegant ancient aesthetic. Composition: landscape 4:3, main subject within central 75%, no card frame, no UI, no letters, no words, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-49b409fb-f2bd-4abc-90ad-ba3c301943e1.png",
+      "destination": "assets/cards/generated/fire_burn_pact.webp"
+    },
+    {
+      "id": "fire_ash_luan_card",
+      "kind": "card",
+      "prompt": "Use case: stylized-concept. Asset type: landscape card art for Chinese xianxia Five Elements card game. Primary request: 轻薄细长的赤色鸾鸟，羽缘化为灰烬，胸中明亮火核，散羽如燃烧小刃，灵动仙侠灵禽。Style: refined painterly Chinese fantasy illustration, subtle ink brush textures, clear readable central silhouette, rich atmospheric depth, restrained warm glow, elegant ancient aesthetic. Composition: landscape 4:3, main subject within central 75%, no card frame, no UI, no letters, no words, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-cae24b31-149c-4006-9407-b81d475798e8.png",
+      "destination": "assets/cards/generated/fire_ash_luan_card.webp"
+    },
+    {
+      "id": "earth_seek_vein",
+      "kind": "card",
+      "prompt": "Use case: stylized-concept. Asset type: landscape card art for Chinese xianxia Five Elements card game. Primary request: 古装仙家行者把手掌按在古老岩壁上，金棕地脉延伸，石印和重器轮廓从岩层浮现，勘龙寻脉。Style: refined painterly Chinese fantasy illustration, subtle ink brush textures, clear readable central silhouette, rich atmospheric depth, restrained warm glow, elegant ancient aesthetic. Composition: landscape 4:3, main subject within central 75%, no card frame, no UI, no letters, no words, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-380bbf4a-6008-4fb9-b91a-c4582ed76ccc.png",
+      "destination": "assets/cards/generated/earth_seek_vein.webp"
+    },
+    {
+      "id": "earth_mountain_elder_card",
+      "kind": "card",
+      "prompt": "Use case: stylized-concept. Asset type: landscape card art for Chinese xianxia Five Elements card game. Primary request: 石灵老翁怀抱一座小山，拄山岩杖，怀中小山展开成厚重山壁，为身后召唤者挡术，仙侠岩灵。Style: refined painterly Chinese fantasy illustration, subtle ink brush textures, clear readable central silhouette, rich atmospheric depth, restrained warm glow, elegant ancient aesthetic. Composition: landscape 4:3, main subject within central 75%, no card frame, no UI, no letters, no words, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-3a304229-88d8-49c9-b63b-5f9479d1581e.png",
+      "destination": "assets/cards/generated/earth_mountain_elder_card.webp"
+    },
+    {
+      "id": "metal_oath_sword",
+      "kind": "standee",
+      "prompt": "Use case: stylized-concept. Asset type: isolated battlefield summon sprite for Chinese xianxia Five Elements card game. Primary request: 悬空古残剑化为修长金色剑灵，以宽剑身为躯干，环绕三枚小剑胚，锋利而轻盈的仙家剑誓灵体。Style: polished painterly Chinese fantasy illustration, restrained ink brush texture, sharp readable silhouette and detailed materials. Composition: portrait, full body or entire object, centered, silhouette fills most of canvas, all wings/roots/sword tips visible with ample padding, no platform. Constraints: genuinely transparent background, clean alpha edges, no landscape, no floor, no frame, no UI, no letters, no text, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-80f7ddfd-9114-41da-9d9b-cb6e5281a44e.png",
+      "destination": "assets/summons/standee/metal_oath_sword.webp"
+    },
+    {
+      "id": "water_mirror_spirit",
+      "kind": "standee",
+      "prompt": "Use case: stylized-concept. Asset type: isolated battlefield summon sprite for Chinese xianxia Five Elements card game. Primary request: 薄纱状蓝白水蜃灵，空灵贝壳与流云融合，双侧薄纱展开，托起一面小圆形水镜，多色灵光汇成蓝色。Style: polished painterly Chinese fantasy illustration, restrained ink brush texture, sharp readable silhouette and detailed materials. Composition: portrait, full body or entire object, centered, silhouette fills most of canvas, all wings/roots/sword tips visible with ample padding, no platform. Constraints: genuinely transparent background, clean alpha edges, no landscape, no floor, no frame, no UI, no letters, no text, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-74ecd15a-6c59-48b4-82a4-3bc3aded2b5f.png",
+      "destination": "assets/summons/standee/water_mirror_spirit.webp"
+    },
+    {
+      "id": "wood_spring_mulberry",
+      "kind": "standee",
+      "prompt": "Use case: stylized-concept. Asset type: isolated battlefield summon sprite for Chinese xianxia Five Elements card game. Primary request: 小巧古雅灵桑树，树干有温柔含蓄的老者面容，整株枝叶完整，碧绿灵露闪烁，树根悬空。Style: polished painterly Chinese fantasy illustration, restrained ink brush texture, sharp readable silhouette and detailed materials. Composition: portrait, full body or entire object, centered, silhouette fills most of canvas, all wings/roots/sword tips visible with ample padding, no platform. Constraints: genuinely transparent background, clean alpha edges, no landscape, no floor, no frame, no UI, no letters, no text, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-eed607b2-8a82-4e58-a0c1-afc51cbeaf90.png",
+      "destination": "assets/summons/standee/wood_spring_mulberry.webp"
+    },
+    {
+      "id": "fire_ash_luan",
+      "kind": "standee",
+      "prompt": "Use case: stylized-concept. Asset type: isolated battlefield summon sprite for Chinese xianxia Five Elements card game. Primary request: 轻薄细长的赤色鸾鸟，全身完整，双翼展开，羽缘化为灰烬，胸中明亮火核，三根散羽如燃烧小刃。Style: polished painterly Chinese fantasy illustration, restrained ink brush texture, sharp readable silhouette and detailed materials. Composition: portrait, full body or entire object, centered, silhouette fills most of canvas, all wings/roots/sword tips visible with ample padding, no platform. Constraints: genuinely transparent background, clean alpha edges, no landscape, no floor, no frame, no UI, no letters, no text, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-5320002c-94b8-491c-b754-3c2cbd4ff8f6.png",
+      "destination": "assets/summons/standee/fire_ash_luan.webp"
+    },
+    {
+      "id": "earth_mountain_elder",
+      "kind": "standee",
+      "prompt": "Use case: stylized-concept. Asset type: isolated battlefield summon sprite for Chinese xianxia Five Elements card game. Primary request: 身形紧凑的石灵老翁，怀抱一座翠苔小山，拄一支山岩杖，粗粝岩石面容慈祥，肩上苔藓，稳重厚实。Style: polished painterly Chinese fantasy illustration, restrained ink brush texture, sharp readable silhouette and detailed materials. Composition: portrait, full body or entire object, centered, silhouette fills most of canvas, all wings/roots/sword tips visible with ample padding, no platform. Constraints: genuinely transparent background, clean alpha edges, no landscape, no floor, no frame, no UI, no letters, no text, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-2256be2e-3020-4d81-baaf-1bb7575e6743.png",
+      "destination": "assets/summons/standee/earth_mountain_elder.webp"
+    }
+  ]
+}

@@ -17,6 +17,11 @@ var enemy_cost_aura := 0
 var enemy_qi_gain_reduction := 0
 var printed_hp := 15
 var art_flip_h := false
+var after_spell: Dictionary = {}
+var death_effects: Array = []
+var intercept_spell := false
+var spell_trigger_turn := -1
+var intercept_turn := -1
 
 func setup(data: Dictionary) -> void:
 	id = str(data["id"])
@@ -34,15 +39,20 @@ func setup(data: Dictionary) -> void:
 	turn_start_effects = data.get("turn_start", []).duplicate(true)
 	turn_end_effects = data.get("turn_end", []).duplicate(true)
 	heal_effects = data.get("on_heal", []).duplicate(true)
+	after_spell = data.get("after_spell", {}).duplicate(true)
+	death_effects = data.get("on_death", []).duplicate(true)
+	intercept_spell = bool(data.get("intercept_spell", false))
 	enemy_cost_aura = int(data.get("enemy_cost_aura", 0))
 	enemy_qi_gain_reduction = maxi(0, int(data.get("enemy_qi_gain_reduction", 0)))
 
 func snapshot() -> Summon:
 	var copy := Summon.new()
-	for property in ["id", "art_id", "card_id", "display_name", "element", "max_hp", "hp", "art_scale", "enemy_cost_aura", "enemy_qi_gain_reduction", "printed_hp", "art_flip_h"]:
+	for property in ["id", "art_id", "card_id", "display_name", "element", "max_hp", "hp", "art_scale", "enemy_cost_aura", "enemy_qi_gain_reduction", "printed_hp", "art_flip_h", "intercept_spell", "spell_trigger_turn", "intercept_turn"]:
 		copy.set(property, get(property))
 	copy.spawn_effects = spawn_effects.duplicate(true)
 	copy.turn_start_effects = turn_start_effects.duplicate(true)
 	copy.turn_end_effects = turn_end_effects.duplicate(true)
 	copy.heal_effects = heal_effects.duplicate(true)
+	copy.after_spell = after_spell.duplicate(true)
+	copy.death_effects = death_effects.duplicate(true)
 	return copy

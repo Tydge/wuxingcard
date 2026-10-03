@@ -78,10 +78,11 @@ static func status_value(actor: Combatant, opponent: Combatant) -> float:
 static func summon_value(summoned: Summon) -> float:
 	var value := 6.0 + summoned.hp * 0.2
 	value += summoned.enemy_qi_gain_reduction * 4.0
-	for effect in summoned.turn_start_effects + summoned.turn_end_effects:
+	if summoned.intercept_spell: value += 7.0
+	for effect in summoned.turn_start_effects + summoned.turn_end_effects + summoned.after_spell.get("effects", []) + summoned.death_effects:
 		match effect["type"]:
 			"gain_energy": value += int(effect.get("amount", 1)) * 4.0
-			"draw": value += 5.0
+			"draw", "discover": value += 5.0
 			"damage", "heal", "heal_summon": value += int(effect.get("amount", 0))
 			"status": value += int(effect.get("stacks", 0)) * 2.5
 	return value

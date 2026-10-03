@@ -1336,5 +1336,307 @@
         "hp": 28
       }
     ]
+  },
+  {
+    "id": "metal_oath_sword",
+    "card_id": "metal_oath_sword_card",
+    "name": "铸誓剑灵",
+    "element": "metal",
+    "hp": 18,
+    "on_spawn": [],
+    "turn_start": [],
+    "turn_end": [],
+    "after_spell": {
+      "element": "metal",
+      "effects": [
+        {
+          "type": "status",
+          "target": "self",
+          "status": "strong_attack",
+          "stacks": 4,
+          "turns": 0
+        }
+      ]
+    },
+    "art_flip_h": true,
+    "upgrades": [
+      {
+        "hp": 22,
+        "on_spawn": [],
+        "turn_start": [],
+        "turn_end": [],
+        "after_spell": {
+          "element": "metal",
+          "effects": [
+            {
+              "type": "status",
+              "target": "self",
+              "status": "strong_attack",
+              "stacks": 5,
+              "turns": 0
+            }
+          ]
+        }
+      },
+      {
+        "hp": 26,
+        "on_spawn": [],
+        "turn_start": [],
+        "turn_end": [],
+        "after_spell": {
+          "element": "metal",
+          "effects": [
+            {
+              "type": "status",
+              "target": "self",
+              "status": "strong_attack",
+              "stacks": 6,
+              "turns": 0
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "water_mirror_spirit",
+    "card_id": "water_mirror_spirit_card",
+    "name": "镜澜蜃灵",
+    "element": "water",
+    "hp": 12,
+    "on_spawn": [],
+    "turn_start": [],
+    "turn_end": [
+      {
+        "type": "discover",
+        "target": "self",
+        "amount": 2,
+        "pool": {
+          "elements": [
+            "water"
+          ],
+          "card_types": [
+            "spell"
+          ]
+        },
+        "pool_label": "水系法术",
+        "condition": {
+          "type": "spell_elements_at_least",
+          "amount": 2
+        }
+      }
+    ],
+    "art_flip_h": true,
+    "upgrades": [
+      {
+        "hp": 15,
+        "on_spawn": [],
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "discover",
+            "target": "self",
+            "amount": 3,
+            "pool": {
+              "elements": [
+                "water"
+              ],
+              "card_types": [
+                "spell"
+              ]
+            },
+            "pool_label": "水系法术",
+            "condition": {
+              "type": "spell_elements_at_least",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "hp": 18,
+        "on_spawn": [],
+        "turn_start": [],
+        "turn_end": [
+          {
+            "type": "discover",
+            "target": "self",
+            "amount": 4,
+            "pool": {
+              "elements": [
+                "water"
+              ],
+              "card_types": [
+                "spell"
+              ]
+            },
+            "pool_label": "水系法术",
+            "condition": {
+              "type": "spell_elements_at_least",
+              "amount": 2
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "wood_spring_mulberry",
+    "card_id": "wood_spring_mulberry_card",
+    "name": "回春灵桑",
+    "element": "wood",
+    "hp": 14,
+    "on_spawn": [],
+    "turn_start": [
+      {
+        "type": "status",
+        "target": "self",
+        "status": "regen",
+        "stacks": 3,
+        "turns": 0
+      }
+    ],
+    "turn_end": [],
+    "art_flip_h": true,
+    "upgrades": [
+      {
+        "hp": 18,
+        "on_spawn": [],
+        "turn_start": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "regen",
+            "stacks": 4,
+            "turns": 0
+          }
+        ],
+        "turn_end": []
+      },
+      {
+        "hp": 22,
+        "on_spawn": [],
+        "turn_start": [
+          {
+            "type": "status",
+            "target": "self",
+            "status": "regen",
+            "stacks": 5,
+            "turns": 0
+          }
+        ],
+        "turn_end": []
+      }
+    ]
+  },
+  {
+    "id": "fire_ash_luan",
+    "card_id": "fire_ash_luan_card",
+    "name": "烬羽鸾",
+    "element": "fire",
+    "hp": 8,
+    "on_spawn": [],
+    "turn_start": [],
+    "turn_end": [],
+    "after_spell": {
+      "element": "fire",
+      "effects": [
+        {
+          "type": "damage",
+          "target": "random_opponent",
+          "amount": 2,
+          "element": "fire"
+        }
+      ]
+    },
+    "on_death": [
+      {
+        "type": "damage",
+        "target": "random_opponent",
+        "amount": 5,
+        "element": "fire"
+      }
+    ],
+    "art_flip_h": true,
+    "upgrades": [
+      {
+        "hp": 10,
+        "on_spawn": [],
+        "turn_start": [],
+        "turn_end": [],
+        "after_spell": {
+          "element": "fire",
+          "effects": [
+            {
+              "type": "damage",
+              "target": "random_opponent",
+              "amount": 3,
+              "element": "fire"
+            }
+          ]
+        },
+        "on_death": [
+          {
+            "type": "damage",
+            "target": "random_opponent",
+            "amount": 6,
+            "element": "fire"
+          }
+        ]
+      },
+      {
+        "hp": 12,
+        "on_spawn": [],
+        "turn_start": [],
+        "turn_end": [],
+        "after_spell": {
+          "element": "fire",
+          "effects": [
+            {
+              "type": "damage",
+              "target": "random_opponent",
+              "amount": 4,
+              "element": "fire"
+            }
+          ]
+        },
+        "on_death": [
+          {
+            "type": "damage",
+            "target": "random_opponent",
+            "amount": 7,
+            "element": "fire"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "earth_mountain_elder",
+    "card_id": "earth_mountain_elder_card",
+    "name": "抱岳石翁",
+    "element": "earth",
+    "hp": 22,
+    "on_spawn": [],
+    "turn_start": [],
+    "turn_end": [],
+    "intercept_spell": true,
+    "art_flip_h": true,
+    "upgrades": [
+      {
+        "hp": 27,
+        "on_spawn": [],
+        "turn_start": [],
+        "turn_end": [],
+        "intercept_spell": true
+      },
+      {
+        "hp": 32,
+        "on_spawn": [],
+        "turn_start": [],
+        "turn_end": [],
+        "intercept_spell": true
+      }
+    ]
   }
 ]

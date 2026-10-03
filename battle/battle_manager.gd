@@ -57,6 +57,10 @@ var pending_choice: Dictionary = {}
 var choice_scoring := false
 # Used only to recover an endless battle from its saved action journal.
 var replay_choice_indices: Array[int] = []
+var card_instance_serial := 0
+var damage_depth := 0
+var death_queue: Array[Dictionary] = []
+var flushing_deaths := false
 
 func _ready() -> void:
 	load_content()
@@ -289,6 +293,12 @@ func start_battle(enemy_id: String, deck_id: String, seed_value: int = -1, custo
 	if not custom_deck.is_empty() and not DeckStore.new(cards).problem(custom_deck.get("cards", [])).is_empty(): return
 	if options.has("enemy_deck") and not DeckStore.new(cards).problem(options["enemy_deck"]).is_empty(): return
 	battle_generation += 1
+	for id: String in cards.keys():
+		if cards[id].get("battle_only", false): cards.erase(id)
+	card_instance_serial = 0
+	death_queue.clear()
+	damage_depth = 0
+	flushing_deaths = false
 	pending_choice.clear()
 	choice_completed.emit()
 	var generation := battle_generation
@@ -453,6 +463,8 @@ func draw_card(actor: Combatant) -> void:
 func _start_turn(actor: Combatant) -> void:
 	var generation := battle_generation
 	actor.own_turn_count += 1
+	actor.last_card_element = ""
+	actor.spell_elements.clear()
 	actor.artifact_flags = {"card": false, "energy": false, "health": false}
 	var opposing := enemy if actor == player else player
 	opposing.artifact_flags["enemy_turn_hit"] = false
@@ -504,6 +516,7 @@ func _trigger_summons(actor: Combatant, timing: String = "turn_start") -> void:
 			continue
 		var effects: Array = summoned.turn_start_effects if timing == "turn_start" else summoned.turn_end_effects
 		for effect in effects:
+			if not _condition_met(effect, actor): continue
 			var resolved: Dictionary = effect.duplicate(true)
 			if not resolved.has("target"):
 				resolved["target"] = "self"
@@ -525,6 +538,8 @@ func _trigger_summons(actor: Combatant, timing: String = "turn_start") -> void:
 			if actor.summons[slot] != summoned:
 				break
 			_resolve_effect(actor, opponent, resolved, summoned.element, resolved.get("selection", {}))
+			await wait_for_choice()
+			if generation != battle_generation: return
 			if summon_presenter.is_valid():
 				changed.emit()
 				await summon_presenter.call(_side(actor), slot, summoned, resolved, "resolved")
@@ -567,6 +582,8 @@ func highest_life_target(owner: Combatant) -> Dictionary:
 
 func _condition_met(effect: Dictionary, actor: Combatant, energy_snapshot: Dictionary = {}) -> bool:
 	var condition: Dictionary = effect.get("condition", {})
+	if condition.get("type") == "previous_card_element": return actor.last_card_element == condition.get("element")
+	if condition.get("type") == "spell_elements_at_least": return actor.spell_elements.size() >= int(condition.get("amount", 2))
 	if condition.is_empty(): return true
 	if condition.get("type", "") == "hand_at_most": return actor.hand.size() <= int(condition.get("amount", 0))
 	if condition.get("type", "") == "energy_at_least":
@@ -591,7 +608,7 @@ func card_target_mode(card: Dictionary) -> String:
 	for effect in card["effects"]:
 		if effect["type"] == "summon":
 			return "slot"
-		if effect["type"] == "grow_summon":
+		if effect["type"] in ["grow_summon", "return_summon", "sacrifice_summon"]:
 			return "ally_summon"
 		if effect["type"] == "damage":
 			if effect.get("scope", "") == "all_summons": return "all_summons"
@@ -610,7 +627,9 @@ func valid_card_target(actor: Combatant, card: Dictionary, selection: Dictionary
 		return kind == "slot" and slot >= 0 and slot < actor.summons.size() and actor.summons[slot] == null and (not summon_requires_target(card) or _valid_enemy_selection(actor, selection.get("entrance_target", {})))
 	if mode in ["ally_summon", "enemy_summons"]:
 		var owner: Combatant = actor if mode == "ally_summon" else enemy if actor == player else player
-		return kind == "summon" and slot >= 0 and slot < owner.summons.size() and owner.summons[slot] != null and str(selection.get("side", _side(owner))) == _side(owner)
+		var valid := kind == "summon" and slot >= 0 and slot < owner.summons.size() and owner.summons[slot] != null and str(selection.get("side", _side(owner))) == _side(owner)
+		if valid and card["effects"][0]["type"] == "return_summon": return cards.has(owner.summons[slot].card_id)
+		return valid
 	var side := str(selection.get("side", "enemy" if actor == player else "player"))
 	if side not in damage_target_sides(actor, card): return false
 	var owner := player if side == "player" else enemy
@@ -690,6 +709,7 @@ func simulation_copy() -> BattleManager:
 	copy.round_number = round_number
 	copy.first_side = first_side
 	copy.choice_scoring = choice_scoring
+	copy.card_instance_serial = card_instance_serial
 	copy.rng.seed = rng.seed
 	copy.rng.state = rng.state
 	return copy
@@ -724,17 +744,34 @@ func _absorb_shield(target: Combatant, absorbed: int) -> void:
 	for i in range(target.statuses.size() - 1, -1, -1):
 		if target.statuses[i]["id"] == "shield" and int(target.statuses[i]["stacks"]) == 0: target.statuses.remove_at(i)
 
+func spell_damage_recipient(actor: Combatant, card: Dictionary, selection: Dictionary) -> Dictionary:
+	if card_target_mode(card) != "damage" or selection.get("kind") != "hero": return selection
+	var opponent := enemy if actor == player else player
+	if selection.get("side", _side(opponent)) != _side(opponent): return selection
+	var eligible := false
+	for effect in card["effects"]:
+		if effect["type"] == "damage" and not effect.has("target") and effect.get("scope", "single") == "single" and _condition_met(effect, actor): eligible = true
+	if not eligible: return selection
+	for slot in SUMMON_TRIGGER_ORDER:
+		var guard: Summon = opponent.summons[slot]
+		if guard != null and guard.intercept_spell and guard.intercept_turn != actor.own_turn_count:
+			return {"kind":"summon", "side":_side(opponent), "slot":slot}
+	return selection
+
 func preview_damage_segments(actor: Combatant, card: Dictionary, selection: Dictionary) -> Array[int]:
 	var segments: Array[int] = []
-	if card_target_mode(card) not in ["damage", "enemy_summons", "all_summons"] or not valid_card_target(actor, card, selection): return segments
+	var sacrifice: bool = card["effects"][0]["type"] == "sacrifice_summon"
+	if (not sacrifice and card_target_mode(card) not in ["damage", "enemy_summons", "all_summons"]) or not valid_card_target(actor, card, selection): return segments
 	var copy := simulation_copy()
 	var source: Combatant = copy.player if actor == player else copy.enemy
 	var opponent: Combatant = copy.enemy if actor == player else copy.player
-	var selected_side := str(selection.get("side", _side(enemy if actor == player else player)))
+	var selected_side := _side(opponent) if sacrifice else str(selection.get("side", _side(enemy if actor == player else player)))
+	var recipient := spell_damage_recipient(actor, card, selection)
+	var preview_kind := "hero" if sacrifice else str(recipient.get("kind", "hero"))
 	copy.damage_segment_resolved.connect(func(hits: Array):
 		var selected_damage := 0
 		for hit in hits:
-			if hit["side"] == selected_side and hit["kind"] == selection.get("kind", "hero") and (hit["kind"] == "hero" or int(hit["slot"]) == int(selection["slot"])):
+			if hit["side"] == selected_side and hit["kind"] == preview_kind and (hit["kind"] == "hero" or int(hit["slot"]) == int(recipient["slot"])):
 				selected_damage += int(hit["amount"])
 		segments.append(selected_damage))
 	var index := _simulation_card(copy, source, card)
@@ -754,6 +791,19 @@ func _play_card(actor: Combatant, target: Combatant, index: int, selection: Dict
 	var card: Dictionary = cards[card_id]
 	if not actor.can_pay(card) or not valid_card_target(actor, card, selection):
 		return false
+	selection = selection.duplicate()
+	if card_target_mode(card) == "damage" and selection.get("kind") == "hero" and selection.get("side", _side(target)) == _side(target):
+		for slot in SUMMON_TRIGGER_ORDER:
+			var guard: Summon = target.summons[slot]
+			if guard == null or not guard.intercept_spell or guard.intercept_turn == actor.own_turn_count: continue
+			var eligible := false
+			for effect in card["effects"]:
+				if effect["type"] == "damage" and not effect.has("target") and effect.get("scope", "single") == "single" and _condition_met(effect, actor): eligible = true
+			if not eligible: break
+			guard.intercept_turn = actor.own_turn_count
+			selection["damage_redirect"] = {"kind":"summon", "side":_side(target), "slot":slot, "summon":guard}
+			_report("%s 替召唤者承受此法术" % guard.display_name, _side(target), "summon_guard", guard.element)
+			break
 	hand_card_removed.emit(_side(actor), card_id, index, "play")
 	actor.hand.remove_at(index)
 	var pre_payment_energy := actor.energy.duplicate()
@@ -765,7 +815,11 @@ func _play_card(actor: Combatant, target: Combatant, index: int, selection: Dict
 		_on_card_played(actor)
 		if paid_cost == 0: _trigger_artifacts(actor, "zero_cost_card")
 	_resolve_sequence(actor, target, card["effects"], card["element"], selection, pre_payment_energy, func():
-		actor.discard_pile.append(card_id)
+		actor.discard_pile.append(_canonical_card_id(card_id))
+		actor.last_card_element = str(card["element"])
+		if card_target_mode(card) != "slot":
+			actor.spell_elements[card["element"]] = true
+			_trigger_after_spell(actor, str(card["element"]))
 		played_cards += 1
 		_check_finish()
 		changed.emit())
@@ -791,9 +845,66 @@ func _take_choice_card(actor: Combatant, index: int) -> void:
 	actor.draw_pile.remove_at(index)
 	_receive_card(actor, id, "观想")
 
+func _canonical_card_id(id: String) -> String:
+	return str(cards.get(id, {}).get("canonical_id", id))
+
+func _discounted_card(actor: Combatant, id: String, amount: int, this_turn: bool = false) -> String:
+	if amount <= 0 or actor.hand.size() >= 8: return _canonical_card_id(id)
+	card_instance_serial += 1
+	var instance := "%s@%d" % [_canonical_card_id(id), card_instance_serial]
+	var entry: Dictionary = cards[id].duplicate(true)
+	entry["id"] = instance
+	entry["canonical_id"] = _canonical_card_id(id)
+	entry["battle_only"] = true
+	entry["cost_reduction"] = int(entry.get("cost_reduction", 0)) + amount
+	entry["discount_turn"] = actor.own_turn_count if this_turn else -1
+	cards[instance] = entry
+	return instance
+
+func _receive_discovery(actor: Combatant, id: String, discount: int) -> void:
+	_receive_card(actor, _discounted_card(actor, id, discount, true), "发现")
+
+func _trigger_after_spell(actor: Combatant, element: String) -> void:
+	var opponent := enemy if actor == player else player
+	for slot in SUMMON_TRIGGER_ORDER:
+		var summoned: Summon = actor.summons[slot]
+		if summoned == null or summoned.after_spell.get("element") != element or summoned.spell_trigger_turn == actor.own_turn_count: continue
+		summoned.spell_trigger_turn = actor.own_turn_count
+		for effect in summoned.after_spell.get("effects", []):
+			if phase in FINISHED_PHASES or actor.summons[slot] != summoned: break
+			if effect.get("target") == "random_opponent":
+				effect = effect.duplicate(true)
+				var aims := _living_targets(opponent)
+				if aims.is_empty(): continue
+				effect["selection"] = aims[rng.randi_range(0, aims.size() - 1)]
+			summon_triggered.emit(_side(actor), slot, "after_spell", effect)
+			_resolve_effect(actor, opponent, effect, summoned.element)
+
+func _flush_deaths() -> void:
+	if damage_depth > 0 or flushing_deaths: return
+	flushing_deaths = true
+	# All deaths in one area segment are removed before any printed death effect.
+	while not death_queue.is_empty():
+		var batch := death_queue.duplicate()
+		death_queue.clear()
+		batch.sort_custom(func(a: Dictionary, b: Dictionary): return (0 if a["owner"] == player else 3) + int(a["slot"]) < (0 if b["owner"] == player else 3) + int(b["slot"]))
+		for item in batch:
+			if _check_finish():
+				death_queue.clear()
+				flushing_deaths = false
+				return
+			var owner: Combatant = item["owner"]
+			var summoned: Summon = item["summon"]
+			var opponent := enemy if owner == player else player
+			for effect in summoned.death_effects:
+				if phase in FINISHED_PHASES: break
+				summon_triggered.emit(_side(owner), int(item["slot"]), "on_death", effect)
+				_resolve_effect(owner, opponent, effect, summoned.element)
+	flushing_deaths = false
+
 func _receive_card(actor: Combatant, id: String, reason: String) -> void:
 	if actor.hand.size() >= 8:
-		actor.discard_pile.append(id)
+		actor.discard_pile.append(_canonical_card_id(id))
 		_report("%s %s：手牌已满，卡牌进入弃牌堆" % [actor.display_name, reason], _side(actor), "draw")
 	else:
 		actor.hand.append(id)
@@ -812,19 +923,19 @@ func _contemplate(actor: Combatant, amount: int) -> void:
 	else:
 		_take_choice_card(actor, _choose_contemplation(actor, candidates))
 
-func _discover(actor: Combatant, amount: int, filters: Dictionary = {}) -> void:
+func _discover(actor: Combatant, amount: int, filters: Dictionary = {}, discount: int = 0) -> void:
 	var pool: Array[String] = ContentCatalog.card_pool(cards, filters)
 	var candidates: Array = []
 	for i in mini(maxi(0, amount), pool.size()):
 		candidates.append(pool.pop_at(rng.randi_range(0, pool.size() - 1)))
 	if candidates.is_empty(): return
 	if actor == player and candidates.size() > 1 and not replay_choice_indices.is_empty():
-		_receive_card(actor, candidates[clampi(replay_choice_indices.pop_front(), 0, candidates.size() - 1)], "发现")
+		_receive_discovery(actor, candidates[clampi(replay_choice_indices.pop_front(), 0, candidates.size() - 1)], discount)
 	elif actor == player and interactive_choices and candidates.size() > 1:
-		pending_choice = {"generation":battle_generation, "kind":"discover", "candidates":candidates}
+		pending_choice = {"generation":battle_generation, "kind":"discover", "candidates":candidates, "discount":discount}
 		call_deferred("_announce_choice")
 	else:
-		_receive_card(actor, candidates[_choose_contemplation(actor, candidates)], "发现")
+		_receive_discovery(actor, candidates[_choose_contemplation(actor, candidates)], discount)
 
 func _announce_choice() -> void:
 	if pending_choice.is_empty() or int(pending_choice["generation"]) != battle_generation: return
@@ -836,9 +947,10 @@ func choose_card(index: int) -> bool:
 	if index < 0 or index >= pending_choice["candidates"].size(): return false
 	var continuation: Dictionary = pending_choice.get("continuation", {})
 	var kind := str(pending_choice.get("kind", "contemplate"))
+	var discount := int(pending_choice.get("discount", 0))
 	var id: String = pending_choice["candidates"][index]
 	pending_choice.clear()
-	if kind == "discover": _receive_card(player, id, "发现")
+	if kind == "discover": _receive_discovery(player, id, discount)
 	else: _take_choice_card(player, index)
 	if not continuation.is_empty():
 		_resolve_sequence(continuation["actor"], continuation["opponent"], continuation["effects"], continuation["element"], continuation["selection"], continuation["energy"], continuation["complete"])
@@ -898,6 +1010,9 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 		"damage":
 			var attack_element := str(effect.get("element", card_element))
 			var resolved_selection := selection
+			if selection.has("damage_redirect") and not effect.has("target") and effect.get("scope", "single") == "single":
+				resolved_selection = selection["damage_redirect"]
+				if opponent.summons[int(resolved_selection["slot"])] != resolved_selection["summon"]: return
 			if effect.get("target", "") == "self": resolved_selection = {"kind": "hero", "side": _side(actor)}
 			elif effect.get("target", "") == "opponent": resolved_selection = {"kind": "hero", "side": _side(opponent)}
 			if effect.get("target", "") == "random_opponent":
@@ -914,6 +1029,7 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 			# Consume only the attack states used by this segment, before reactions
 			# can add states intended for the next attack. Area hits share the plan.
 			if not plan.is_empty(): _consume_attack_statuses(actor)
+			damage_depth += 1
 			var hits: Array[Dictionary] = []
 			for hit in plan:
 				var dealt: int
@@ -929,6 +1045,8 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 				if life_before > 0 and dealt >= life_before and actor.hp > 0:
 					_resolve_sequence(actor, opponent, effect.get("on_kill", []), card_element)
 			damage_segment_resolved.emit(hits)
+			damage_depth -= 1
+			_flush_deaths()
 			_check_finish()
 		"summon":
 			var slot := int(selection["slot"])
@@ -949,6 +1067,28 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 				elif resolved.get("target") == "selected_opponent": resolved["selection"] = selection.get("entrance_target", {})
 				summon_triggered.emit(_side(actor), slot, "on_spawn", resolved)
 				_resolve_effect(actor, opponent, resolved, summoned.element, resolved.get("selection", {}))
+		"return_summon":
+			var slot := int(selection.get("slot", -1))
+			if slot < 0 or slot >= actor.summons.size() or actor.summons[slot] == null: return
+			var summoned: Summon = actor.summons[slot]
+			if not cards.has(summoned.card_id): return
+			actor.summons[slot] = null
+			_sync_cost_auras()
+			# The summon contract has resolved as a spell; returning the spirit
+			# produces its same-grade contract without a death event.
+			_receive_card(actor, _discounted_card(actor, summoned.card_id, int(effect.get("cost_reduction", 0))), "收回")
+			summon_event.emit(_side(actor), slot, "return", summoned.element, 0, "")
+		"sacrifice_summon":
+			var slot := int(selection.get("slot", -1))
+			if slot < 0 or slot >= actor.summons.size() or actor.summons[slot] == null: return
+			var summoned: Summon = actor.summons[slot]
+			var base := mini(int(effect["base_cap"]), floori(summoned.max_hp * float(effect["multiplier"])))
+			summoned.hp = 0
+			actor.summons[slot] = null
+			_sync_cost_auras()
+			_finish_summon_death(actor, slot, summoned, card_element)
+			_flush_deaths()
+			if not _check_finish(): _resolve_effect(actor, opponent, {"type":"damage", "target":"opponent", "amount":base, "element":card_element}, card_element)
 		"heal_selected":
 			var resolved := effect.duplicate(true)
 			resolved["type"] = "heal_summon" if selection.get("kind", "") == "summon" else "heal"
@@ -997,7 +1137,7 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 					break
 				draw_card(target)
 		"contemplate": _contemplate(target, amount)
-		"discover": _discover(target, amount, effect.get("pool", {}))
+		"discover": _discover(target, amount, effect.get("pool", {}), int(effect.get("cost_reduction", 0)))
 		"generate_card":
 			var pool: Array[String] = []
 			for entry: Dictionary in ContentCatalog.base_entries(cards):
@@ -1066,7 +1206,7 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 				var random_index := rng.randi_range(0, target.hand.size() - 1)
 				hand_card_removed.emit(_side(target), target.hand[random_index], random_index, "discard")
 				var lost_card: String = target.hand.pop_at(random_index)
-				target.discard_pile.append(lost_card)
+				target.discard_pile.append(_canonical_card_id(lost_card))
 				_report("%s 被弃掉 1 张手牌" % target.display_name, _side(target), "discard")
 
 func apply_damage(source: Combatant, target: Combatant, base_amount: int, element: String) -> int:
@@ -1132,13 +1272,18 @@ func _apply_summon_hit(source: Combatant, owner: Combatant, slot: int, raw: int,
 		owner.summons[slot] = null
 		_sync_cost_auras()
 	if dealt > 0 and owner.hp > 0 and phase not in FINISHED_PHASES: _trigger_artifacts(owner, "ally_summon_hit")
-	if destroyed:
-		_trigger_artifacts(owner, "ally_summon_death")
-		var opponent: Combatant = enemy if owner == player else player
-		if opponent.hp > 0: _trigger_artifacts(opponent, "enemy_summon_death")
-		_report("%s 被摧毁，槽位 %d 空出" % [summoned.display_name, slot + 1], _side(owner), "summon_destroy", element)
-		summon_event.emit(_side(owner), slot, "destroy", element, 0, "")
+	if destroyed: _finish_summon_death(owner, slot, summoned, element)
 	return dealt
+
+func _finish_summon_death(owner: Combatant, slot: int, summoned: Summon, element: String) -> void:
+	_trigger_artifacts(owner, "ally_summon_death")
+	var opponent: Combatant = enemy if owner == player else player
+	if opponent.hp > 0: _trigger_artifacts(opponent, "enemy_summon_death")
+	_report("%s 被摧毁，槽位 %d 空出" % [summoned.display_name, slot + 1], _side(owner), "summon_destroy", element)
+	summon_event.emit(_side(owner), slot, "destroy", element, 0, "")
+	if not summoned.death_effects.is_empty():
+		death_queue.append({"owner":owner, "slot":slot, "summon":summoned})
+		_flush_deaths()
 
 func _end_turn(actor: Combatant) -> void:
 	var generation := battle_generation
@@ -1167,6 +1312,9 @@ func _end_turn(actor: Combatant) -> void:
 	_trigger_artifacts(actor, "turn_end")
 	if phase in FINISHED_PHASES: return
 	await _trigger_summons(actor, "turn_end")
+	for i in actor.hand.size():
+		var entry: Dictionary = cards[actor.hand[i]]
+		if entry.get("battle_only", false) and int(entry.get("discount_turn", -1)) >= 0: actor.hand[i] = _canonical_card_id(actor.hand[i])
 	if generation != battle_generation or phase in ["menu", "victory", "defeat", "tie"]:
 		return
 	_check_finish()

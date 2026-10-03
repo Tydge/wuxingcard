@@ -1542,7 +1542,7 @@ func _show_drag_hints(card: Dictionary) -> void:
 		marker.set_meta("selection", choice["selection"])
 		fx_layer.add_child(marker)
 		drag_hints.append(marker)
-	if mode in ["damage", "all_summons"]:
+	if mode in ["damage", "all_summons"] or card["effects"][0]["type"] == "sacrifice_summon":
 		damage_preview = _panel(fx_layer, Rect2(Vector2.ZERO, Vector2(200, 58 if PlatformUI.is_touch() else 42)), Color("#09121ff2"), GOLD, 8)
 		damage_preview.z_index = 20
 		damage_preview.visible = false
@@ -1579,6 +1579,9 @@ func _update_drag_hints(card: Dictionary, pointer: Vector2) -> void:
 		total += damage
 	var value := parts[0] if parts.size() == 1 else "%s=%d" % ["+".join(parts), total]
 	var caption := "预计伤害 " + value
+	if card["effects"][0]["type"] == "sacrifice_summon": caption = "对手承伤 " + value
+	var recipient := manager.spell_damage_recipient(manager.player, card, selection)
+	if recipient != selection: caption = "石翁承伤 " + value
 	var width := clampf(44.0 + caption.length() * (22.0 if PlatformUI.is_touch() else 12.0), 180.0, 520.0)
 	var height := 58.0 if PlatformUI.is_touch() else 42.0
 	damage_preview.size = Vector2(width, height)
@@ -2143,7 +2146,7 @@ func _on_summon_event(side: String, slot: int, kind: String, element: String, am
 
 func _on_summon_triggered(side: String, slot: int, timing: String, effect: Dictionary) -> void:
 	if endless_restoring: return
-	if timing not in ["on_spawn", "on_heal"]: return
+	if timing not in ["on_spawn", "on_heal", "after_spell"]: return
 	var owner := manager.player if side == "player" else manager.enemy
 	if slot < 0 or slot >= owner.summons.size(): return
 	var summoned: Summon = owner.summons[slot]

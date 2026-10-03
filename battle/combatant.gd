@@ -26,6 +26,8 @@ var artifact_durability := 0
 var artifact_ready_turn := 0
 var own_turn_count := 0
 var artifact_flags: Dictionary = {}
+var last_card_element := ""
+var spell_elements: Dictionary = {}
 
 func setup(new_id: String, new_name: String, deck: Array, random: RandomNumberGenerator) -> void:
 	id = new_id
@@ -40,6 +42,8 @@ func setup(new_id: String, new_name: String, deck: Array, random: RandomNumberGe
 	artifact_ready_turn = 0
 	own_turn_count = 0
 	artifact_flags.clear()
+	last_card_element = ""
+	spell_elements.clear()
 	energy.clear()
 	for element in BattleRules.ELEMENTS:
 		energy[element] = 0
@@ -128,7 +132,8 @@ func tick_status_durations() -> void:
 			statuses.remove_at(i)
 
 func card_cost(card: Dictionary) -> int:
-	return maxi(0, int(card["cost"]) + card_cost_increase)
+	var reduction := int(card.get("cost_reduction", 0)) if int(card.get("discount_turn", -1)) in [-1, own_turn_count] else 0
+	return maxi(0, maxi(0, int(card["cost"]) - reduction) + card_cost_increase)
 
 func can_pay(card: Dictionary) -> bool:
 	var element: String = card["element"]
@@ -164,9 +169,9 @@ func lose_energy(element: String, amount: int) -> int:
 
 func snapshot() -> Combatant:
 	var copy := Combatant.new()
-	for property in ["id", "display_name", "max_hp", "hp", "qi", "card_cost_increase", "fatigue_level", "artifact_durability", "artifact_ready_turn", "own_turn_count"]:
+	for property in ["id", "display_name", "max_hp", "hp", "qi", "card_cost_increase", "fatigue_level", "artifact_durability", "artifact_ready_turn", "own_turn_count", "last_card_element"]:
 		copy.set(property, get(property))
-	for property in ["energy", "artifacts", "artifact_resistances", "artifact_flags"]:
+	for property in ["energy", "artifacts", "artifact_resistances", "artifact_flags", "spell_elements"]:
 		copy.set(property, get(property).duplicate(true))
 	copy.statuses.assign(statuses.duplicate(true))
 	for property in ["draw_pile", "initial_deck", "hand", "discard_pile"]:

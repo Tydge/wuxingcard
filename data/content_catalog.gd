@@ -31,7 +31,7 @@ static func load_all(path: String) -> Dictionary:
 static func base_entries(known: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for entry: Dictionary in known.values():
-		if int(entry.get("level", 0)) == 0: result.append(entry)
+		if not entry.get("battle_only", false) and int(entry.get("level", 0)) == 0: result.append(entry)
 	return result
 
 # Discover pools are declarative: omitted fields impose no restriction, except
@@ -39,6 +39,7 @@ static func base_entries(known: Dictionary) -> Array[Dictionary]:
 static func card_pool(known: Dictionary, filters: Dictionary = {}) -> Array[String]:
 	var result: Array[String] = []
 	for entry: Dictionary in known.values():
+		if entry.get("battle_only", false): continue
 		if int(entry.get("level", 0)) not in filters.get("levels", [0]): continue
 		if filters.has("elements") and entry["element"] not in filters["elements"]: continue
 		var family := base_id(entry)

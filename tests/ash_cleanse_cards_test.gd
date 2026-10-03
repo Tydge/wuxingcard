@@ -30,7 +30,7 @@ func cast(id: String, selection: Dictionary = {}) -> bool:
 
 func run() -> void:
 	m = BattleManager.new(); m.random_artifacts_enabled = false; root.add_child(m)
-	check(m.cards.size() == 255 and ContentCatalog.base_entries(m.cards).size() == 85, "85 families expand to 255 card versions")
+	check(m.cards.size() == 285 and ContentCatalog.base_entries(m.cards).size() == 95, "95 families expand to 285 card versions")
 	for level in 3:
 		var suffix := "" if level == 0 else "__%d" % level
 		clean()

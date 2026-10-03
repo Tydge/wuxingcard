@@ -23,8 +23,9 @@ def main():
     parser.add_argument('--signing', type=Path, default=Path.home() / '.config/wuxingcard/android-signing.json')
     parser.add_argument('--version-code', type=int)
     parser.add_argument('--checks-report', type=Path, help='Reuse a passing --suite full report for the same runtime, tests and engine')
+    parser.add_argument("--required-test", action="append", help="Explicitly authorized targeted release scope; requires --checks-report. Repeat for every required test.")
     args = parser.parse_args()
-    source_snapshot, checks = ensure_checks(args.godot, args.checks_report)
+    source_snapshot, checks = ensure_checks(args.godot, args.checks_report, args.required_test)
     if not args.signing.is_file():
         raise SystemExit('Android signing configuration is missing; see README Android export instructions.')
     signing = json.loads(args.signing.read_text())

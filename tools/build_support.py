@@ -46,27 +46,33 @@ def check_manifest(snapshot=None):
     return {"fingerprint": fingerprint, "files": entries}
 
 
-def validate_checks(report, fingerprint, engine):
-    """Partial, quick, failing, or differently configured runs never satisfy release gates."""
+def validate_checks(report, fingerprint, engine, required_tests=None):
+    """Full by default; an explicitly requested named scope stays honestly targeted."""
+    suite = [script for script in SUITE if Path(script).stem in set(required_tests or [])] if required_tests else SUITE
+    profile = "targeted" if required_tests else "full"
+    if required_tests and len(suite) != len(set(required_tests)):
+        return False
     if not isinstance(report, dict):
         return False
     results = report.get("results", [])
     if not isinstance(results, list) or not all(isinstance(item, dict) for item in results):
         return False
     return (report.get("schema_version") == 2
-            and report.get("profile") == "full"
+            and report.get("profile") == profile
             and report.get("complete") is True
             and report.get("source_unchanged") is True
             and report.get("check_sha256") == fingerprint
             and report.get("engine") == engine
-            and report.get("suite") == SUITE
-            and [item.get("script") for item in results] == SUITE
+            and report.get("suite") == suite
+            and [item.get("script") for item in results] == suite
             and all(item.get("exit_code") == 0
-                    and item.get("arguments") == test_arguments(item["script"], "full")
+                    and item.get("arguments") == test_arguments(item["script"], profile)
                     for item in results))
 
 
-def ensure_checks(godot, report_path=None):
+def ensure_checks(godot, report_path=None, required_tests=None):
+    if required_tests and not report_path:
+        raise RuntimeError("A targeted release requires an explicit checks report and named scope.")
     snapshot = source_manifest()
     fingerprint = check_manifest(snapshot)["fingerprint"]
     engine = subprocess.check_output([godot, "--version"], text=True).strip()
@@ -76,11 +82,11 @@ def ensure_checks(godot, report_path=None):
             report = json.loads(path.read_text())
         except (ValueError, OSError):
             report = {}
-        if validate_checks(report, fingerprint, engine):
-            print(f"Reusing full regression: {path}", flush=True)
+        if validate_checks(report, fingerprint, engine, required_tests):
+            print(f"Reusing {report['profile']} regression ({len(report['results'])} tests): {path}", flush=True)
             return snapshot, report
     if report_path:
-        raise RuntimeError("A passing full report for the current runtime, tests and engine is required; run check_project.py --suite full.")
+        raise RuntimeError("A passing report matching the requested scope, runtime, tests and engine is required.")
     subprocess.run([sys.executable, str(ROOT / "tools/check_project.py"), "--suite", "full",
                     "--godot", godot, "--output", str(path)], check=True)
     return ensure_checks(godot, path)

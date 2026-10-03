@@ -1,11 +1,11 @@
 {
-  "version": "0.8.0",
-  "release": "新卡牌与仓库卡图修复",
-  "cards": 80,
-  "summons": 26,
+  "version": "0.9.0",
+  "release": "五行新术与灵物",
+  "cards": 95,
+  "summons": 32,
   "artifacts": 30,
-  "card_versions": 240,
-  "summon_versions": 78,
+  "card_versions": 285,
+  "summon_versions": 96,
   "artifact_versions": 90,
   "enemies": 8
 }

@@ -36,7 +36,7 @@ func run() -> void:
 	manager = BattleManager.new()
 	manager.random_artifacts_enabled = false
 	root.add_child(manager)
-	check(manager.cards.size() == 255 and manager.summon_templates.size() == 81 and manager.artifacts.size() == 90, "all 115 families contain three distinct versions")
+	check(manager.cards.size() == 285 and manager.summon_templates.size() == 96 and manager.artifacts.size() == 90, "all 125 families contain three distinct versions")
 	check(manager.cards["water_spring_card"]["text"] == "回合开始：召唤者获得1点木能量。", "spring description names the actual energy recipient")
 	check(manager.cards["water_spring_card__1"]["text"] == "回合开始：召唤者获得1点木能量，恢复2点生命。", "spring upgrades share concise caster wording")
 	check(manager.cards["water_spring_card__2"]["text"] == "回合开始：召唤者获得1点木能量，恢复4点生命。", "spring second upgrade uses the same format")
@@ -184,5 +184,5 @@ func run() -> void:
 		check(manager.phase in BattleManager.FINISHED_PHASES and manager.pending_choice.is_empty(), "complete upgraded battle with AI and artifacts: " + str(seed_value))
 	manager.queue_free()
 	await process_frame
-	print("Upgrade rules: all 255 cards and 90 artifacts, choices, bleeding, generation, cooldown, durability and persistence; %d failures" % failures)
+	print("Upgrade rules: all 285 cards and 90 artifacts, choices, bleeding, generation, cooldown, durability and persistence; %d failures" % failures)
 	quit(1 if failures else 0)
