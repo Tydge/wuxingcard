@@ -4,6 +4,7 @@ import argparse
 from datetime import datetime
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -65,24 +66,27 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--godot', default='/Users/wangtaizhi/Desktop/Godot.app/Contents/MacOS/Godot')
     parser.add_argument('--checks-report', type=Path, help='Reuse a passing --suite full report for the same runtime, tests and engine')
+    parser.add_argument('--required-test', action='append', help='Explicitly authorized targeted release scope; requires --checks-report. Repeat for every required test.')
     args = parser.parse_args()
-    source_snapshot, checks = ensure_checks(args.godot, args.checks_report)
+    source_snapshot, checks = ensure_checks(args.godot, args.checks_report, args.required_test)
+    env = os.environ.copy()
+    env['WUXING_TEST_AUDIO'] = '0'
     built = datetime.now().astimezone()
     stamp = built.strftime('%Y-%m-%d_%H%M%S')
     stage = ROOT / 'work' / f'windows-export-{stamp}'
     report = prepare_project(stage)
-    subprocess.run([args.godot, '--headless', '--path', str(stage), '--script', str(ROOT / 'tools/prepare_export_art.gd'), '--', str(report)], check=True)
-    subprocess.run([args.godot, '--headless', '--path', str(stage), '--editor', '--import', '--quit'], check=True)
-    subprocess.run([args.godot, '--headless', '--path', str(stage), '--script', str(ROOT / 'tools/verify_export_art.gd'), '--', str(report)], check=True)
+    subprocess.run([args.godot, '--headless', '--audio-driver', 'Dummy', '--path', str(stage), '--script', str(ROOT / 'tools/prepare_export_art.gd'), '--', str(report)], check=True, env=env)
+    subprocess.run([args.godot, '--headless', '--audio-driver', 'Dummy', '--path', str(stage), '--editor', '--import', '--quit'], check=True, env=env)
+    subprocess.run([args.godot, '--headless', '--audio-driver', 'Dummy', '--path', str(stage), '--script', str(ROOT / 'tools/verify_export_art.gd'), '--', str(report)], check=True, env=env)
     art_report = json.loads(report.read_text())
     folder = ROOT / 'dist' / f'WuxingMingpan-Windows-{stamp}'
     folder.mkdir(parents=True, exist_ok=False)
     executable = folder / 'WuxingMingpan.exe'
-    subprocess.run([args.godot, '--headless', '--path', str(stage), '--export-release', 'Windows Desktop', str(executable)], check=True)
+    subprocess.run([args.godot, '--headless', '--audio-driver', 'Dummy', '--path', str(stage), '--export-release', 'Windows Desktop', str(executable)], check=True, env=env)
     pack = executable.with_suffix('.pck')
     if not executable.is_file() or not pack.is_file():
         raise RuntimeError('Windows export did not produce both the executable and resource pack')
-    subprocess.run([args.godot, '--headless', '--main-pack', str(pack), '--script', str(ROOT / 'tools/verify_export_pack.gd')], check=True, cwd=stage)
+    subprocess.run([args.godot, '--headless', '--audio-driver', 'Dummy', '--main-pack', str(pack), '--script', str(ROOT / 'tools/verify_export_pack.gd')], check=True, env=env, cwd=stage)
     card_count = len(json.loads((ROOT / 'data' / 'cards.json').read_text()))
     instructions = f'''五行 · 命盘 — Windows 试玩版
 
@@ -97,7 +101,8 @@ def main():
 4. 其他牌拖到手牌区域上方释放；点“结束回合”让敌人行动。
 5. “卡牌一览”收录当前 {card_count} 张卡牌，可以按属性筛选、点击放大，点击旁边收回。
 6. 悬停五行能量查看抗性，点击“规则”查看说明、“记录”查看或导出战报。
-7. 肉鸽、竞技、无尽模式暂未开放。当前版本为单机测试模式。
+7. 无尽模式已开放：自选15张原版牌起步，胜利后可购买、升级和休整，进度自动保存；肉鸽、竞技暂未开放。
+8. 真气可保留，点击我方五行灵石消耗1真气换取1点对应灵气。发现候选等级与触发牌相同（原／精／玄）。
 
 反馈问题时，附上截图、刚刚使用的卡牌和发生问题前的操作。
 运行日志：%APPDATA%\\Godot\\app_userdata\\五行 · 命盘\\logs\\godot.log
@@ -114,7 +119,7 @@ def main():
     for source in sorted((ROOT / 'assets/audio/licenses').glob('*.txt')):
         shutil.copy2(source, licenses / f'Kenney-{source.name}')
     build_source = provenance(source_snapshot)
-    manifest = {'built':built.isoformat(), **build_source, 'engine':subprocess.check_output([args.godot, '--version'],text=True).strip(), 'platform':'Windows x86_64', 'cards':card_count, 'summons':len(json.loads((ROOT / 'data/summons.json').read_text())), 'art':art_report, 'files':[]}
+    manifest = {'built':built.isoformat(), **build_source, 'engine':subprocess.check_output([args.godot, '--version'],text=True).strip(), 'platform':'Windows x86_64', 'cards':card_count, 'summons':len(json.loads((ROOT / 'data/summons.json').read_text())), 'artifacts':len(json.loads((ROOT / 'data/artifacts.json').read_text())), 'art':art_report, 'files':[]}
     (folder / 'source_manifest.json').write_text(json.dumps(source_snapshot, ensure_ascii=False, indent=2) + '\n')
     (folder / 'checks.json').write_text(json.dumps(checks, ensure_ascii=False, indent=2) + '\n')
     for path in sorted(folder.rglob('*')):

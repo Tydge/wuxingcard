@@ -158,6 +158,8 @@ Android 和 Windows 共用导出暂存与图片优化：排除未使用图片，
 python3 tools/build_windows.py
 ```
 
+已明确选择较小试玩验证范围时，可组合`--checks-report 报告路径`和重复的`--required-test 测试名`；会严格核对当前代码与记录，保留targeted标记，不自动启动full。
+
 其他环境可用 `--godot /路径/Godot` 指定引擎。脚本导入资源、导出 Release 版本，生成 `dist/五行命盘_Windows_x64_试玩版_日期_时分秒.zip`；压缩包包含游戏 EXE、同名 PCK、中文试玩说明、构建信息及字体/引擎授权文件。解压后双击 `WuxingMingpan.exe`，EXE 和 PCK 必须放在同一个目录。适用于 64 位 Windows 10/11，需要支持 OpenGL 3.3 的显卡驱动。
 
 导出包含运行所需的 `data/*.json` 和当前卡池、角色、背景及特效的美术资源，排除 `work/`、`dist/`、`tests/`、`tools/`、`docs/`。中文正文内置 Noto Sans CJK SC；标题和伤害数字以内置 Noto Serif CJK SC 作为后备，字体授权保存在 `assets/fonts/`。Mac 保留原有已安装字体。引擎授权保存在 `licenses/`。`dist/` 为本地构建产物，不进入 Git。
@@ -207,7 +209,7 @@ python3 tools/check_project.py --suite full
 
 Windows 与 Android 导出包均附 `source_manifest.json`、`checks.json`、`build_info.json`，记录完整源码文件哈希、源码总指纹、Git 提交、包括新文件在内的工作树状态和本次验证。试玩包版本以清单为准，不能仅凭提交号判断含未提交改动的构建。正式交付前将相关源码和资源纳入 Git，再从同一套源码生成两种平台的包。
 
-工程源码的唯一维护目录是本目录。`Documents/ChatGPT/五行卡牌` 为试玩交付目录，见其中的 README 与 `试玩包/latest.json`。旧包归档保留，最新 Windows 和 Android 包从同一验证后的源码生成。肉鸽和竞技的完整玩法继续作为后续开发范围。无尽模式已在0.4.0实现。
+工程源码的唯一维护目录是本目录。`Documents/ChatGPT/五行卡牌` 为试玩交付目录，见其中的 README 与 `试玩包/latest.json`。旧包归档保留，各平台最新包分别记录源码提交和所选验证范围；仅导出单个平台时，另一平台保留原有构建。肉鸽和竞技的完整玩法继续作为后续开发范围。无尽模式已在0.4.0实现。
 
 ### 2026-09-30 精、玄升级
 

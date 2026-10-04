@@ -116,3 +116,5 @@ Android原生触屏发现取消召唤目标时隐藏控件会重入取消函数�
 本轮所选7项已通过：wuxing_spirits_cards_test（120项断言）、PC／触屏wuxing_spirits_ui_test（各88项）、discovery_cards_test（109项）、settlement_regression_test、upgrade_test --quick及endless_recovery_test。Python发布工作流11项通过。未运行full，报告位于`work/checks/wuxing_spirits_release/latest.json`。
 
 2026-10-04后续立绘／发现等级／关键词修正只运行4项：discovery_cards_test（115项断言）、wuxing_spirits_cards_test（120项）、endless_recovery_test、test_card_keywords，分别通过。规则与侧栏报告分别保存在`work/checks/identity_rules/latest.json`和`work/checks/identity_keywords/latest.json`。六张透明立绘逐张与原图人工对照，转换后RGBA逐像素一致；游戏内卡图／立绘组合预览另存`work/identity_fix/runtime_comparison.png`。未跑full，未导出安装包；朝向配置的最终静态修改由组合预览核对，不重复未受影响的规则检查。
+
+Windows构建同样支持显式`--required-test`与`--checks-report`组合，沿用上述targeted报告校验；未明确指定仍保留full门槛。2026-10-04 Windows试玩导出选择发现规则、五系新牌规则、无尽恢复、关键词侧栏4项；所有构建验证默认Dummy音频驱动。
