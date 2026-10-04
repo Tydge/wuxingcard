@@ -310,7 +310,8 @@ func test_summon_affinities(manager: BattleManager) -> void:
 	for card in manager.cards.values():
 		var entries := CardKeywords.entries(card, manager.summon_templates)
 		if manager.card_target_mode(card) == "slot":
-			check(entries.size() >= 2 and entries[0]["text"].contains("−50%") and entries[1]["text"].contains("+50%"), "every summon has affinity explanations")
+			for entry in entries:
+				check(not str(entry["title"]).begins_with("抵抗") and not str(entry["title"]).begins_with("克制"), "summon sidebar contains keywords rather than affinity rules")
 	check(CardKeywords.entries(manager.cards["wood_regen"], manager.summon_templates)[0]["title"] == "再生 X", "status cards explain their status")
 	check(not manager.cards.has("metal_lock") and manager.cards["fire_strike"]["name"] == "炎咒" and manager.cards["water_drain"]["name"] == "熄焰", "updated card pool and names")
 

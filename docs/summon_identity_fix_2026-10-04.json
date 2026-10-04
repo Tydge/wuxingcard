@@ -1,0 +1,49 @@
+{
+  "tool": "image_gen.imagegen",
+  "mode": "edit",
+  "transparent_background": true,
+  "assets": [
+    {
+      "id": "metal_oath_sword",
+      "input": "/Users/wangtaizhi/娱乐/五行卡牌_可玩原型/assets/cards/generated/metal_oath_sword_card.webp",
+      "prompt": "Use case: background-extraction. Asset type: transparent summon standee for the same game card. Image 1 is the EDIT TARGET, not merely a style reference. Extract the actual foreground subject from this image: The golden female sword spirit, her exact face in right-facing profile, crown, golden armor, streaming pale gold hair and ribbons, tapering sword-shaped lower body, and floating ornate swords. Preserve the original visible subject's identity, proportions, silhouette, orientation, pose, colors, exact facial features and ornament details as closely as possible. Change only the background to genuine transparent alpha. Do not redesign, reinterpret or replace the character. Remove all distant mountains, buildings, sky, landscape, clouds and ground scenery. Preserve subject-associated energy effects with subtle translucent edges. Fit the whole cutout comfortably inside the canvas; minimally complete any cropped extremities using the exact existing design. No solid background, no checkerboard painted in, no text, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-1fefc22e-ce0c-4531-bb0b-a8133ab3e487.png",
+      "asset": "assets/summons/standee/metal_oath_sword.webp"
+    },
+    {
+      "id": "water_mirror_spirit",
+      "input": "/Users/wangtaizhi/娱乐/五行卡牌_可玩原型/assets/cards/generated/water_mirror_spirit_card.webp",
+      "prompt": "Use case: background-extraction. Asset type: transparent summon standee for the same game card. Image 1 is the EDIT TARGET, not merely a style reference. Extract the actual foreground subject from this image: The silver-haired female water spirit, her exact tilted face and pearl-shell hair ornament, blue-white translucent robes, both hands holding the round water mirror, swirling water ribbons. Remove scenery even inside the mirror; preserve the mirror as a translucent blue reflective water disc. Preserve the original visible subject's identity, proportions, silhouette, orientation, pose, colors, exact facial features and ornament details as closely as possible. Change only the background to genuine transparent alpha. Do not redesign, reinterpret or replace the character. Remove all distant mountains, buildings, sky, landscape, clouds and ground scenery. Preserve subject-associated energy effects with subtle translucent edges. Fit the whole cutout comfortably inside the canvas; minimally complete any cropped extremities using the exact existing design. No solid background, no checkerboard painted in, no text, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-eb7d70b5-e398-4da1-be59-2e357117b8ae.png",
+      "asset": "assets/summons/standee/water_mirror_spirit.webp"
+    },
+    {
+      "id": "wood_spring_mulberry",
+      "input": "/Users/wangtaizhi/娱乐/五行卡牌_可玩原型/assets/cards/generated/wood_spring_mulberry_card.webp",
+      "prompt": "Use case: background-extraction. Asset type: transparent summon standee for the same game card. Image 1 is the EDIT TARGET, not merely a style reference. Extract the actual foreground subject from this image: The serene female-faced mulberry tree spirit, exact youthful feminine face with closed eyes embedded in twisted trunk, broad leafy mulberry canopy, hanging green healing droplets, moss-covered branching roots. Keep her original face, not a male treant. Preserve the original visible subject's identity, proportions, silhouette, orientation, pose, colors, exact facial features and ornament details as closely as possible. Change only the background to genuine transparent alpha. Do not redesign, reinterpret or replace the character. Remove all distant mountains, buildings, sky, landscape, clouds and ground scenery. Preserve subject-associated energy effects with subtle translucent edges. Fit the whole cutout comfortably inside the canvas; minimally complete any cropped extremities using the exact existing design. No solid background, no checkerboard painted in, no text, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-843fa141-19a7-4363-abad-8871a66cceb3.png",
+      "asset": "assets/summons/standee/wood_spring_mulberry.webp"
+    },
+    {
+      "id": "fire_ash_luan",
+      "input": "/Users/wangtaizhi/娱乐/五行卡牌_可玩原型/assets/cards/generated/fire_ash_luan_card.webp",
+      "prompt": "Use case: background-extraction. Asset type: transparent summon standee for the same game card. Image 1 is the EDIT TARGET, not merely a style reference. Extract the actual foreground subject from this image: The red phoenix in the exact same diagonal flight pose with raised left wing and extended right wing, exact head/crest, glowing chest orb, long sweeping tail feathers and ember-edged wings. Preserve the original visible subject's identity, proportions, silhouette, orientation, pose, colors, exact facial features and ornament details as closely as possible. Change only the background to genuine transparent alpha. Do not redesign, reinterpret or replace the character. Remove all distant mountains, buildings, sky, landscape, clouds and ground scenery. Preserve subject-associated energy effects with subtle translucent edges. Fit the whole cutout comfortably inside the canvas; minimally complete any cropped extremities using the exact existing design. No solid background, no checkerboard painted in, no text, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-4ab48651-9f36-412c-b72c-d06b2a4a6384.png",
+      "asset": "assets/summons/standee/fire_ash_luan.webp"
+    },
+    {
+      "id": "earth_mountain_elder",
+      "input": "/Users/wangtaizhi/娱乐/五行卡牌_可玩原型/assets/cards/generated/earth_mountain_elder_card.webp",
+      "prompt": "Use case: background-extraction. Asset type: transparent summon standee for the same game card. Image 1 is the EDIT TARGET, not merely a style reference. Extract the actual foreground subject from this image: The massive white-haired and white-bearded mountain elder, exact stern right-facing face, flowing gray-white robes and bronze circular ornaments, left hand grasping irregular stone staff, mountain shoulders and stone body. Remove the tiny human worshipper and remote scenery. Preserve the original visible subject's identity, proportions, silhouette, orientation, pose, colors, exact facial features and ornament details as closely as possible. Change only the background to genuine transparent alpha. Do not redesign, reinterpret or replace the character. Remove all distant mountains, buildings, sky, landscape, clouds and ground scenery. Preserve subject-associated energy effects with subtle translucent edges. Fit the whole cutout comfortably inside the canvas; minimally complete any cropped extremities using the exact existing design. No solid background, no checkerboard painted in, no text, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-d697245d-05c0-4d5d-937f-e4c34f59e270.png",
+      "asset": "assets/summons/standee/earth_mountain_elder.webp"
+    },
+    {
+      "id": "water_breath_wisp",
+      "input": "/Users/wangtaizhi/娱乐/五行卡牌_可玩原型/assets/cards/generated/water_breath_wisp_card.webp",
+      "prompt": "Use case: background-extraction. Image 1 is the EDIT TARGET. Extract its EXACT central blue translucent bell-shaped water spirit and its ruffled flowing ribbons and thin bead-decorated tendrils, plus the white qi stream being bound at the right by the thin blue spiraling tendrils. Preserve the original subject's silhouette, left-leaning bell orientation, proportions, shapes, colours and placement of all ribbons as closely as possible; do not independently redesign the spirit. Remove all scenery: sky, mountains, temple pillars, ground, clouds. Real transparent alpha background, including spaces between the thin tendrils. Preserve the translucent materials and fine blue edges, without a broad rectangular blue fog around the cutout. Keep the whole subject inside the canvas with small transparent margin. No new character, no text, no watermark.",
+      "source": "/Users/wangtaizhi/.codex/generated_images/01a10264-ea45-7112-8eb4-888b6e11d750/exec-2a3c41fc-1dc3-4223-96bb-8423af2cf2f3.png",
+      "asset": "assets/summons/standee/water_breath_wisp.webp"
+    }
+  ]
+}

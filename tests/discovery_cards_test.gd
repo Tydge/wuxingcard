@@ -40,7 +40,7 @@ func run() -> void:
 		check(m.play_player_card(0) and m.pending_choice.get("kind") == "discover" and m.pending_choice["candidates"].size() == 2 + level, "earth opens level-dependent discovery")
 		var candidates: Array = m.pending_choice["candidates"].duplicate()
 		var distinct := {}
-		for id: String in candidates: distinct[id] = true; check(m.cards[id]["level"] == 0, "default pool gives original grade")
+		for id: String in candidates: distinct[id] = true; check(m.cards[id]["level"] == level, "discovery inherits triggering card grade")
 		check(distinct.size() == candidates.size() and m.player.draw_pile == ["metal_strike__2"] and m.player.fatigue_level == 0, "discover unique candidates without using deck or fatigue")
 		check(not m.choose_card(-1) and not m.choose_card(candidates.size()) and not m.play_player_card(0), "invalid choices and additional plays rejected")
 		m.end_player_turn(); check(m.phase == "player_action", "pending discovery blocks end turn")
@@ -48,7 +48,7 @@ func run() -> void:
 	clean(); m.interactive_choices = true
 	var filters := {"elements":["water"], "card_types":["summon"], "min_cost":8, "max_cost":8, "levels":[2]}
 	check(ContentCatalog.card_pool(m.cards, filters) == ["water_breath_wisp_card__2"], "pool supports combined element, type, cost and grade limits")
-	m._discover(m.player, 4, filters)
+	m._discover(m.player, 4, filters, 0, 2)
 	check(m.player.hand == ["water_breath_wisp_card__2"] and m.pending_choice.is_empty(), "undersized filtered pool preserves grade and auto-selects sole result")
 	check(ContentCatalog.card_pool(m.cards, {"include_ids":["metal_strike","water_strike"], "exclude_ids":["metal_strike"], "effect_types":["damage"]}) == ["water_strike"], "explicit IDs, exclusions and effect types combine")
 	m._discover(m.player, 4, {"elements":[]})
@@ -63,6 +63,22 @@ func run() -> void:
 	m._resolve_sequence(m.player, m.enemy, [{"type":"discover","target":"self","amount":3}, {"type":"gain_qi","target":"self","amount":2}], "earth")
 	check(m.player.qi == 3, "subsequent effects wait for choice")
 	m.choose_card(0); check(m.player.qi == 5, "subsequent effects resume once")
+	# A later discovery in the same spell must retain grade after the first choice.
+	clean(); m.interactive_choices = true
+	var scoped := {"elements":["water"], "card_types":["spell"]}
+	m._resolve_sequence(m.player, m.enemy, [{"type":"discover", "target":"self", "amount":2}, {"type":"discover", "target":"self", "amount":2, "pool":scoped}], "earth", {}, {}, Callable(), 2)
+	m.choose_card(0)
+	check(m.pending_choice.get("kind") == "discover" and scoped == {"elements":["water"], "card_types":["spell"]}, "resumed discovery preserves filters without mutating caller")
+	for id: String in m.pending_choice["candidates"]: check(m.cards[id]["level"] == 2 and m.cards[id]["element"] == "water", "resumed discovery keeps source grade and restricted scope")
+	m.choose_card(0)
+	for level in 3:
+		clean(); m.phase = "enemy_action"
+		var id := ContentCatalog.variant_id("earth_seek_treasure", level)
+		m.enemy.hand.assign([id]); m.enemy.energy["earth"] = 1
+		var simulation := m.simulation_copy()
+		simulation._play_card(simulation.enemy, simulation.player, 0)
+		check(simulation.cards[simulation.enemy.hand[0]]["level"] == level and m.enemy.hand == [id], "AI discovery keeps source grade in isolated simulation")
+		simulation.free()
 	clean(); m.interactive_choices = true; m.rng.seed = 4242; m.player.hand.assign(["earth_seek_treasure__2"]); m.player.energy["earth"] = 1
 	m.play_player_card(0); chosen = m.pending_choice["candidates"][2]; m.choose_card(2); var state := m.rng.state
 	clean(); m.rng.seed = 4242; m.replay_choice_indices.assign([2]); m.player.hand.assign(["earth_seek_treasure__2"]); m.player.energy["earth"] = 1

@@ -114,3 +114,5 @@ Android原生触屏发现取消召唤目标时隐藏控件会重入取消函数�
 2026-10-04本轮用户明确要求：导出也只测新增内容与可能冲突，不跑不相关的完整回归。Android构建新增可重复的`--required-test`，必须同时传入`--checks-report`。报告仍须schema 2、targeted范围、所列测试身份与参数完全一致、全部通过、运行代码与测试指纹一致、Godot版本一致及测试期间源码未改变；不会自动回退full或将局部记录标成full。未显式选择该例外时继续执行既有full发布门槛。资源包探针保留资源、字体、授权检查，把重复随机对战样本缩为2场。
 
 本轮所选7项已通过：wuxing_spirits_cards_test（120项断言）、PC／触屏wuxing_spirits_ui_test（各88项）、discovery_cards_test（109项）、settlement_regression_test、upgrade_test --quick及endless_recovery_test。Python发布工作流11项通过。未运行full，报告位于`work/checks/wuxing_spirits_release/latest.json`。
+
+2026-10-04后续立绘／发现等级／关键词修正只运行4项：discovery_cards_test（115项断言）、wuxing_spirits_cards_test（120项）、endless_recovery_test、test_card_keywords，分别通过。规则与侧栏报告分别保存在`work/checks/identity_rules/latest.json`和`work/checks/identity_keywords/latest.json`。六张透明立绘逐张与原图人工对照，转换后RGBA逐像素一致；游戏内卡图／立绘组合预览另存`work/identity_fix/runtime_comparison.png`。未跑full，未导出安装包；朝向配置的最终静态修改由组合预览核对，不重复未受影响的规则检查。

@@ -60,11 +60,11 @@ func run() -> void:
 		m.player.spell_elements["wood"] = true
 		m._trigger_summons(m.player, "turn_end")
 		check(m.pending_choice.get("kind") == "discover" and m.pending_choice["candidates"].size() == [2,3,4][level], "two distinct spells open restricted grade discovery")
-		for id: String in m.pending_choice["candidates"]: check(m.cards[id]["element"] == "water" and m.card_target_mode(m.cards[id]) != "slot" and m.cards[id]["level"] == 0, "mirror pool contains original water spells only")
+		for id: String in m.pending_choice["candidates"]: check(m.cards[id]["element"] == "water" and m.card_target_mode(m.cards[id]) != "slot" and m.cards[id]["level"] == level, "mirror pool contains same-grade water spells only")
 		m.choose_card(0); m.interactive_choices = false
 		clean(); m.interactive_choices = true
 		check(cast("earth_seek_vein" + suffix) and m.pending_choice["candidates"].size() == [2,3,3][level], "earth uses user-edited cost and discovery count")
-		for id: String in m.pending_choice["candidates"]: check(m.cards[id]["element"] == "earth" and m.cards[id]["cost"] >= 3 and m.cards[id]["level"] == 0, "earth filters printed cost and element")
+		for id: String in m.pending_choice["candidates"]: check(m.cards[id]["element"] == "earth" and m.cards[id]["cost"] >= 3 and m.cards[id]["level"] == level, "earth combines source grade, printed cost and element")
 		var chosen: String = m.pending_choice["candidates"][0]; m.choose_card(0)
 		var discounted := m.player.hand[0]
 		check(m.player.card_cost(m.cards[discounted]) == m.cards[chosen]["cost"] - [1,1,2][level] and m.cards[chosen]["cost"] >= 3, "earth discount belongs to selected copy")

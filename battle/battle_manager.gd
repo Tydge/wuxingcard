@@ -137,7 +137,7 @@ func activate_artifact(actor: Combatant, selection: Dictionary = {}) -> bool:
 
 func _resolve_artifact_effects(actor: Combatant, entry: Dictionary, selection: Dictionary = {}) -> void:
 	var opponent := enemy if actor == player else player
-	_resolve_sequence(actor, opponent, entry.get("effects", []), str(entry["element"]), selection)
+	_resolve_sequence(actor, opponent, entry.get("effects", []), str(entry["element"]), selection, {}, Callable(), int(entry.get("level", 0)))
 
 func _trigger_artifacts(actor: Combatant, event: String, selection: Dictionary = {}) -> void:
 	if actor.hp <= 0 or phase in FINISHED_PHASES: return
@@ -223,7 +223,7 @@ func _on_healed(owner: Combatant, actual: int) -> void:
 		for effect: Dictionary in summoned.heal_effects:
 			if phase in FINISHED_PHASES: break
 			summon_triggered.emit(_side(actor), int(listener["slot"]), "on_heal", effect)
-			_resolve_effect(actor, enemy if actor == player else player, effect, summoned.element)
+			_resolve_effect(actor, enemy if actor == player else player, effect, summoned.element, {}, {}, summoned.level)
 
 func summon_requires_target(card: Dictionary) -> bool:
 	for effect: Dictionary in card.get("effects", []):
@@ -537,7 +537,7 @@ func _trigger_summons(actor: Combatant, timing: String = "turn_start") -> void:
 				return
 			if actor.summons[slot] != summoned:
 				break
-			_resolve_effect(actor, opponent, resolved, summoned.element, resolved.get("selection", {}))
+			_resolve_effect(actor, opponent, resolved, summoned.element, resolved.get("selection", {}), {}, summoned.level)
 			await wait_for_choice()
 			if generation != battle_generation: return
 			if summon_presenter.is_valid():
@@ -822,17 +822,17 @@ func _play_card(actor: Combatant, target: Combatant, index: int, selection: Dict
 			_trigger_after_spell(actor, str(card["element"]))
 		played_cards += 1
 		_check_finish()
-		changed.emit())
+		changed.emit(), int(card.get("level", 0)))
 	return true
 
 # A choice suspends only the remaining effects; payment/earlier effects cannot
 # be replayed. Simulations take the same path but select without a UI.
-func _resolve_sequence(actor: Combatant, opponent: Combatant, effects: Array, element: String, selection: Dictionary = {}, energy_snapshot: Dictionary = {}, complete: Callable = Callable()) -> void:
+func _resolve_sequence(actor: Combatant, opponent: Combatant, effects: Array, element: String, selection: Dictionary = {}, energy_snapshot: Dictionary = {}, complete: Callable = Callable(), source_level: int = 0) -> void:
 	for i in effects.size():
 		if phase in FINISHED_PHASES: break
-		_resolve_effect(actor, opponent, effects[i], element, selection, energy_snapshot)
+		_resolve_effect(actor, opponent, effects[i], element, selection, energy_snapshot, source_level)
 		if not pending_choice.is_empty():
-			pending_choice["continuation"] = {"actor":actor, "opponent":opponent, "effects":effects.slice(i + 1), "element":element, "selection":selection, "energy":energy_snapshot, "complete":complete}
+			pending_choice["continuation"] = {"actor":actor, "opponent":opponent, "effects":effects.slice(i + 1), "element":element, "selection":selection, "energy":energy_snapshot, "complete":complete, "level":source_level}
 			return
 	if complete.is_valid(): complete.call()
 
@@ -878,7 +878,7 @@ func _trigger_after_spell(actor: Combatant, element: String) -> void:
 				if aims.is_empty(): continue
 				effect["selection"] = aims[rng.randi_range(0, aims.size() - 1)]
 			summon_triggered.emit(_side(actor), slot, "after_spell", effect)
-			_resolve_effect(actor, opponent, effect, summoned.element)
+			_resolve_effect(actor, opponent, effect, summoned.element, {}, {}, summoned.level)
 
 func _flush_deaths() -> void:
 	if damage_depth > 0 or flushing_deaths: return
@@ -899,7 +899,7 @@ func _flush_deaths() -> void:
 			for effect in summoned.death_effects:
 				if phase in FINISHED_PHASES: break
 				summon_triggered.emit(_side(owner), int(item["slot"]), "on_death", effect)
-				_resolve_effect(owner, opponent, effect, summoned.element)
+				_resolve_effect(owner, opponent, effect, summoned.element, {}, {}, summoned.level)
 	flushing_deaths = false
 
 func _receive_card(actor: Combatant, id: String, reason: String) -> void:
@@ -923,8 +923,11 @@ func _contemplate(actor: Combatant, amount: int) -> void:
 	else:
 		_take_choice_card(actor, _choose_contemplation(actor, candidates))
 
-func _discover(actor: Combatant, amount: int, filters: Dictionary = {}, discount: int = 0) -> void:
-	var pool: Array[String] = ContentCatalog.card_pool(cards, filters)
+func _discover(actor: Combatant, amount: int, filters: Dictionary = {}, discount: int = 0, source_level: int = 0) -> void:
+	var scoped_filters := filters.duplicate(true)
+	# Discovery inherits its originating card/summon grade; other pool limits compose.
+	scoped_filters["levels"] = [source_level]
+	var pool: Array[String] = ContentCatalog.card_pool(cards, scoped_filters)
 	var candidates: Array = []
 	for i in mini(maxi(0, amount), pool.size()):
 		candidates.append(pool.pop_at(rng.randi_range(0, pool.size() - 1)))
@@ -953,7 +956,7 @@ func choose_card(index: int) -> bool:
 	if kind == "discover": _receive_discovery(player, id, discount)
 	else: _take_choice_card(player, index)
 	if not continuation.is_empty():
-		_resolve_sequence(continuation["actor"], continuation["opponent"], continuation["effects"], continuation["element"], continuation["selection"], continuation["energy"], continuation["complete"])
+		_resolve_sequence(continuation["actor"], continuation["opponent"], continuation["effects"], continuation["element"], continuation["selection"], continuation["energy"], continuation["complete"], int(continuation["level"]))
 	choice_completed.emit()
 	changed.emit()
 	return true
@@ -1002,7 +1005,7 @@ func _card_candidates(actor: Combatant, card: Dictionary) -> Array[Dictionary]:
 			if (mode == "slot") == (owner.summons[slot] == null): candidates.append({"kind":"slot" if mode == "slot" else "summon", "side":_side(owner), "slot":slot})
 	return candidates
 
-func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, card_element: String, selection: Dictionary = {}, pre_payment_energy: Dictionary = {}) -> void:
+func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, card_element: String, selection: Dictionary = {}, pre_payment_energy: Dictionary = {}, source_level: int = 0) -> void:
 	if not _condition_met(effect, actor, pre_payment_energy): return
 	var target: Combatant = actor if effect.get("target", "opponent") == "self" else opponent
 	var amount := int(effect.get("amount", 0))
@@ -1043,7 +1046,7 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 				# The reward belongs to this hit, before the lethal segment ends battle.
 				# A reaction killing another unit must not count as this spell's kill.
 				if life_before > 0 and dealt >= life_before and actor.hp > 0:
-					_resolve_sequence(actor, opponent, effect.get("on_kill", []), card_element)
+					_resolve_sequence(actor, opponent, effect.get("on_kill", []), card_element, selection, pre_payment_energy, Callable(), source_level)
 			damage_segment_resolved.emit(hits)
 			damage_depth -= 1
 			_flush_deaths()
@@ -1066,7 +1069,7 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 				elif resolved.get("target", "") == "highest_opponent": resolved["selection"] = highest_life_target(opponent)
 				elif resolved.get("target") == "selected_opponent": resolved["selection"] = selection.get("entrance_target", {})
 				summon_triggered.emit(_side(actor), slot, "on_spawn", resolved)
-				_resolve_effect(actor, opponent, resolved, summoned.element, resolved.get("selection", {}))
+				_resolve_effect(actor, opponent, resolved, summoned.element, resolved.get("selection", {}), {}, summoned.level)
 		"return_summon":
 			var slot := int(selection.get("slot", -1))
 			if slot < 0 or slot >= actor.summons.size() or actor.summons[slot] == null: return
@@ -1093,7 +1096,7 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 			var resolved := effect.duplicate(true)
 			resolved["type"] = "heal_summon" if selection.get("kind", "") == "summon" else "heal"
 			resolved["target"] = "self"
-			_resolve_effect(actor, opponent, resolved, card_element, selection)
+			_resolve_effect(actor, opponent, resolved, card_element, selection, pre_payment_energy, source_level)
 		"heal":
 			if target.hp <= 0: return
 			var actual := maxi(0, mini(amount, target.max_hp - target.hp))
@@ -1137,7 +1140,7 @@ func _resolve_effect(actor: Combatant, opponent: Combatant, effect: Dictionary, 
 					break
 				draw_card(target)
 		"contemplate": _contemplate(target, amount)
-		"discover": _discover(target, amount, effect.get("pool", {}), int(effect.get("cost_reduction", 0)))
+		"discover": _discover(target, amount, effect.get("pool", {}), int(effect.get("cost_reduction", 0)), source_level)
 		"generate_card":
 			var pool: Array[String] = []
 			for entry: Dictionary in ContentCatalog.base_entries(cards):

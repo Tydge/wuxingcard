@@ -1358,7 +1358,7 @@
         }
       ]
     },
-    "art_flip_h": true,
+    "art_flip_h": false,
     "upgrades": [
       {
         "hp": 22,
@@ -1426,7 +1426,7 @@
         }
       }
     ],
-    "art_flip_h": true,
+    "art_flip_h": false,
     "upgrades": [
       {
         "hp": 15,
@@ -1497,7 +1497,7 @@
       }
     ],
     "turn_end": [],
-    "art_flip_h": true,
+    "art_flip_h": false,
     "upgrades": [
       {
         "hp": 18,
@@ -1557,7 +1557,7 @@
         "element": "fire"
       }
     ],
-    "art_flip_h": true,
+    "art_flip_h": false,
     "upgrades": [
       {
         "hp": 10,
@@ -1621,7 +1621,7 @@
     "turn_start": [],
     "turn_end": [],
     "intercept_spell": true,
-    "art_flip_h": true,
+    "art_flip_h": false,
     "upgrades": [
       {
         "hp": 27,

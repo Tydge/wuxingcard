@@ -12,7 +12,8 @@ func check(condition: bool, message: String) -> void:
 		push_error(message)
 
 func shot(name: String) -> void:
-	await RenderingServer.frame_post_draw
+	RenderingServer.force_draw()
+	await process_frame
 	root.get_texture().get_image().save_png(output.path_join(name + ".png"))
 
 func inspect_popup(popup: CardKeywordPopup, side: String) -> void:
@@ -38,6 +39,12 @@ func run() -> void:
 	await process_frame
 	var ui: Control = current_scene
 	var manager: BattleManager = ui.get("manager")
+	check(CardKeywords.entries(manager.cards["water_breath_wisp_card"], manager.summon_templates).is_empty(), "qi suppression has no invented lock-breath keyword")
+	check(CardKeywords.entries(manager.cards["fire_kindling"], manager.summon_templates).is_empty(), "plain energy scaling has no invented keyword")
+	var forge := CardKeywords.entries(manager.cards["metal_forge_edge"], manager.summon_templates)
+	check(forge.size() == 2 and forge[0]["title"] == "强攻 X" and forge[1]["title"] == "强防 X", "copied defense explains only its two actual statuses")
+	var discovery := CardKeywords.entries(manager.cards["earth_seek_treasure__2"], manager.summon_templates)
+	check(discovery.size() == 1 and discovery[0]["text"].length() <= 30 and not discovery[0]["text"].contains("原级"), "discovery definition is concise and grade-neutral")
 	var menu: MainMenu
 	for child in ui.get_children():
 		if child is MainMenu: menu = child
@@ -45,7 +52,7 @@ func run() -> void:
 	await process_frame
 	menu.call("_open_inspector", manager.cards["metal_chime_card"], menu.card_nodes[0])
 	await inspect_popup(menu.inspect_keywords, "right")
-	check(menu.inspect_keywords.explanations.size() == 3, "summon card explains resistance, counter and charge")
+	check(menu.inspect_keywords.explanations.size() == 1 and menu.inspect_keywords.explanations[0]["title"] == "蓄力 X", "summon side panel explains only its actual charge keyword")
 	await shot("collection_summon")
 	var closing := menu.inspect_keywords
 	menu.call("_close_inspector")
